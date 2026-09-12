@@ -1,0 +1,73 @@
+---
+title: "Synthetic datasets for geometric smoothing"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Synthetic datasets for geometric smoothing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`geosmooth` represents a synthetic dataset as four serializable components:
+geometry, sampling, truth, and response. `synthetic.spec()` combines those
+components without drawing data. `materialize.synthetic()` performs all random
+work under an explicit seed and RNG policy and returns a validated
+`synthetic_dataset`.
+
+```{r circle}
+library(geosmooth)
+
+circle.spec <- synthetic.spec(
+  geometry = synthetic.circle(radius = 1, ambient.dim = 2),
+  sampling = synthetic.sampling.grid.interval(
+    0, 2 * pi, endpoints = "exclude.lower"),
+  truth = synthetic.truth.polynomial(c(b0 = 0)),
+  response = synthetic.response.gaussian(sd = 0.05)
+)
+circle.data <- materialize.synthetic(circle.spec, n = 80, seed = 2026)
+circle.data
+plot(circle.data)
+```
+
+Quadforms use separate intrinsic and ambient dimensions. A flat geometry has no
+quadratic forms; a paraboloid or saddle supplies one or more symmetric forms.
+
+```{r quadform}
+surface.spec <- synthetic.spec(
+  geometry = synthetic.quadform(
+    intrinsic.dim = 2,
+    ambient.dim = 5,
+    forms = list(diag(c(1, -1))),
+    frame = "random.orthonormal"
+  ),
+  sampling = synthetic.sampling.uniform.box(-1, 1),
+  truth = synthetic.truth.polynomial(c(b0 = 0, b1 = 1, b22 = -0.5)),
+  response = synthetic.response.gaussian(sd = 0.1)
+)
+surface.data <- materialize.synthetic(surface.spec, n = 100, seed = 17)
+as.data.frame(surface.data)
+```
+
+Maintained benchmark recipes are discoverable through
+`synthetic.registry.ids()`. G1--G7 remain compatibility identifiers; the
+S01--S16 and V1--V3 identifiers preserve the shared SSRHE regression suite.
+Ordinary datasets bind their full specification hash into `dataset.id`.
+
+```{r registry}
+head(synthetic.registry.ids())
+registered <- synthetic.registry.spec("S01.V1")
+registered.data <- materialize.synthetic(
+  registered, n = 160,
+  seed = synthetic.registry.seed("S01.V1", replicate = 1),
+  rng.policy = "legacy"
+)
+synthetic.dataset.checksum(registered.data)
+```
+
+Use `rng.policy = "named.stream.v1"` for new work. The `"legacy"` policy exists
+for frozen scientific parity and pins historical RNG behavior. Predictor noise,
+response noise, and finite-design truth normalization are distinct contracts;
+they should not be substituted for one another.

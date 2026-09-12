@@ -1,0 +1,22 @@
+# Native support for geosmooth methods. ANN and Eigen are vendored locally.
+
+PKG_CPPFLAGS = -I. -IANN
+PKG_CPPFLAGS += -I../inst/include -DR_NO_REMAP
+PKG_CPPFLAGS += -DEIGEN_DONT_PARALLELIZE
+PKG_CPPFLAGS += -D_Alignof=__alignof__
+PKG_CPPFLAGS += -DDLL_API=
+PKG_CPPFLAGS += -include ../inst/include/geosmooth/eigen_config.hpp
+
+CXX_STD = CXX17
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+
+SOURCES_CPP = $(wildcard *.cpp)
+SOURCES_C = $(wildcard *.c)
+ANN_SOURCES = $(wildcard ANN/*.cpp)
+OBJECTS = $(SOURCES_CPP:.cpp=.o) $(SOURCES_C:.c=.o) $(ANN_SOURCES:.cpp=.o)
+override OBJECTS := $(filter-out RcppExports.o,$(OBJECTS)) RcppExports.o
+
+$(SHLIB): $(OBJECTS)
+
+clean:
+	$(RM) $(OBJECTS)

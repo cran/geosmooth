@@ -1,0 +1,4 @@
+"variant.id","variant.name","sampling.family","response.family","version"
+"V1","uniform gaussian","uniform.interval","gaussian",1
+"V2","center-biased heteroskedastic","truncated.normal","heteroskedastic.gaussian",1
+"V3","gap-biased laplace outliers","gapped.uniform","laplace.outlier",1

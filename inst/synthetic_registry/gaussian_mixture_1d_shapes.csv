@@ -1,0 +1,17 @@
+"shape.id","shape.name","means","sds","weights","version"
+"S01","two separated narrow equal","0.28;0.72","0.045;0.045","1.00;1.00",1
+"S02","two separated unequal","0.25;0.74","0.050;0.070","1.00;0.55",1
+"S03","two close overlapping equal","0.43;0.56","0.080;0.080","1.00;1.00",1
+"S04","two close overlapping unequal","0.40;0.54","0.060;0.095","1.00;0.45",1
+"S05","narrow left plus broad right","0.30;0.69","0.035;0.140","1.00;0.85",1
+"S06","broad left plus narrow right","0.31;0.70","0.140;0.035","0.85;1.00",1
+"S07","left boundary plus interior","0.08;0.48","0.035;0.090","0.85;1.00",1
+"S08","interior plus right boundary","0.52;0.93","0.090;0.035","1.00;0.85",1
+"S09","deep valley separated","0.22;0.78","0.040;0.040","1.00;1.00",1
+"S10","nearly unimodal overlap","0.45;0.56","0.115;0.115","1.00;0.90",1
+"S11","three separated peaks","0.20;0.50;0.80","0.040;0.050;0.040","0.85;1.00;0.75",1
+"S12","dominant center side bumps","0.23;0.52;0.79","0.060;0.045;0.060","0.45;1.00;0.45",1
+"S13","two close plus distant","0.35;0.46;0.82","0.045;0.045;0.060","0.90;0.75;1.00",1
+"S14","narrow center spike","0.24;0.50;0.76","0.090;0.025;0.090","0.55;1.00;0.55",1
+"S15","left-heavy triple","0.16;0.38;0.70","0.040;0.060;0.080","1.00;0.75;0.45",1
+"S16","boundary interior boundary","0.08;0.50;0.92","0.035;0.075;0.035","0.70;1.00;0.70",1
