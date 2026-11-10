@@ -4,7 +4,13 @@
 \alias{lps.pointwise.band}
 \title{Pointwise Variance and Confidence Band for a Fixed-Configuration LPS Fit}
 \usage{
-lps.pointwise.band(object, sigma = NULL, level = 0.95, check.tol = 1e-10)
+lps.pointwise.band(
+  object,
+  sigma = NULL,
+  level = 0.95,
+  check.tol = 1e-10,
+  variance.method = c("residual", "legacy")
+)
 }
 \arguments{
 \item{object}{A fitted \code{"lps"} object from \code{\link[=fit.lps]{fit.lps()}} at a fixed
@@ -14,24 +20,38 @@ configuration, with \code{X.eval} identical to \code{X}.}
 (default) to use the plug-in \code{sigma.hat}.}
 
 \item{level}{Confidence level of the band, a single number strictly
-between 0 and 1. Default \code{0.95}.}
+between 0 and 1. Default \code{0.95}.
+For independent errors with common variance and a fixed smoother, the expected
+residual sum of squares is \verb{sigma^2 * sum((I - S)^2) + ||(I - S) mu||^2}.
+The default denominator is therefore the residual noise degrees of freedom,
+\code{n - 2*tr(S) + sum(S^2)}, computed as \code{sum((I - S)^2)} for stability.
+This corrects the variance contribution; it cannot remove signal bias. Normal
+bands target the smoothed mean \verb{S mu}. Their interpretation as bands for \code{mu}
+requires negligible smoothing bias. Plug-in bands are approximate, pointwise,
+and conditional on the specified configuration; they do not account for
+tuning on the same responses, dependent errors, or simultaneous coverage.}
 
-\item{check.tol}{Passed to \code{\link[=lps.smoother.matrix]{lps.smoother.matrix()}}'s self-guard.}
+\item{check.tol}{Passed to \code{\link[=smoother.matrix]{smoother.matrix()}}'s self-guard.}
+
+\item{variance.method}{Noise-variance denominator: \code{"residual"} (default)
+uses \code{sum((I - S)^2)}; \code{"legacy"} reproduces the former \code{n - tr(S)} rule.
+Neither removes smoothing bias. Added after \code{check.tol} to preserve positional
+calls. The choice affects \code{sigma.hat} even when a known \code{sigma} is supplied.}
 }
 \value{
 A list of class \code{"lps.pointwise.band"} with named fields:
 \code{fitted} (the fit's raw fitted values), \code{se}, \code{variance}, \code{lower},
 \code{upper}, \code{level}, \code{z}, \code{sigma} (the supplied known sigma, or \code{NA} in
 plug-in mode), \code{sigma.hat}, \code{sigma.source} (\code{"known"} or \code{"plug.in"}),
-\code{df} (\code{tr(S)}), \code{rss}, \code{n.train}, \code{smoother.row.norm} (\verb{||S_i.||_2}),
+\code{df} (\code{tr(S)}), \code{residual.df}, \code{variance.method}, \code{rss}, \code{n.train}, \code{smoother.row.norm} (\verb{||S_i.||_2}),
 and \code{configuration} (the pinned fit configuration).
 }
 \description{
 Computes, from the analytically extracted linear-smoother matrix \code{S} of a
-fixed-configuration LPS fit (see \code{\link[=lps.smoother.matrix]{lps.smoother.matrix()}}), the pointwise
+fixed-configuration LPS fit (see \code{\link[=smoother.matrix]{smoother.matrix()}}), the pointwise
 variance \verb{Var(fitted_i) = sigma^2 * sum_j S_ij^2}, the effective degrees of
 freedom \code{df = tr(S)}, the plug-in noise estimate
-\code{sigma.hat^2 = RSS / (n - tr(S))}, and the pointwise confidence band
+\code{sigma.hat^2 = RSS / (n - 2*tr(S) + sum(S^2))}, and the pointwise confidence band
 \verb{fitted_i +/- z * sigma * ||S_i.||_2} with
 \code{z = qnorm(1 - (1 - level) / 2)}.
 }
@@ -46,7 +66,7 @@ not masked.
 
 Requires \code{X.eval} identical to \code{X} (the square training-fit smoother, on
 which \code{tr(S)} and \code{RSS} are defined), in addition to all restrictions of
-\code{\link[=lps.smoother.matrix]{lps.smoother.matrix()}}. If any evaluation point's local fit returned \code{NA},
+\code{\link[=smoother.matrix]{smoother.matrix()}}. If any evaluation point's local fit returned \code{NA},
 its variance/band entries are \code{NA}, and \code{df}, \code{rss}, and \code{sigma.hat} are
 \code{NA} as well; supplying a known \code{sigma} still yields bands at the
 unaffected points.
@@ -68,5 +88,5 @@ band.known$df
 band.plugin$sigma.hat
 }
 \seealso{
-\code{\link[=lps.smoother.matrix]{lps.smoother.matrix()}}
+\code{\link[=smoother.matrix]{smoother.matrix()}}
 }

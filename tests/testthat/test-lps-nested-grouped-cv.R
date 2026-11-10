@@ -1,9 +1,5 @@
 # E1.10 Part A GATEs -- nested and grouped cross-validation machinery.
 #
-# Contract: dev/methods/lps/audit_contracts/lps_tiers1to4_contract_2026-06-11.md sB / E1.10
-# (sub-item typing per sA1); plan sE1.10 + sec:paired. Spec memo:
-# dev/methods/lps/audit_contracts/tiers1to4/e1_10_spec_questions_implementer_2026-06-11.md.
-#
 # Deterministic GATEs on inline fixtures (no DGP library):
 #   E1.10A1  no selection leakage -- the held-out outer fold never enters
 #            inner selection (behavioral invariance, per-fold).

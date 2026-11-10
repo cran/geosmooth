@@ -75,7 +75,14 @@
 }
 
 .geosmooth.shortest.path <- function(graph, edge.lengths, vertices) {
-    dgraphs::shortest.path(graph, edge.lengths, vertices)
+    # Dependency versions before dgraph expose a raw-list distance routine.
+    # New versions require an explicit dgraph and the public distance generic.
+    ns <- asNamespace("dgraphs")
+    if (!"dgraph" %in% getNamespaceExports(ns)) {
+        return(getExportedValue("dgraphs", "shortest.path")(graph, edge.lengths, vertices))
+    }
+    payload <- getExportedValue("dgraphs", "dgraph")(graph, edge.lengths)
+    dgraphs::graph.geodesic.distances(payload, vertices = vertices)
 }
 
 .exact.knn.index <- function(X, k) {
@@ -87,4 +94,18 @@
         out[i, ] <- order(d, seq_len(n))[seq_len(k)]
     }
     out
+}
+
+# Keep dependency object adaptation in one place. Statistical code consumes
+# aligned adjacency/length lists, never dependency-specific storage slots.
+.geosmooth.graph.payload <- function(graph, stage = "final") {
+    if (inherits(graph, "dgraph")) {
+        return(list(
+            adj.list = getExportedValue("dgraphs", "graph.adjacency")(graph, stage),
+            weight.list = getExportedValue("dgraphs", "graph.lengths")(graph, stage),
+            fields = list(adj = "graph.adjacency()", weight = "graph.lengths()", stage = stage)
+        ))
+    }
+    fields <- .graph.geodesic.fields(graph, stage)
+    list(adj.list = graph[[fields$adj]], weight.list = graph[[fields$weight]], fields = fields)
 }

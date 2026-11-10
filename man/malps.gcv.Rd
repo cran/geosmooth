@@ -16,20 +16,20 @@ malps.gcv(
 }
 \arguments{
 \item{object}{A \code{"malps"} object from \code{\link{fit.malps}} or
-\code{\link{refit.malps}}.}
+\code{\link{refit}}.}
 
 \item{y}{Optional response vector.  Defaults to \code{object$y}.}
 
 \item{smoother.matrix}{Optional precomputed matrix from
-\code{\link{malps.smoother.matrix}}.}
+\code{\link{smoother.matrix}}.}
 
 \item{include.loocv}{Logical; include analytic leave-one-out residuals and
 mean squared error.}
 
 \item{max.n}{Maximum dense smoother size passed to
-\code{\link{malps.smoother.matrix}} when \code{smoother.matrix = NULL}.}
+\code{\link{smoother.matrix}} when \code{smoother.matrix = NULL}.}
 
-\item{allow.robust}{Logical; passed to \code{\link{malps.smoother.matrix}}.}
+\item{allow.robust}{Logical; passed to \code{\link{smoother.matrix}}.}
 
 \item{...}{Reserved for future extensions.}
 }
@@ -43,7 +43,7 @@ and analytic leave-one-out residual diagnostics from a MALPS smoother matrix.
 These diagnostics are exact for fixed-support, fixed-weight linear MALPS
 fits.  For cross-validated fits they are conditional on the selected support
 profile.  Robust fits are rejected by default for the same reason described
-in \code{\link{malps.smoother.matrix}}.
+in \code{\link{smoother.matrix}}.
 }
 \details{
 The GCV score is computed as

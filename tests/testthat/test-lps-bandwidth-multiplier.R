@@ -1,7 +1,6 @@
 # E1.9 GATEs -- decouple bandwidth from support size.
 #
-# Contract: dev/methods/lps/audit_contracts/lps_tiers1to4 (sB / E1.9);
-# frozen spec dev/methods/lps/specs/lps_experimental_plan_2026-06-09.tex
+# Specification: dev/methods/lps/specs/lps_experimental_plan_2026-06-09.tex
 # (E1.9).
 # Fixtures: helper-lps-e1-9.R (configurations) and
 # helper-lps-e1-9-reference.R (pre-change pinned values; provenance in its

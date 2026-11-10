@@ -116,8 +116,8 @@ target coefficient \code{+1} and predictor coefficients \code{-h_ij}.}
 \item{drop.rank.deficient}{Logical. The current implementation requires
 \code{TRUE}.}
 
-\item{sync.row.normalize}{Synchronization-row normalization. Phase S2 uses
-\code{"l2"} by default.}
+\item{sync.row.normalize}{Synchronization-row normalization. The current
+implementation uses \code{"l2"} by default.}
 
 \item{sync.min.norm}{Minimum raw synchronization-row norm. Rows below this
 threshold are dropped with metadata.}

@@ -7,21 +7,20 @@
 #' equation solution using weighted averaging.
 #'
 #' @details
-#' Harmonic smoothing preserves the overall shape of a function defined on a
-#' graph while removing local fluctuations. It works by iteratively updating
-#' interior vertex values as weighted averages of their neighbors until
-#' convergence, while keeping boundary values fixed.
+#' Boundary vertices are exactly the region vertices with a neighbor outside
+#' the region. Degree-one vertices are not automatically boundary vertices.
+#' Boundary values and values outside the region remain fixed. Each synchronous
+#' relaxation step replaces interior values by neighbor averages with conductance
+#' \eqn{1 / (w + 10^{-10})}, where \eqn{w} is the supplied edge length.
 #'
-#' The algorithm:
-#' \enumerate{
-#'   \item Identifies boundary vertices (vertices with neighbors outside the
-#'         region or degree 1 vertices)
-#'   \item Iteratively updates interior vertex values using edge-weighted averaging
-#'   \item Continues until convergence or maximum iterations reached
-#' }
-#'
-#' Edge weights are incorporated by using their inverse as weighting factors,
-#' respecting the geometric structure of the graph.
+#' With no boundary, this function returns the input unchanged, with status
+#' \code{"no_boundary"} and \code{converged = FALSE}. With no interior there
+#' is nothing to solve: status is \code{"no_interior"} and convergence is true.
+#' On a disconnected region, components without a connection to fixed boundary
+#' values are not uniquely anchored; relaxation can oscillate. Inspect convergence
+#' before using the result as a harmonic solution. Unlike this basic function,
+#' \code{harmonic.smoother()} also runs relaxation when the whole region has no
+#' boundary, retaining its historical behavior.
 #'
 #' @param adj.list A list of integer vectors, where each vector contains indices
 #'   of vertices adjacent to the corresponding vertex. Indices must be 1-based.
@@ -44,7 +43,9 @@
 #'       vertex counts for the requested region and its boundary/interior split;
 #'     \item \code{num_iterations}: the number of relaxation iterations run;
 #'     \item \code{max_change} and \code{max_residual}: per-iteration convergence
-#'       diagnostics.
+#'       diagnostics;
+#'     \item \code{status}: \code{converged}, \code{iteration_limit},
+#'       \code{no_boundary}, or \code{no_interior}.
 #'   }
 #'
 #' @examples
@@ -79,8 +80,8 @@ perform.harmonic.smoothing <- function(adj.list,
         stop("'adj.list' and 'weight.list' must have the same length")
     }
 
-    if (!is.numeric(values) || !is.vector(values)) {
-        stop("'values' must be a numeric vector")
+    if (!is.numeric(values) || !is.vector(values) || any(!is.finite(values))) {
+        stop("'values' must be a finite numeric vector")
     }
 
     if (length(values) != length(adj.list)) {
@@ -91,7 +92,7 @@ perform.harmonic.smoothing <- function(adj.list,
         stop("'region.vertices' must be a numeric vector of vertex indices")
     }
 
-    region.vertices <- as.integer(region.vertices)
+    region.vertices <- .validate.vertex.indices(region.vertices, length(adj.list), "region.vertices")
 
     if (length(region.vertices) == 0) {
         stop("'region.vertices' must not be empty")
@@ -106,13 +107,13 @@ perform.harmonic.smoothing <- function(adj.list,
         stop("'max.iterations' must be a single numeric value")
     }
 
-    max.iterations <- as.integer(max.iterations)
+    max.iterations <- .validate.positive.integer.scalar(max.iterations, "max.iterations")
 
     if (max.iterations < 1) {
         stop("'max.iterations' must be a positive integer")
     }
 
-    if (!is.numeric(tolerance) || length(tolerance) != 1 || tolerance <= 0) {
+    if (!is.numeric(tolerance) || length(tolerance) != 1 || !is.finite(tolerance) || tolerance <= 0) {
         stop("'tolerance' must be a single positive numeric value")
     }
 
@@ -131,11 +132,13 @@ perform.harmonic.smoothing <- function(adj.list,
                  "]] must match")
         }
 
+        adj.list[[i]] <- .validate.vertex.indices(adj.list[[i]], length(adj.list),
+                                                  sprintf("adj.list[[%d]]", i))
         if (any(adj.list[[i]] < 1) || any(adj.list[[i]] > length(adj.list))) {
             stop("adj.list[[", i, "]] contains invalid vertex indices")
         }
 
-        if (any(weight.list[[i]] <= 0)) {
+        if (any(!is.finite(weight.list[[i]])) || any(weight.list[[i]] <= 0)) {
             stop("All weights in weight.list[[", i, "]] must be positive")
         }
     }
@@ -159,27 +162,27 @@ perform.harmonic.smoothing <- function(adj.list,
 #' Perform Harmonic Smoothing with Topology Tracking
 #'
 #' @description
-#' Applies harmonic smoothing to function values defined on vertices of a graph
-#' while tracking how the topological structure (local extrema and their basins)
-#' evolves during the smoothing process. This helps identify the optimal level
-#' of smoothing that reduces noise while preserving significant features.
+#' Relaxes graph values while recording changes in local extrema. Boundary
+#' vertices have neighbors outside the region and retain their original values.
 #'
 #' @details
-#' This function extends standard harmonic smoothing by monitoring the evolution
-#' of local extrema during the iterative process. It identifies a "sweet spot"
-#' where the topological structure stabilizes, indicating that noise has been
-#' removed without over-flattening important features.
+#' Uses the same inverse-length neighbor averages and boundary definition as
+#' \code{\link{perform.harmonic.smoothing}}. Unlike the basic function, it also
+#' relaxes regions with no boundary. Such a problem is not uniquely anchored;
+#' synchronous updates can oscillate on bipartite graphs, including paths.
 #'
-#' The algorithm:
-#' \enumerate{
-#'   \item Iteratively performs harmonic smoothing on interior vertices
-#'   \item Periodically identifies local extrema and their basins
-#'   \item Monitors the stability of the topological structure
-#'   \item Identifies when the topological structure stabilizes
-#' }
-#'
-#' The function returns comprehensive information about the smoothing process,
-#' including all intermediate states and the detected stability point.
+#' The recorded diagnostic compares sets of (vertex, minimum/maximum) pairs.
+#' Its value is one minus twice the number of shared pairs divided by the sum
+#' of the two set sizes (zero for two empty sets). A detection means that the
+#' last \code{stability.window} recorded differences are at most
+#' \code{stability.threshold}. It does not establish numerical convergence,
+#' optimal smoothing, noise removal, or stability of full attraction basins.
+#' In particular, recording every two iterations can conceal an alternating
+#' oscillation. Always inspect \code{converged} and \code{max_residual} separately.
+#' Stability detection does not stop relaxation or select the returned fit.
+#' The initial and final states are always recorded, including a final partial
+#' recording interval. Disconnected components without fixed boundary values
+#' have the same lack of anchoring as a region without a boundary.
 #'
 #' @param adj.list A list of integer vectors, where each vector contains indices
 #'     of vertices adjacent to the corresponding vertex. Indices must be
@@ -195,8 +198,8 @@ perform.harmonic.smoothing <- function(adj.list,
 #'     Default is 1e-6.
 #' @param record.frequency Integer scalar, how often to record states (every N
 #'     iterations). Default is 1 (record every iteration).
-#' @param stability.window Integer scalar, number of consecutive iterations to
-#'     check for topological stability. Default is 3.
+#' @param stability.window Integer scalar, number of consecutive recorded
+#'     differences to check for extrema stability. Default is 3.
 #' @param stability.threshold Numeric scalar in \eqn{[0,1]}, maximum allowed
 #'     difference in topology to consider stable. Default is 0.05.
 #'
@@ -205,8 +208,15 @@ perform.harmonic.smoothing <- function(adj.list,
 #'   \item{i_harmonic_predictions}{Matrix of function values at each recorded
 #'     iteration (columns are iterations)}
 #'   \item{i_basins}{List of matrices representing extrema at each iteration}
-#'   \item{stable_iteration}{Integer indicating the iteration at which topology
-#'     stabilized}
+#'   \item{stable_iteration}{First iteration with a detected extrema-stability
+#'     window, or \code{NA_integer_} if none was detected}
+#'   \item{stability_detected}{Whether an extrema-stability window was detected}
+#'   \item{num_iterations, recorded_iterations}{Number of relaxation updates
+#'     and their actual indices for the recorded columns, starting at zero}
+#'   \item{max_change, max_residual}{Per-update maximum change and harmonic
+#'     residual. Both must fall below \code{tolerance} for convergence}
+#'   \item{status}{\code{converged}, \code{iteration_limit}, or
+#'     \code{no_interior}}
 #'   \item{topology_differences}{Numeric vector of differences between consecutive
 #'     recorded iterations}
 #'   \item{basin_cx_differences}{Alias of \code{topology_differences}}
@@ -252,8 +262,8 @@ harmonic.smoother <- function(adj.list,
         stop("'adj.list' and 'weight.list' must have the same length")
     }
 
-    if (!is.numeric(values) || !is.vector(values)) {
-        stop("'values' must be a numeric vector")
+    if (!is.numeric(values) || !is.vector(values) || any(!is.finite(values))) {
+        stop("'values' must be a finite numeric vector")
     }
 
     if (length(values) != length(adj.list)) {
@@ -264,7 +274,7 @@ harmonic.smoother <- function(adj.list,
         stop("'region.vertices' must be a numeric vector of vertex indices")
     }
 
-    region.vertices <- as.integer(region.vertices)
+    region.vertices <- .validate.vertex.indices(region.vertices, length(adj.list), "region.vertices")
 
     if (length(region.vertices) == 0) {
         stop("'region.vertices' must not be empty")
@@ -279,13 +289,13 @@ harmonic.smoother <- function(adj.list,
         stop("'max.iterations' must be a single numeric value")
     }
 
-    max.iterations <- as.integer(max.iterations)
+    max.iterations <- .validate.positive.integer.scalar(max.iterations, "max.iterations")
 
     if (max.iterations < 1) {
         stop("'max.iterations' must be a positive integer")
     }
 
-    if (!is.numeric(tolerance) || length(tolerance) != 1 || tolerance <= 0) {
+    if (!is.numeric(tolerance) || length(tolerance) != 1 || !is.finite(tolerance) || tolerance <= 0) {
         stop("'tolerance' must be a single positive numeric value")
     }
 
@@ -293,7 +303,7 @@ harmonic.smoother <- function(adj.list,
         stop("'record.frequency' must be a single numeric value")
     }
 
-    record.frequency <- as.integer(record.frequency)
+    record.frequency <- .validate.positive.integer.scalar(record.frequency, "record.frequency")
 
     if (record.frequency < 1) {
         stop("'record.frequency' must be a positive integer")
@@ -303,14 +313,14 @@ harmonic.smoother <- function(adj.list,
         stop("'stability.window' must be a single numeric value")
     }
 
-    stability.window <- as.integer(stability.window)
+    stability.window <- .validate.positive.integer.scalar(stability.window, "stability.window")
 
     if (stability.window < 1) {
         stop("'stability.window' must be a positive integer")
     }
 
     if (!is.numeric(stability.threshold) || length(stability.threshold) != 1 ||
-        stability.threshold < 0 || stability.threshold > 1) {
+        !is.finite(stability.threshold) || stability.threshold < 0 || stability.threshold > 1) {
         stop("'stability.threshold' must be a single numeric value between 0 and 1")
     }
 
@@ -329,11 +339,13 @@ harmonic.smoother <- function(adj.list,
                  "]] must match")
         }
 
+        adj.list[[i]] <- .validate.vertex.indices(adj.list[[i]], length(adj.list),
+                                                  sprintf("adj.list[[%d]]", i))
         if (any(adj.list[[i]] < 1) || any(adj.list[[i]] > length(adj.list))) {
             stop("adj.list[[", i, "]] contains invalid vertex indices")
         }
 
-        if (any(weight.list[[i]] <= 0)) {
+        if (any(!is.finite(weight.list[[i]])) || any(weight.list[[i]] <= 0)) {
             stop("All weights in weight.list[[", i, "]] must be positive")
         }
     }
@@ -368,6 +380,18 @@ harmonic.smoother <- function(adj.list,
 #'
 #' @return Invisibly returns the input object.
 #'
+#' @examples
+#' fit <- structure(
+#'   list(
+#'     stable_iteration = 2L,
+#'     i_harmonic_predictions = matrix(1:4, nrow = 2),
+#'     i_basins = list(matrix(c(1, 1), ncol = 2)),
+#'     topology_differences = numeric()
+#'   ),
+#'   class = "harmonic_smoother"
+#' )
+#' print(fit)
+#'
 #' @seealso \code{\link{harmonic.smoother}}, \code{\link{summary.harmonic_smoother}}
 #'
 #' @method print harmonic_smoother
@@ -375,7 +399,7 @@ harmonic.smoother <- function(adj.list,
 print.harmonic_smoother <- function(x, ...) {
   cat("Harmonic Smoother Results\n")
   cat("------------------------\n")
-  cat(sprintf("Stable iteration: %d\n", x$stable_iteration))
+  .print.harmonic.status(x)
   cat(sprintf("Number of recorded iterations: %d\n", ncol(x$i_harmonic_predictions)))
 
   n_extrema <- if (length(x$i_basins) > 0) {
@@ -400,7 +424,9 @@ print.harmonic_smoother <- function(x, ...) {
 #' @param ... Further arguments passed to or from other methods.
 #'
 #' @return An object of class \code{"summary.harmonic_smoother"} containing:
-#'   \item{stable_iteration}{The iteration at which topology stabilized}
+#'   \item{stable_iteration, stability_detected}{Extrema-stability detection,
+#'     separate from numerical convergence; iteration is NA if undetected}
+#'   \item{converged, status, num_iterations}{Numerical relaxation status}
 #'   \item{iterations_recorded}{Total number of recorded iterations}
 #'   \item{initial_extrema}{Number of extrema at the first iteration}
 #'   \item{initial_maxima}{Number of maxima at the first iteration}
@@ -410,6 +436,17 @@ print.harmonic_smoother <- function(x, ...) {
 #'   \item{final_minima}{Number of minima at the final iteration}
 #'   \item{extrema_reduction}{Reduction in number of extrema}
 #'   \item{topology_diff_summary}{Summary statistics of topology differences}
+#'
+#' @examples
+#' fit <- structure(
+#'   list(
+#'     stable_iteration = 2L,
+#'     i_basins = list(matrix(c(1, 1), ncol = 2)),
+#'     topology_differences = numeric()
+#'   ),
+#'   class = "harmonic_smoother"
+#' )
+#' summary(fit)
 #'
 #' @seealso \code{\link{harmonic.smoother}}, \code{\link{print.summary.harmonic_smoother}}
 #'
@@ -430,6 +467,10 @@ summary.harmonic_smoother <- function(object, ...) {
   # Create result structure
   result <- list(
     stable_iteration = object$stable_iteration,
+    stability_detected = object$stability_detected,
+    converged = object$converged,
+    status = object$status,
+    num_iterations = object$num_iterations,
     iterations_recorded = length(object$i_basins),
     initial_extrema = if (length(extrema_counts) > 0) extrema_counts[1] else 0,
     initial_maxima = if (length(maxima_counts) > 0) maxima_counts[1] else 0,
@@ -464,6 +505,24 @@ summary.harmonic_smoother <- function(object, ...) {
 #'
 #' @return Invisibly returns the input object.
 #'
+#' @examples
+#' object <- structure(
+#'   list(
+#'     stable_iteration = 2L,
+#'     iterations_recorded = 1L,
+#'     initial_extrema = 1L,
+#'     initial_maxima = 1L,
+#'     initial_minima = 0L,
+#'     final_extrema = 1L,
+#'     final_maxima = 1L,
+#'     final_minima = 0L,
+#'     extrema_reduction = 0L,
+#'     topology_diff_summary = NULL
+#'   ),
+#'   class = "summary.harmonic_smoother"
+#' )
+#' print(object)
+#'
 #' @seealso \code{\link{summary.harmonic_smoother}}
 #'
 #' @method print summary.harmonic_smoother
@@ -471,7 +530,7 @@ summary.harmonic_smoother <- function(object, ...) {
 print.summary.harmonic_smoother <- function(x, ...) {
   cat("Summary of Harmonic Smoother Results\n")
   cat("-----------------------------------\n")
-  cat(sprintf("Stability detected at iteration: %d\n", x$stable_iteration))
+  .print.harmonic.status(x)
   cat(sprintf("Total iterations recorded: %d\n\n", x$iterations_recorded))
 
   cat("Extrema Evolution:\n")
@@ -540,11 +599,16 @@ plot.harmonic_smoother <- function(x, y = NULL, ..., type = c("topology", "extre
       return(invisible(x))
     }
 
-    plot(x$topology_differences, type = "l",
-         xlab = "Iteration", ylab = "Topology Difference",
-         main = "Evolution of Topological Structure", ...)
-    graphics::abline(v = x$stable_iteration, col = "blue", lty = 2)
-    graphics::legend("topright", legend = "Stability point", col = "blue", lty = 2)
+    iterations <- if (is.null(x$recorded_iterations)) seq_along(x$topology_differences) else x$recorded_iterations[-1L]
+    plot.args <- utils::modifyList(list(
+        x = iterations, y = x$topology_differences, type = "l",
+        xlab = "Iteration", ylab = "Extrema-set difference", ylim = c(0, 1),
+        main = "Changes in Recorded Extrema"), list(...))
+    do.call(graphics::plot, plot.args)
+    if (isTRUE(x$stability_detected)) {
+      graphics::abline(v = x$stable_iteration, col = "blue", lty = 2)
+      graphics::legend("topright", legend = "Extrema stability detected", col = "blue", lty = 2)
+    }
 
   } else if (type == "extrema") {
     # Plot the evolution of extrema counts
@@ -569,18 +633,22 @@ plot.harmonic_smoother <- function(x, y = NULL, ..., type = c("topology", "extre
       }
     })
 
-    iterations <- seq_along(extrema_counts)
-    plot(iterations, extrema_counts, type = "l", col = "black",
-         xlab = "Iteration", ylab = "Count",
-         main = "Evolution of Extrema Counts", ...)
+    iterations <- if (is.null(x$recorded_iterations)) seq_along(extrema_counts) else x$recorded_iterations
+    plot.args <- utils::modifyList(list(
+        x = iterations, y = extrema_counts, type = "l", col = "black",
+        xlab = "Iteration", ylab = "Count", ylim = range(0, extrema_counts),
+        main = "Evolution of Extrema Counts"), list(...))
+    do.call(graphics::plot, plot.args)
     graphics::lines(iterations, maxima_counts, col = "red")
     graphics::lines(iterations, minima_counts, col = "blue")
-    graphics::abline(v = x$stable_iteration, col = "green", lty = 2)
+    if (isTRUE(x$stability_detected)) graphics::abline(v = x$stable_iteration, col = "green", lty = 2)
 
+    detected <- isTRUE(x$stability_detected)
     graphics::legend("topright",
-                     legend = c("Total", "Maxima", "Minima", "Stability point"),
-                     col = c("black", "red", "blue", "green"),
-                     lty = c(1, 1, 1, 2))
+                     legend = c("Total", "Maxima", "Minima",
+                                if (detected) "Extrema stability detected"),
+                     col = c("black", "red", "blue", if (detected) "green"),
+                     lty = c(1, 1, 1, if (detected) 2))
 
   } else if (type == "values") {
     # Plot original vs smoothed values
@@ -682,7 +750,7 @@ get.region.boundary <- function(adj.list, region) {
         stop("'region' must be a numeric vector of vertex indices")
     }
 
-    region <- as.integer(region)
+    region <- .validate.vertex.indices(region, length(adj.list), "region")
 
     if (length(region) == 0) {
         return(integer(0))
@@ -704,10 +772,11 @@ get.region.boundary <- function(adj.list, region) {
     boundary_vertices <- integer(0)
 
     for (v in region) {
-        neighbors <- adj.list[[v]]
+        neighbors <- .validate.vertex.indices(adj.list[[v]], length(adj.list),
+                                               sprintf("adj.list[[%d]]", v))
 
         if (!is.numeric(neighbors)) {
-            stop("adj.list[[", v, "]] must be a numeric vector")
+            stop("adj.list[[", v, "]] must be a finite numeric vector")
         }
 
         ## Check if vertex has any neighbor outside the region
@@ -726,4 +795,21 @@ get.region.boundary <- function(adj.list, region) {
     }
 
     return(boundary_vertices)
+}
+
+.print.harmonic.status <- function(x) {
+    convergence <- if (is.null(x$converged)) "unavailable (older object)" else
+        if (isTRUE(x$converged)) "yes" else "no"
+    cat("Numerical convergence:", convergence, "\n")
+    if (!is.null(x$status)) cat("Relaxation status:", x$status, "\n")
+    if (!is.null(x$num_iterations)) cat("Relaxation iterations:", x$num_iterations, "\n")
+    if (isTRUE(x$stability_detected)) {
+        cat("Extrema stability detected at iteration:", x$stable_iteration,
+            "(does not imply numerical convergence)\n")
+    } else if (is.null(x$stability_detected)) {
+        cat("Extrema stability detection: unavailable (older object)\n")
+    } else {
+        cat("Extrema stability: not detected\n")
+    }
+    invisible(x)
 }

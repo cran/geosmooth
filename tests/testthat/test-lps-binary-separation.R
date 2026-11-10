@@ -1,8 +1,6 @@
 # E2.14 — local logistic robustness under separation (Tier 2 GATE).
 #
-# Contract (dev/methods/lps/audit_contracts/lps_tiers1to4 via
-# dev/methods/lps/specs, frozen spec
-# S E2.14): with IRLS step-halving the deviance trajectory is non-increasing
+# With IRLS step-halving the deviance trajectory is non-increasing
 # to within 1e-8 per step; the final fitted probability lies strictly in
 # (0, 1) and the coefficients are finite; non-convergence within the
 # iteration cap triggers the documented, telemetered fallback; EXACT

@@ -1,8 +1,6 @@
 # E2.15 — binomial selection NA-consistency (Tier 2 GATE).
 #
-# Amendment (dev/methods/lps/audit_contracts/
-# lps_e2_15_binomial_na_consistency_amendment_2026-06-12.md, promoting
-# spec-memo item 11): gaussian and bernoulli
+# Gaussian and Bernoulli
 # selection score any candidate with a non-finite CV prediction as Inf
 # (the .klp.rmse convention), but binomial selection previously delegated
 # to .klp.logloss, which DROPS non-finite pairs -- so a candidate

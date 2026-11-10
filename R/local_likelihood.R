@@ -87,6 +87,24 @@
 #' @param return.details Logical; if \code{TRUE}, keep per-evaluation
 #'   diagnostics.
 #'
+#' @param chart.geometry Opt-in chart implementation. Default \code{"legacy"}
+#'   preserves existing behavior. \code{"euclidean"} uses ambient distances;
+#'   \code{"linf.simplex"} max-normalizes rows and uses intrinsic Euclidean
+#'   distances, including intermediate faces. Both new modes support Bernoulli
+#'   degree 0/1 fits, weighted \code{"local.pca"} or \code{"local.pls"}, numeric
+#'   dimensions and grid CV only. Supports and kernels use the original metric,
+#'   independent of projection. Directions, weighted centering and score scaling
+#'   are learned from training rows only, including within every CV fold.
+#' @param unfold.faces Certify and unfold local simplex neighborhoods using
+#'   \code{\link{unfold.simplex.chart}}? Requires simplex geometry. Unsupported
+#'   charts use the declared \code{fallback}: \code{"degree0"} or \code{"na"}.
+#' @param intercept.mass In nonlegacy modes, positive symmetric pseudo-count
+#'   for successes and failures at the weighted chart center. Default 0.5 keeps
+#'   constant-response supports finite. Kernel times quadrature weights are
+#'   normalized to support.size before fitting; slopes have the ridge penalty.
+#'   Convergence requires the maximum absolute gradient below tol, not just a
+#'   small step. Failed fits retain diagnostic status and use the fallback.
+#'
 #' @return A list with class \code{"local_likelihood"} containing
 #'   \code{fitted.values}, selected controls, and local solver diagnostics.
 #' @examples
@@ -113,7 +131,7 @@ fit.local.likelihood <- function(
     foldid = NULL,
     cv.folds = 5L,
     cv.seed = 1L,
-    coordinate.method = c("coordinates", "local.pca"),
+    coordinate.method = c("coordinates", "local.pca", "local.pls"),
     chart.dim = NULL,
     chart.dim.grid = NULL,
     selection.strategy = c("grid", "sparse_kd", "plateau_kd"),
@@ -129,7 +147,32 @@ fit.local.likelihood <- function(
     optimizer = c("newton", "optim"),
     max.iter = 50L,
     tol = 1e-8,
-    return.details = TRUE) {
+    return.details = TRUE,
+    chart.geometry = c("legacy", "euclidean", "linf.simplex"),
+    unfold.faces = FALSE,
+    intercept.mass = 0.5) {
+
+    chart.geometry <- match.arg(chart.geometry)
+    coordinate.method <- match.arg(coordinate.method)
+    if (chart.geometry != "legacy") {
+        if (match.arg(likelihood.family) != "bernoulli")
+            stop("Nonlegacy charts currently support only Bernoulli likelihood.", call. = FALSE)
+        if (match.arg(selection.strategy) != "grid" || !is.null(chart.dim.max) ||
+            is.character(chart.dim))
+            stop("Nonlegacy charts require a numeric chart dimension and grid selection.", call. = FALSE)
+        if (match.arg(optimizer) != "newton")
+            stop("Nonlegacy charts require optimizer = 'newton'.", call. = FALSE)
+        return(.fit.local.binary.chart(X, y, X.eval, support.size, degree,
+            match.arg(kernel), bandwidth.multiplier, coordinate.method, chart.dim,
+            quadrature.weights, lambda.ridge, match.arg(fallback), max.iter, tol,
+            return.details, chart.geometry, unfold.faces, intercept.mass,
+            support.grid, degree.grid, kernel.grid, bandwidth.multiplier.grid,
+            lambda.ridge.grid, chart.dim.grid, foldid, cv.folds, cv.seed))
+    }
+    if (coordinate.method == "local.pls" || !identical(unfold.faces, FALSE) ||
+        !identical(intercept.mass, 0.5))
+        stop("PLS, unfolding and intercept.mass require nonlegacy chart.geometry.", call. = FALSE)
+
 
     prepared <- .local.chart.prepare.X.eval(X, X.eval)
     X <- prepared$X

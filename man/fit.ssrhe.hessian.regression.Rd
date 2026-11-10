@@ -2,6 +2,8 @@
 % Please edit documentation in R/ssrhe_hessian_energy.R
 \name{fit.ssrhe.hessian.regression}
 \alias{fit.ssrhe.hessian.regression}
+\alias{fit.ssrhe.hessian.regression.cv}
+\alias{fit.ssrhe.hessian.regression.gcv}
 \title{Fit SSRHE-Style Hessian-Energy Regression}
 \usage{
 fit.ssrhe.hessian.regression(
@@ -33,7 +35,12 @@ fit.ssrhe.hessian.regression(
   return.A = TRUE,
   return.local.diagnostics = FALSE,
   return.timing = FALSE,
-  verbose = FALSE
+  verbose = FALSE,
+  lambda.selection = c("fixed", "cv", "gcv"),
+  lambda1.grid = NULL,
+  lambda2.grid = NULL,
+  cv.control = list(),
+  gcv.control = list()
 )
 }
 \arguments{
@@ -153,11 +160,45 @@ are also attached in \code{neighborhoods$timing}.}
 
 \item{verbose}{Logical. If \code{TRUE}, print a short native construction
 message.}
+
+\item{lambda.selection}{Penalty selection: \code{"fixed"} (the default)
+uses \code{lambda1} and \code{lambda2}; \code{"cv"} holds out observed
+labels; \code{"gcv"} uses generalized cross-validation. Grid inputs
+require an explicit \code{"cv"} or \code{"gcv"} selection mode.}
+
+\item{lambda1.grid, lambda2.grid}{Nonnegative penalty candidates for CV or
+GCV. \code{lambda1.grid} is required in either selection mode;
+\code{lambda2.grid = NULL} means \code{0}. Do not also supply scalar
+\code{lambda1} or \code{lambda2}. Unless explicitly set, \code{stabilizer}
+is enabled when any supplemental penalty candidate is positive.}
+
+\item{cv.control}{Named list used only with \code{lambda.selection = "cv"}.
+Entries: \code{foldid = NULL} (one fold label per row of \code{X};
+nonpositive or missing labels are ignored), \code{cv.folds = 5L},
+\code{loss = "mse"} (or \code{"mae"}), and
+\code{selection = "min"} (or \code{"one.se"}, choosing the largest
+total penalty within one standard error of the minimum). Support-search
+entries are \code{support.selection = "rule"} (or \code{"cv"}),
+\code{support.grid = NULL}, and \code{support.max.candidates = 8L}.
+Fold count is ignored when \code{foldid} is supplied.}
+
+\item{gcv.control}{Named list used only with \code{lambda.selection = "gcv"}.
+Entries: \code{trace.method = "exact"} (or \code{"hutchinson"}),
+\code{trace.n.probes = 50L}, \code{trace.seed = NULL},
+\code{support.selection = "rule"} (or \code{"gcv"}),
+\code{support.grid = NULL}, and \code{support.max.candidates = 8L}.
+Unknown, unnamed, or duplicated control entries are errors. Controls
+for a different selection mode are rejected rather than ignored.}
 }
 \value{
 A list of class \code{"ssrhe.hessian.fit"} containing fitted values,
 residuals, input response, weights, lambda parameters, objective/energy
-diagnostics, the reused \code{operator}, solver metadata, and the call.
+diagnostics, the reused \code{operator}, solver metadata, the call, and
+\code{lambda.selection}. CV adds class \code{"ssrhe.hessian.cv.fit"},
+\code{cv.table}, \code{fold.id}, and \code{selection}; GCV adds class
+\code{"ssrhe.hessian.gcv.fit"}, \code{gcv.table}, \code{gcv.trace}, and
+\code{selection}. Support searches retain \code{selected.support} and
+the corresponding \code{support.cv.table} or \code{support.gcv.table}.
 }
 \description{
 Fits the \eqn{\ell_2} Hessian-energy regularized estimator associated with
@@ -187,10 +228,76 @@ fixed-intercept local quadratic fit, doubled diagonal Hessian components,
 and optional supplemental stabilizer. The package exposes both \eqn{A} and
 \eqn{B=A^\top A}; the fitted \eqn{\ell_2} estimator uses \eqn{B}.
 }
+\section{Penalty selection}{
+
+Fixed fitting supports response vectors or matrices. CV and GCV currently
+select penalties for one response vector at a time. Label CV removes each
+validation fold from the data-fit term and scores its held-out observed
+positive-weight labels. It supports missing responses. GCV requires a fully
+observed response and strictly positive observation weights, and minimizes
+\deqn{\frac{n^{-1}\sum_i w_i(y_i-\hat f_i)^2}
+  {(1-\mathrm{tr}(S_\lambda)/n)^2},}
+where \eqn{S_\lambda=(W+\lambda_1 B+\lambda_2 B_S+\epsilon I)^{-1}W}.
+The exact trace is deterministic. The Hutchinson option uses Rademacher
+probes, reports trace standard errors, and is reproducible with
+\code{gcv.control = list(trace.method = "hutchinson", trace.seed = ...)}.
+
+Both selection modes can also search adaptive-radius support profiles:
+set \code{support.selection} to the same mode in its control list. Each row
+of \code{support.grid} contains \code{adaptive.k.scale}, \code{min.support},
+and optionally \code{max.support}. A \code{NULL} grid is constructed by
+\code{\link{ssrhe.support.grid}}. Each profile requires a new operator and
+a full penalty search, so this can substantially increase runtime.
+}
+
+\section{Migration}{
+
+The former \code{fit.ssrhe.hessian.regression.cv()} and
+\code{fit.ssrhe.hessian.regression.gcv()} entry points have been retired.
+Use this function with \code{lambda.selection = "cv"} or \code{"gcv"}.
+Move \code{fold.id} to \code{cv.control$foldid}, \code{nfolds} to
+\code{cv.control$cv.folds}, and \code{loss}/\code{selection} to
+\code{cv.control}. Move \code{gcv.trace.method}, \code{gcv.trace.n.probes},
+and \code{gcv.trace.seed} to \code{trace.method}, \code{trace.n.probes},
+and \code{trace.seed} in \code{gcv.control}. Support search settings also
+belong in the active control list; both former support candidate limits
+are now named \code{support.max.candidates}.
+}
+
+\section{Choosing controls}{
+
+\strong{First fit:} supply \code{X}, \code{y}, neighborhood size \code{k}, \code{tangent.dim}, and
+\code{lambda1}; use \code{lambda.selection = "fixed"} for a specified penalty.
+
+\strong{Selection:} \code{lambda.selection}, \code{lambda1.grid}, and \code{lambda2.grid} select
+penalties. Fold settings belong in \code{cv.control}; trace settings belong in
+\code{gcv.control}. Label CV and GCV are different criteria. Support selection
+rebuilds the operator for each candidate and multiplies this work.
+
+\strong{Geometry:} neighborhood, adaptive-radius, tangent and derivative controls
+determine the operator. Reuse it when fitting multiple responses.
+
+\strong{Numerics:} ridge and local conditioning controls stabilize solves.
+Exact GCV traces require more solves than stochastic trace estimates; the
+latter report sampling uncertainty and need a reproducible probe seed.
+
+\strong{Diagnostics:} inspect the selection table, energies, observed-label mask,
+and solver metadata. \code{\link[=fitted]{fitted()}} and \code{\link[=residuals]{residuals()}} preserve response matrices.
+}
+
 \examples{
 X <- matrix(seq(0, 1, length.out = 12), ncol = 1)
 fit.ssrhe.hessian.regression(
   X, sin(2 * pi * X[, 1]), k = 6L, tangent.dim = 1L, lambda1 = 0.1
+)
+fit.ssrhe.hessian.regression(
+  X, sin(2 * pi * X[, 1]), k = 6L, tangent.dim = 1L,
+  lambda.selection = "cv", lambda1.grid = c(0.01, 0.1),
+  cv.control = list(cv.folds = 2L)
+)
+fit.ssrhe.hessian.regression(
+  X, sin(2 * pi * X[, 1]), k = 6L, tangent.dim = 1L,
+  lambda.selection = "gcv", lambda1.grid = c(0.01, 0.1)
 )
 }
 \references{

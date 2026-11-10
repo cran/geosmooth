@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Observed-data heat fits with numerical cross-checks</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Observed-data heat fits with numerical
+cross-checks</h1>
+
+
+
+<p>A completed linear solve does not establish that a graph smoother is
+accurate. The default <code>numerical.policy = &quot;conservative&quot;</code>
+therefore retains the spectral, heat-time and missing-block condition
+checks. An opt-in policy, <code>&quot;verified.fallback&quot;</code>, offers a
+bounded alternative when the latter two checks refuse a calculation. It
+checks <strong>every</strong> requested positive time and observed
+response mask, even when the conservative checks would pass. It reports
+which calculations needed the fallback. It does not weaken the initial
+requirement that the graph’s positive eigenvalues be numerically
+distinguishable from its known nullspace.</p>
+<p>The fallback currently supports a complete spectrum, the unnormalized
+Laplacian, the heat filter, and a fixed tuning grid. It uses two
+calculations in double precision. Their agreement is evidence for the
+tested calculation, not an interval certificate or a guarantee for
+arbitrary graphs. It costs an additional dense eigendecomposition and
+additional matrix solves. Partial spectra, normalized Laplacians, other
+filters and automatic grid expansion are outside this implementation’s
+scope.</p>
+<div id="the-fitted-model" class="section level2">
+<h2>The fitted model</h2>
+<p>Let <span class="math inline">\(L\)</span> be the unnormalized graph
+Laplacian and <span class="math inline">\(H_t=\exp(-tL)\)</span> its
+heat operator. For fully observed responses the fitted vector is <span class="math inline">\(H_ty\)</span>. For observed vertices <span class="math inline">\(O\)</span>, unobserved vertices <span class="math inline">\(U\)</span>, and <span class="math inline">\(q=|O|\)</span>, the observed-data extension
+minimizes</p>
+<p><span class="math display">\[\|y_O-f_O\|^2+f^T\{\exp(tL)-I\}f,\qquad
+t&gt;0.\]</span></p>
+<p>Each connected component must have an observed response. A completely
+unobserved component is unidentified and causes an error. With only one
+observation in each component the extension is componentwise constant
+and GCV is undefined; the path is available but cannot tune a time.</p>
+<p>Directly forming <span class="math inline">\(\exp(tL)\)</span> can
+overflow. Instead, put <span class="math inline">\(A=(I-H_t)/s\)</span>,
+where <span class="math inline">\(s=\max_i(1-\exp(-t\lambda_i))\)</span>
+and <span class="math inline">\(\lambda_i\)</span> are the Laplacian
+eigenvalues. The implementation computes the small complements with
+<code>-expm1(-t * lambda)</code>. Missing-block elimination gives</p>
+<p><span class="math display">\[X=A_{UU}^{-1}A_{UO},\qquad
+K=A_{OO}-A_{OU}X,\]</span> <span class="math display">\[\widehat
+f_U=-Xy_O,\qquad \widehat f_O=(I-sK)y_O.\]</span></p>
+<p>The implementation evaluates this Schur complement through a residual
+factor. Write <span class="math inline">\(A=F^TF\)</span>, with <span class="math inline">\(F=\operatorname{diag}(\sqrt{(1-\exp(-t\lambda_i))/s})V^T\)</span>
+for the checked eigenvector matrix <span class="math inline">\(V\)</span>. Then</p>
+<p><span class="math display">\[R=F_O-F_UX,\qquad K=R^TR.\]</span></p>
+<p>This is the same matrix in exact arithmetic. It avoids subtracting
+two large, nearly equal matrices when the observed vertices are
+separated by a weak edge. That subtraction can corrupt a small residual
+trace and hence GCV even when predictions and the missing-block solve
+appear accurate. The factor calculation adds no ridge or denominator
+adjustment. The independent bordered reference and all acceptance
+tolerances below remain unchanged.</p>
+<p>Scaling cancels from GCV, giving a stable expression even when <span class="math inline">\(t\)</span> is very small:</p>
+<p><span class="math display">\[\operatorname{df}=q-s\operatorname{tr}(K),\qquad
+\operatorname{GCV}=q\frac{\|Ky_O\|^2}{\operatorname{tr}(K)^2}.\]</span></p>
+<p>The sample size here is the number of observed responses, not the
+number of vertices. The identity endpoint <span class="math inline">\(t=0\)</span> is returned separately with undefined
+GCV and unknown values still missing. There is no denominator floor,
+ridge, edge removal or removal of a failed positive grid point.</p>
+</div>
+<div id="the-alternative-calculation-and-acceptance-checks" class="section level2">
+<h2>The alternative calculation and acceptance checks</h2>
+<p>A separate base-R LAPACK eigendecomposition starts from the actual
+Laplacian. Both eigensystems undergo the existing nullspace, residual
+and orthogonality checks. The alternative route constructs <span class="math inline">\(P=A^+\)</span>, the Moore–Penrose pseudoinverse of
+its own normalized heat complement. With <span class="math inline">\(Q\)</span> the component constant orthonormal
+basis, it solves</p>
+<p><span class="math display">\[\begin{pmatrix}P_{OO}&amp;Q_O\\Q_O^T&amp;0\end{pmatrix}
+  \begin{pmatrix}K_{\mathrm{ref}}\\C\end{pmatrix}
+  =\begin{pmatrix}I_q\\0\end{pmatrix}.\]</span></p>
+<p>It predicts unobserved responses with <span class="math inline">\((P_{UO}K_{\mathrm{ref}}+Q_U C)y_O\)</span> and
+observed responses with <span class="math inline">\((I-s_{\mathrm{ref}}K_{\mathrm{ref}})y_O\)</span>.
+Thus the two routes eliminate different blocks. When all responses are
+observed the reference simply applies its own heat operator; neither
+block solve is necessary.</p>
+<p>Acceptance requires all these checks, for every positive time and
+distinct observed-vertex mask:</p>
+<table>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Check</th>
+<th align="right">Maximum accepted value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Candidate missing-block scaled solve residual</td>
+<td align="right"><span class="math inline">\(10^{-8}\)</span></td>
+</tr>
+<tr class="even">
+<td align="left">Reference bordered scaled solve residual</td>
+<td align="right"><span class="math inline">\(10^{-9}\)</span></td>
+</tr>
+<tr class="odd">
+<td align="left">Maximum absolute row sum of prediction-operator
+difference</td>
+<td align="right"><span class="math inline">\(10^{-7}\)</span></td>
+</tr>
+<tr class="even">
+<td align="left">Maximum entry of error preserving the component
+nullspace, either operator</td>
+<td align="right"><span class="math inline">\(10^{-7}\)</span></td>
+</tr>
+<tr class="odd">
+<td align="left">Maximum prediction difference for centered,
+training-RMS-scaled responses</td>
+<td align="right"><span class="math inline">\(10^{-7}\)</span></td>
+</tr>
+<tr class="even">
+<td align="left">Absolute effective-degrees-of-freedom difference</td>
+<td align="right"><span class="math inline">\(10^{-7}\)</span></td>
+</tr>
+<tr class="odd">
+<td align="left">Standardized-response GCV difference</td>
+<td align="right"><span class="math inline">\(10^{-10}+10^{-7}|\operatorname{GCV}_{\mathrm{ref}}|\)</span></td>
+</tr>
+<tr class="even">
+<td align="left">Final original-unit GCV difference used for tuning</td>
+<td align="right"><span class="math inline">\(10^{-10}+10^{-7}|\operatorname{GCV}^{\mathrm{original}}_{\mathrm{ref}}|\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>For a solve <span class="math inline">\(BX=C\)</span>, its scaled
+residual is <span class="math inline">\(\max|BX-C|/\max(1,\max|C|,\|B\|_\infty\max|X|)\)</span>.
+The reference uses the analogous expression with an identity-and-zero
+right hand side. A nonfinite check, a failed solve, unresolved residual
+degrees of freedom, or a failed tolerance stops the entire path. All
+returned positive-time predictions and valid GCV scores must be
+finite.</p>
+<p>The final scores use the same centered calculation as the numerical
+check. For each response, subtract its observed mean <strong>within each
+connected component</strong>, then divide by its training
+root-mean-square deviation <span class="math inline">\(\sigma\)</span>.
+Means are calculated relative to an observed anchor in that component,
+avoiding summing a large additive baseline. Write <span class="math inline">\(y_O=c_O+\sigma z\)</span>, where <span class="math inline">\(c\)</span> is constant within each component.
+Since <span class="math inline">\(Kc_O=0\)</span> and the prediction
+operator <span class="math inline">\(T\)</span> preserves those
+component constants, the package computes</p>
+<p><span class="math display">\[\widehat f=c+\sigma Tz,\qquad
+\operatorname{GCV}_{\mathrm{original}}=\sigma^2\operatorname{GCV}(z).\]</span></p>
+<p>These are algebraic identities, not a change of regression model. The
+same observed component means and scale are used for the independent
+calculation. Both the standardized scores and these final original-unit
+scores must pass their stated agreement tests <strong>before</strong>
+being returned or used to select a time. The implementation never
+recomputes GCV by multiplying <span class="math inline">\(K\)</span> by
+the uncentered measurements. <code>gcv.scaled.error</code> records the
+standardized comparison, while <code>gcv.final.scaled.error</code>
+records the final-score comparison; each is divided by its allowed
+tolerance and must not exceed one. A response constant within every
+component uses scale one and has exactly zero residual score whenever
+residual degrees of freedom exist. Component means use observed training
+measurements only. The operator nullspace-preservation check remains
+mandatory.</p>
+<p><code>numerical$diagnostics</code> retains both conservative
+diagnostics and agreement checks. <code>response.mask</code> maps
+response columns to distinct masks; matrix factorizations are shared for
+responses with the same mask. The declared limits and reference
+eigensystem diagnostics are also returned. These two computations can
+share floating-point limitations; no claim of arbitrary forward accuracy
+follows from their agreement.</p>
+</div>
+<div id="score-accuracy-and-time-selection-are-different-decisions" class="section level2">
+<h2>Score accuracy and time selection are different decisions</h2>
+<p>Passing a numerical score check does not imply that a difference
+between two scores is resolved. For example, two scores <span class="math inline">\(1-7\times10^{-8}\)</span> and <span class="math inline">\(1+7\times10^{-8}\)</span> are each within
+approximately <span class="math inline">\(10^{-7}\)</span> of the same
+exact value. Their difference exceeds <span class="math inline">\(10^{-7}\)</span>; it still provides no evidence
+that one time is better. The verified fallback therefore uses a separate
+selection rule, without changing any numerical acceptance limit.</p>
+<p>At time <span class="math inline">\(j\)</span>, let <span class="math inline">\(c_j\)</span> and <span class="math inline">\(r_j\)</span> be the checked candidate and
+reference scores in original response units, and define the per-score
+resolution radius <span class="math inline">\(e(x)=10^{-10}+10^{-7}|x|\)</span>. The combined
+band covers both formulations:</p>
+<p><span class="math display">\[\ell_j=\max\{0,\min(c_j-e(c_j),r_j-e(r_j))\},\qquad
+u_j=\max\{c_j+e(c_j),r_j+e(r_j)\}.\]</span></p>
+<p>These are <strong>operational numerical-resolution bands</strong>,
+not statistical confidence intervals or certified enclosures of exact
+values. Their scale is explicitly tied to the existing pointwise score
+budgets. When the formulations agree exactly, comparing two times
+accounts for the sum of their two budgets, not just one budget. Using
+the envelope of both formulations also prevents a nominal preference in
+one calculation from concealing disagreement in the other.</p>
+<p>Automatic selection among distinct times requires a single time <span class="math inline">\(j\)</span> satisfying</p>
+<p><span class="math display">\[u_j &lt; \min_{k:\,t_k\ne
+t_j}\ell_k.\]</span></p>
+<p>The separation must be strict: overlapping or touching bands do not
+justify selection. Duplicate copies of a time are one alternative, with
+their bands enveloped and all original indices retained. With one
+prescribed distinct time, application remains available and is labeled
+<code>single_candidate</code>; there is no claim of an identified
+optimum.</p>
+<p>The returned <code>tuning</code> record provides:</p>
+<ul>
+<li><code>unique_grid_minimum</code> only when a time is separated from
+every alternative. Endpoint flags remain explicit.
+<code>bracketed</code> means interior to the supplied grid, not proven
+optimal over continuous time.</li>
+<li><code>unresolved_flat_gcv</code> if all bands share a common value,
+or structural flatness is known as described below. No time is
+selected.</li>
+<li><code>multiple_near_minima</code> if several possible minima remain,
+even if other times are clearly worse. No time is selected. This is
+stricter than the earlier behavior that chose the smallest nominal score
+in this situation.</li>
+<li><code>no_valid_candidate</code> when there are no valid positive
+scores.</li>
+</ul>
+<p><code>near.minimum.indices</code> contains every index whose time has
+a lower band endpoint no greater than the smallest upper endpoint,
+except known structurally flat paths, for which every valid time is
+retained. <code>selection.allowed</code>,
+<code>structural.flat.reason</code>, <code>resolution</code> (both
+scores, their radii and combined bands), and
+<code>separation.margin</code> make the decision inspectable. Raw
+candidate and reference minimum indices are diagnostics, not selected
+smoothing times. The reference score matrix is also in
+<code>numerical$reference.gcv.scores</code>.</p>
+<p>Both unresolved statuses stop automatic selection in
+<code>fit()</code> and automatically tuned <code>refit()</code>. The
+path and a fixed-time application remain available.</p>
+<div id="structurally-flat-cases-do-not-depend-on-rounding" class="section level3">
+<h3>Structurally flat cases do not depend on rounding</h3>
+<p>If there are <span class="math inline">\(q\)</span> observations and
+<span class="math inline">\(c\)</span> connected components, all
+observed, the observed residual space has dimension <span class="math inline">\(q-c\)</span>. When <span class="math inline">\(q-c=1\)</span>, its direction is fixed and its
+residual matrix has the form <span class="math inline">\(K=\kappa
+vv^T\)</span> for a fixed unit contrast <span class="math inline">\(v\)</span>. Hence</p>
+<p><span class="math display">\[\operatorname{GCV}=q\frac{\|\kappa
+vv^Ty\|^2}{\kappa^2}
+=q(v^Ty)^2,\]</span></p>
+<p>which is independent of time. Two observations on a connected graph
+give the familiar special case <span class="math inline">\((y_1-y_2)^2\)</span>. Such paths are marked
+structurally flat regardless of their numerical spread and cannot tune a
+time. Responses constant within each observed component likewise have
+exactly zero residual score and are structurally flat when GCV is
+defined. When <span class="math inline">\(q=c\)</span>, residual degrees
+of freedom vanish and GCV remains undefined instead.</p>
+<p>These structural checks accompany, rather than replace, all numerical
+acceptance checks. An inaccurate or nonfinite path still fails. The
+absolute part of the score budget has squared-response units; changing
+units can still change whether a numerical difference is resolved. This
+is distinct from the additive-shift invariance provided by componentwise
+centering.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(geosmooth)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>adj <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="dv">2</span><span class="dt">L</span>, <span class="fu">c</span>(<span class="dv">1</span><span class="dt">L</span>,<span class="dv">3</span><span class="dt">L</span>), <span class="fu">c</span>(<span class="dv">2</span><span class="dt">L</span>,<span class="dv">4</span><span class="dt">L</span>), <span class="fu">c</span>(<span class="dv">3</span><span class="dt">L</span>,<span class="dv">5</span><span class="dt">L</span>), <span class="dv">4</span><span class="dt">L</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>w <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="dv">1</span>, <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>), <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>), <span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">4</span>), <span class="dv">4</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>basis <span class="ot">&lt;-</span> <span class="fu">metric.graph.lowpass.basis</span>(</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  adj, w, <span class="at">weight.type=</span><span class="st">&quot;conductance&quot;</span>, <span class="at">spectrum=</span><span class="st">&quot;full&quot;</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">numerical.policy=</span><span class="st">&quot;verified.fallback&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="fu">apply.metric.graph.lowpass.path</span>(</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>  basis, <span class="fu">c</span>(<span class="dv">2</span>,<span class="cn">NA</span>,<span class="dv">4</span>,<span class="cn">NA</span>,<span class="sc">-</span><span class="dv">1</span>), <span class="at">eta.grid=</span><span class="fu">c</span>(<span class="dv">0</span>,.<span class="dv">01</span>,.<span class="dv">1</span>,<span class="dv">1</span>))</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>path<span class="sc">$</span>tuning</span></code></pre></div>
+<pre><code>## [[1]]
+## [[1]]$status
+## [1] &quot;unique_grid_minimum&quot;
+## 
+## [[1]]$best.idx
+## [1] 4
+## 
+## [[1]]$lower.endpoint
+## [1] FALSE
+## 
+## [[1]]$upper.endpoint
+## [1] TRUE
+## 
+## [[1]]$bracketed
+## [1] FALSE
+## 
+## [[1]]$near.minimum.indices
+## [1] 4
+## 
+## [[1]]$selection.allowed
+## [1] TRUE
+## 
+## [[1]]$structural.flat.reason
+## NULL
+## 
+## [[1]]$resolution.rule
+## [1] &quot;two_form_score_envelope_v1&quot;
+## 
+## [[1]]$resolution
+##   grid.index  eta candidate.score reference.score candidate.radius
+## 1          2 0.01        22.81063        22.81063     2.281163e-06
+## 2          3 0.10        21.70200        21.70200     2.170300e-06
+## 3          4 1.00        13.98273        13.98273     1.398373e-06
+##   reference.radius    lower    upper
+## 1     2.281163e-06 22.81063 22.81063
+## 2     2.170300e-06 21.70200 21.70200
+## 3     1.398373e-06 13.98273 13.98273
+## 
+## [[1]]$separation.margin
+## [1] 7.719266
+## 
+## [[1]]$candidate.minimum.index
+## [1] 4
+## 
+## [[1]]$reference.minimum.index
+## [1] 4</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>path<span class="sc">$</span>numerical<span class="sc">$</span>diagnostics[,<span class="fu">c</span>(<span class="st">&quot;eta&quot;</span>,<span class="st">&quot;n.observed&quot;</span>,<span class="st">&quot;fallback.used&quot;</span>,</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>                              <span class="st">&quot;candidate.residual&quot;</span>,<span class="st">&quot;operator.error&quot;</span>)]</span></code></pre></div>
+<pre><code>##    eta n.observed fallback.used candidate.residual operator.error
+## 1 0.01          3         FALSE       1.389134e-19   9.018394e-16
+## 2 0.10          3         FALSE       5.551115e-17   8.049117e-16
+## 3 1.00          3         FALSE       5.551115e-17   7.771561e-16</code></pre>
+<p><code>fit.metric.graph.lowpass()</code> accepts the same policy
+explicitly. <code>apply.metric.graph.lowpass.path()</code> and
+<code>refit()</code> inherit it unless overridden. The conservative
+default, including its previous refusals, is unchanged.</p>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

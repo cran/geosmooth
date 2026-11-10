@@ -21,3 +21,7 @@ A one-row data frame.
 \description{
 Summarize a synthetic dataset as one metadata row
 }
+\examples{
+x <- materialize.synthetic(synthetic.registry.spec("G1"), n = 20L, seed = 1L)
+as.data.frame(x)
+}

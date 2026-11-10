@@ -1,6 +1,7 @@
 Package: geosmooth
-Title: Geometric Smoothing and Conditional Expectation Methods
-Version: 0.1.0
+Title: Geometric Methods for Nonparametric Regression and Density
+        Estimation
+Version: 0.2.0
 Authors@R: c(
     person(given = "Pawel",
            family = "Gajer",
@@ -44,7 +45,8 @@ Description: Provides geometric methods for nonparametric regression and
     graphs.
     Methods include local polynomial smoothing, model-averaged local polynomial
     smoothing, local polynomial lifting trend filtering, synchronized local
-    polynomial lifting trend filtering, graph low-pass filtering, and
+    polynomial lifting trend filtering, order-2 Gaussian and logistic trend filtering,
+    graph low-pass filtering, and
     Hessian-energy regression. Methodological references include Gajer and
     Ravel (2025) "Adaptive Geometric Regression for High-Dimensional Structured
     Data" <doi:10.48550/arXiv.2511.03817>, Fan and Gijbels (1996,
@@ -54,21 +56,23 @@ Description: Provides geometric methods for nonparametric regression and
     <https://papers.nips.cc/paper/3741-semi-supervised-regression-using-hessian-energy-with-an-application-to-semi-supervised-dimensionality-reduction>.
 Copyright: file inst/COPYRIGHTS
 License: GPL (>= 3)
-URL: https://github.com/pgajer/geosmooth
+URL: https://pgajer.github.io/geosmooth/,
+        https://github.com/pgajer/geosmooth
 BugReports: https://github.com/pgajer/geosmooth/issues
 Encoding: UTF-8
 Language: en-US
 SystemRequirements: GNU make
-LinkingTo: Rcpp
-Depends: R (>= 3.5.0)
-Imports: dgraphs (>= 0.1.0), digest, jsonlite, MASS, Matrix, methods,
-        Rcpp, stats, utils
-Suggests: genlasso, grip, knitr, rmarkdown, testthat (>= 3.0.0), waldo
+LinkingTo: Rcpp, dgraphs (>= 0.4.0)
+Depends: R (>= 4.1.0)
+Imports: dgraphs (>= 0.4.0), digest, jsonlite, MASS, Matrix, methods,
+        parallel, Rcpp, stats, utils
+Suggests: genlasso, grip (>= 0.3.0), knitr, rmarkdown, splines,
+        testthat (>= 3.0.0), waldo, withr
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 NeedsCompilation: yes
-Packaged: 2026-08-31 21:42:50 UTC; pgajer
+Packaged: 2026-11-10 08:05:10 UTC; pgajer
 Author: Pawel Gajer [aut, cre],
   Gael Guennebaud [ctb] (Eigen),
   Benoit Jacob [ctb] (Eigen),
@@ -82,4 +86,4 @@ Author: Pawel Gajer [aut, cre],
   University of Maryland [cph] (ANN)
 Maintainer: Pawel Gajer <pgajer@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-09-12 14:10:10 UTC
+Date/Publication: 2026-11-10 18:20:02 UTC

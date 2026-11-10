@@ -1,4 +1,4 @@
-test_that("every exported function has an Rd example section", {
+test_that("every exported function and registered S3 method has an Rd example section", {
     root <- geosmooth.test.source.root()
     skip_if(is.null(root),
             "package source tree is unavailable in installed-package tests")
@@ -8,6 +8,11 @@ test_that("every exported function has an Rd example section", {
         "^export[(](.*)[)]$", "\\1",
         grep("^export[(]", namespace, value = TRUE)
     )
+    s3.methods <- sub(
+        "^S3method[(]([^,]+),([^,)]+).*$", "\\1.\\2",
+        grep("^S3method[(]", namespace, value = TRUE)
+    )
+    documented.objects <- c(exports, s3.methods)
 
     rd.files <- list.files(
         file.path(root, "man"), pattern = "[.]Rd$", full.names = TRUE
@@ -19,9 +24,12 @@ test_that("every exported function has an Rd example section", {
         unlist(lapply(rd[tags == "\\alias"], as.character), use.names = FALSE)
     }), use.names = FALSE)
 
-    missing <- setdiff(exports, documented)
+    missing <- setdiff(documented.objects, documented)
     expect_equal(
         missing, character(),
-        info = paste("Exports without Rd examples:", paste(missing, collapse = ", "))
+        info = paste(
+            "Exports or S3 registrations without Rd examples:",
+            paste(missing, collapse = ", ")
+        )
     )
 })

@@ -226,7 +226,7 @@ List rcpp_perform_harmonic_smoothing(
     max_change.reserve(static_cast<size_t>(max_iterations));
     max_residual.reserve(static_cast<size_t>(max_iterations));
 
-    bool converged = false;
+    bool converged = interior.empty();
     int num_iterations = 0;
 
     if (!boundary.empty() && !interior.empty()) {
@@ -295,6 +295,8 @@ List rcpp_perform_harmonic_smoothing(
     return List::create(
         Named("harmonic_predictions") = harmonic_predictions,
         Named("converged") = converged,
+        Named("status") = interior.empty() ? "no_interior" :
+            (boundary.empty() ? "no_boundary" : (converged ? "converged" : "iteration_limit")),
         Named("num_region") = static_cast<int>(region.size()),
         Named("num_boundary") = static_cast<int>(boundary.size()),
         Named("num_interior") = static_cast<int>(interior.size()),
@@ -381,7 +383,11 @@ List rcpp_harmonic_smoother(
     basin_history.push_back(extrema_matrix(adj, f));
 
     bool converged = interior.empty();
-    int stable_iteration = max_iterations;
+    int stable_iteration = NA_INTEGER;
+    int num_iterations = 0;
+    std::vector<int> recorded_iterations(1, 0);
+    std::vector<double> max_change;
+    std::vector<double> max_residual;
     bool stability_seen = false;
     const double eps = 1e-10;
     std::vector<double> next_f = f;
@@ -412,8 +418,27 @@ List rcpp_harmonic_smoother(
             f[static_cast<size_t>(v)] = next_f[static_cast<size_t>(v)];
         }
 
-        converged = iter_change <= tolerance;
-        if (((iter + 1) % record_frequency == 0) || converged) {
+        double iter_residual = 0.0;
+        for (const int v : interior) {
+            double sum = 0.0;
+            double wsum = 0.0;
+            const auto& nbrs = adj[static_cast<size_t>(v)];
+            const auto& ws = weights[static_cast<size_t>(v)];
+            for (size_t k = 0; k < nbrs.size(); ++k) {
+                const double conductance = 1.0 / (ws[k] + eps);
+                sum += conductance * f[static_cast<size_t>(nbrs[k])];
+                wsum += conductance;
+            }
+            if (wsum > 0.0) iter_residual = std::max(iter_residual,
+                std::abs(f[static_cast<size_t>(v)] - sum / wsum));
+        }
+        max_change.push_back(iter_change);
+        max_residual.push_back(iter_residual);
+        num_iterations = iter + 1;
+        converged = iter_change < tolerance && iter_residual < tolerance;
+        if ((num_iterations % record_frequency == 0) || converged ||
+            num_iterations == max_iterations) {
+            recorded_iterations.push_back(num_iterations);
             prediction_history.push_back(f);
             IntegerMatrix current_basins = extrema_matrix(adj, f);
             topology_differences.push_back(
@@ -430,15 +455,6 @@ List rcpp_harmonic_smoother(
                 stability_seen = true;
             }
         }
-    }
-
-    if (!stability_seen && converged) {
-        stable_iteration = static_cast<int>(
-            std::min<size_t>(
-                static_cast<size_t>(max_iterations),
-                topology_differences.size() * static_cast<size_t>(record_frequency)
-            )
-        );
     }
 
     NumericVector harmonic_predictions(n);
@@ -470,6 +486,13 @@ List rcpp_harmonic_smoother(
         Named("i_harmonic_predictions") = i_harmonic_predictions,
         Named("i_basins") = i_basins,
         Named("stable_iteration") = stable_iteration,
+        Named("stability_detected") = stability_seen,
+        Named("num_iterations") = num_iterations,
+        Named("recorded_iterations") = IntegerVector(recorded_iterations.begin(), recorded_iterations.end()),
+        Named("max_change") = NumericVector(max_change.begin(), max_change.end()),
+        Named("max_residual") = NumericVector(max_residual.begin(), max_residual.end()),
+        Named("status") = interior.empty() ? "no_interior" :
+            (converged ? "converged" : "iteration_limit"),
         Named("topology_differences") = diffs,
         Named("basin_cx_differences") = diffs,
         Named("converged") = converged,

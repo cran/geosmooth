@@ -1,11 +1,18 @@
 .package.source.files <- function() {
+  root <- geosmooth.test.source.root()
+  if (is.null(root)) return(character())
   c(
-    list.files("R", pattern = "\\.[Rr]$", full.names = TRUE),
-    list.files("vignettes", pattern = "\\.[Rr](md)?$", full.names = TRUE))
+    list.files(file.path(root, "R"), pattern = "\\.[Rr]$",
+               full.names = TRUE),
+    list.files(file.path(root, "vignettes"), pattern = "\\.[Rr](md)?$",
+               full.names = TRUE))
 }
 
 test_that("installed synthetic code has no cross-repository source calls", {
   files <- .package.source.files()
+  skip_if(!length(files),
+          "package source tree is unavailable in installed-package tests")
+  expect_gt(length(files), 0L)
   text <- unlist(lapply(files, readLines, warn = FALSE), use.names = FALSE)
   expect_false(any(grepl(
     "source\\s*\\(\\s*['\"](?:/Users/|\\.\\./)",
@@ -60,4 +67,38 @@ test_that("canonical APIs do not expose deprecated arguments or fields", {
   aliases <- c("U", "Z", "X", "y", "d", "p", "sigma", "gtag", "params")
   expect_false(any(aliases %in% names(object)))
   expect_false(inherits(object, "dgp_dataset"))
+})
+
+test_that("geometry re-exports and separate quadratic selection entry points are retired", {
+  migrated <- c(
+    "edge.lengths.synthetic.geometry", "embed.synthetic.geometry",
+    "quadform.gradient", "quadform.metric", "synthetic.circle", "synthetic.helix",
+    "synthetic.point.line.junction", "synthetic.quadform",
+    "synthetic.sampling.clustered", "synthetic.sampling.dirichlet.zeros",
+    "synthetic.sampling.gapped.uniform", "synthetic.sampling.grid.interval",
+    "synthetic.sampling.truncated.normal", "synthetic.sampling.uniform.box",
+    "synthetic.sampling.uniform.disk", "synthetic.sampling.uniform.interval",
+    "synthetic.sampling.uniform.rectangle", "synthetic.simplex",
+    "synthetic.sphere.cap", "synthetic.stratified", "synthetic.stratum.point",
+    "synthetic.stratum.rectangle", "synthetic.stratum.segment",
+    "synthetic.torus.patch", "synthetic.trefoil"
+  )
+  retired.fitters <- c("fit.ssrhe.hessian.regression.cv", "fit.ssrhe.hessian.regression.gcv")
+  exports <- getNamespaceExports("geosmooth")
+  expect_length(migrated, 25L)
+  expect_false(any(c(migrated, retired.fitters) %in% exports))
+  expect_true(all(migrated %in% getNamespaceExports("dgraphs")))
+  expect_true("synthetic.sampling.stratified" %in% exports)
+  expect_true("fit.ssrhe.hessian.regression" %in% exports)
+  expect_false(any(vapply(retired.fitters, exists, logical(1),
+                          envir = asNamespace("geosmooth"), inherits = FALSE)))
+  # Exercise the user-visible dependency spelling, without attaching dgraphs.
+  spec <- synthetic.spec(
+    dgraphs::synthetic.circle(),
+    dgraphs::synthetic.sampling.uniform.interval(0, 2 * pi),
+    synthetic.truth.polynomial(c(b0 = 0)), synthetic.response.gaussian(sd = 0.1)
+  )
+  data <- materialize.synthetic(spec, n = 12L, seed = 31L)
+  expect_s3_class(data, "synthetic_dataset")
+  expect_silent(validate.synthetic.dataset(data))
 })

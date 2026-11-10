@@ -277,6 +277,7 @@ lpl.tf.operator <- function(
     out
 }
 
+#' @rdname geosmooth-print-methods
 #' @method print lpl_tf_operator
 #' @export
 print.lpl_tf_operator <- function(x, ...) {
@@ -293,7 +294,7 @@ print.lpl_tf_operator <- function(x, ...) {
 
 #' Fit A Local Polynomial Lifting Trend Filter
 #'
-#' Fits the Phase-2 LPL-TF estimator with a fixed operator:
+#' Fits an LPL-TF estimator with a fixed operator:
 #' \deqn{\hat f = \arg\min_f \frac12\|y-f\|_2^2 +
 #' \lambda\|A_{\mathrm{LPL}}f\|_1.}
 #'
@@ -308,10 +309,10 @@ print.lpl_tf_operator <- function(x, ...) {
 #' @param lambda.grid Optional nonnegative lambda grid.
 #' @param lambda Optional fixed lambda shortcut. If supplied, it is used as the
 #'   single fixed lambda and \code{lambda.selection} must be \code{"fixed"}.
-#' @param lambda.selection \code{"cv"} or \code{"fixed"}. Phase 2 requires an
-#'   explicit \code{lambda.grid} for CV so the candidate grid is not generated
-#'   from the full response vector before fold scoring.
-#' @param operator.grid Optional Phase-3 operator candidate grid. Supply a data
+#' @param lambda.selection \code{"cv"} or \code{"fixed"}. CV requires an
+#'   explicit \code{lambda.grid} so the candidate grid is not generated from
+#'   the full response vector before fold scoring.
+#' @param operator.grid Optional operator candidate grid. Supply a data
 #'   frame with one row per candidate or a list of named lists. Candidate fields
 #'   may include operator-construction arguments such as \code{degree},
 #'   \code{support.type}, \code{support.size}, \code{min.support},
@@ -322,10 +323,16 @@ print.lpl_tf_operator <- function(x, ...) {
 #' @param cv.loss Cross-validation loss, \code{"mse"}, \code{"rmse"}, or
 #'   \code{"mae"}. \code{"rmse"} uses the same lambda ordering as MSE and reports
 #'   square-rooted fold errors.
-#' @param cv.seed Reserved for reproducible generated folds. Phase 2 generated
-#'   folds are deterministic even when this is \code{NULL}.
-#' @param cv.repeats Phase 2 supports only one CV repeat.
-#' @param solver Phase 2 supports only \code{"genlasso"}.
+#' @param cv.seed Reserved for reproducible generated folds. Generated folds
+#'   are deterministic even when this is \code{NULL}.
+#' @param cv.repeats Number of CV repeats. The current implementation supports
+#'   only one repeat.
+#' @param cv.penalty.scale \code{"training_mass"} (default) scales fold lambda
+#'   by the training/full weight-sum ratio, preserving its coefficient relative
+#'   to mean loss. \code{"none"} uses the earlier unchanged numerical lambda.
+#'   All folds must have finite predictions for a candidate to be eligible.
+#' @param solver Solver backend. The current implementation supports only
+#'   \code{"genlasso"}.
 #' @param selection Lambda selection rule, \code{"min"} or \code{"one.se"}.
 #' @param n.lambda Number of generated lambdas when a genlasso path is used and
 #'   \code{lambda.grid = NULL}.
@@ -370,12 +377,14 @@ fit.lpl.tf <- function(
     btol = 1e-7,
     eps = 1e-4,
     verbose = FALSE,
+    cv.penalty.scale = c("training_mass", "none"),
     ...) {
 
     if (!requireNamespace("genlasso", quietly = TRUE)) {
         stop("Package 'genlasso' is required for fit.lpl.tf().", call. = FALSE)
     }
     lambda.selection <- match.arg(lambda.selection)
+    cv.penalty.scale <- match.arg(cv.penalty.scale)
     cv.loss <- match.arg(cv.loss)
     solver <- match.arg(solver)
     selection <- match.arg(selection)
@@ -383,7 +392,7 @@ fit.lpl.tf <- function(
     cv.folds <- .validate.ssrhe.positive.integer(cv.folds, "cv.folds")
     cv.repeats <- .validate.ssrhe.positive.integer(cv.repeats, "cv.repeats")
     if (cv.repeats != 1L) {
-        stop("Phase 2 fit.lpl.tf() supports cv.repeats = 1 only.",
+        stop("fit.lpl.tf() supports cv.repeats = 1 only.",
              call. = FALSE)
     }
     if (!is.null(lambda)) {
@@ -394,7 +403,7 @@ fit.lpl.tf <- function(
         lambda.selection <- "fixed"
     }
     if (identical(lambda.selection, "cv") && is.null(lambda.grid)) {
-        stop("Phase 2 fit.lpl.tf() requires an explicit 'lambda.grid' ",
+        stop("fit.lpl.tf() requires an explicit 'lambda.grid' ",
              "when lambda.selection = 'cv' to avoid response-dependent ",
              "full-data lambda-grid generation.", call. = FALSE)
     }
@@ -426,6 +435,7 @@ fit.lpl.tf <- function(
                 cv.loss = cv.loss,
                 cv.seed = cv.seed,
                 cv.repeats = cv.repeats,
+                cv.penalty.scale = cv.penalty.scale,
                 solver = solver,
                 selection = selection,
                 n.lambda = n.lambda,
@@ -494,6 +504,7 @@ fit.lpl.tf <- function(
         loss = loss.internal,
         selection = selection,
         solver.args = solver.args,
+        cv.penalty.scale = cv.penalty.scale,
         verbose = verbose
     )
     runtime <- proc.time()[["elapsed"]] - start
@@ -538,6 +549,7 @@ fit.lpl.tf <- function(
         cv.loss.internal = loss.internal,
         cv.folds = cv.folds,
         cv.repeats = cv.repeats,
+        cv.penalty.scale = cv.penalty.scale,
         selection = selection,
         n.lambda = n.lambda,
         beta.grid = raw.fit$beta.grid,
@@ -569,10 +581,13 @@ fit.lpl.tf <- function(
 #'   fit <- fit.lpl.tf(X, X[, 1]^2, degree = 1L,
 #'                     support.type = "knn", support.size = 7L,
 #'                     lambda = 0.1, lambda.selection = "fixed")
-#'   refit.lpl.tf(fit, y = X[, 1]^3)
+#'   refit(fit, y = X[, 1]^3)
 #' }
+#' @seealso \code{\link{refit}} for supported fitted objects and migration.
+#' @method refit lpl_tf
+#' @aliases refit.lpl.tf
 #' @export
-refit.lpl.tf <- function(object, y, lambda = NULL, reuse.lambda = TRUE,
+refit.lpl_tf <- function(object, y, lambda = NULL, reuse.lambda = TRUE,
                          verbose = FALSE, ...) {
     if (!inherits(object, "lpl_tf")) {
         stop("'object' must be an lpl_tf fit.", call. = FALSE)
@@ -595,6 +610,7 @@ refit.lpl.tf <- function(object, y, lambda = NULL, reuse.lambda = TRUE,
         lambda = lambda,
         lambda.selection = "fixed",
         solver = object$solver$requested %||% "genlasso",
+        cv.penalty.scale = object$cv.penalty.scale %||% "none",
         verbose = verbose
     )
 }
@@ -602,12 +618,22 @@ refit.lpl.tf <- function(object, y, lambda = NULL, reuse.lambda = TRUE,
 #' Predict From A Local Polynomial Lifting Trend Filter
 #'
 #' @param object A \code{"lpl_tf"} object.
-#' @param newdata Must be \code{NULL} in Phase 2.
-#' @param type Prediction type. Phase 2 supports only \code{"response"}.
+#' @param newdata Must be \code{NULL}; prediction is currently available only
+#'   at the training points.
+#' @param type Prediction type. The current implementation supports only
+#'   \code{"response"}.
 #' @param allow.incomplete Reserved.
 #' @param ... Reserved.
 #'
 #' @return Fitted values at the training points.
+#' @examples
+#' if (requireNamespace("genlasso", quietly = TRUE)) {
+#'   X <- matrix(seq(0, 1, length.out = 18), ncol = 1)
+#'   fit <- fit.lpl.tf(X, sin(2 * pi * X[, 1]), degree = 1L,
+#'                     support.type = "knn", support.size = 7L,
+#'                     lambda = 0.1, lambda.selection = "fixed")
+#'   predict(fit)
+#' }
 #' @method predict lpl_tf
 #' @export
 predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
@@ -619,11 +645,11 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
              call. = FALSE)
     }
     if (!is.null(newdata)) {
-        stop("Phase 2 predict() for lpl_tf supports training-point prediction only; ",
+        stop("predict() for lpl_tf supports training-point prediction only; ",
              "'newdata' must be NULL.", call. = FALSE)
     }
     if (!identical(type, "response")) {
-        stop("Phase 2 predict() for lpl_tf supports type = 'response' only.",
+        stop("predict() for lpl_tf supports type = 'response' only.",
              call. = FALSE)
     }
     object$fitted.values
@@ -693,7 +719,9 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
                                       loss,
                                       selection,
                                       solver.args,
-                                      verbose = FALSE) {
+                                      verbose = FALSE,
+                                      cv.penalty.scale = c("training_mass", "none")) {
+    cv.penalty.scale <- match.arg(cv.penalty.scale)
     if (is.null(operator$A)) {
         stop("operator must contain A.", call. = FALSE)
     }
@@ -718,7 +746,7 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
         D.info = D.info
     )
     if (is.null(lambda.grid)) {
-        stop("lambda.grid is required for Phase 2 LPL-TF fitting.",
+        stop("lambda.grid is required for LPL-TF fitting.",
              call. = FALSE)
     }
     if (identical(lambda.selection, "fixed") && length(lambda.grid) != 1L) {
@@ -745,7 +773,8 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
             loss = loss,
             selection = selection,
             solver.args = solver.args,
-            use.svd = D.info$svd
+            use.svd = D.info$svd,
+            cv.penalty.scale = cv.penalty.scale
         )
         selected.idx <- cv$selected.idx
     } else {
@@ -881,24 +910,33 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
 }
 
 .lpl.tf.cv <- function(y, weights, D, D.fallback = NULL, lambda.grid, fold.id,
-                       loss, selection, solver.args, use.svd = FALSE) {
+                       loss, selection, solver.args, use.svd = FALSE,
+                       cv.penalty.scale = c("training_mass", "none")) {
+    cv.penalty.scale <- match.arg(cv.penalty.scale)
     n <- length(y)
     folds <- sort(unique(fold.id[fold.id > 0L]))
     cv.errors <- matrix(NA_real_, nrow = length(folds), ncol = length(lambda.grid))
     rownames(cv.errors) <- paste0("Fold", folds)
     colnames(cv.errors) <- format(signif(lambda.grid, 6), scientific = TRUE)
+    factors <- numeric(length(folds))
+    fold.lambda <- cv.errors
 
     for (ii in seq_along(folds)) {
         fold <- folds[ii]
         test <- which(fold.id == fold)
         train.weights <- weights
         train.weights[test] <- 0
+        factors[ii] <- .tf.cv.penalty.factor(sum(train.weights), sum(weights),
+                                             cv.penalty.scale)
+        fold.lambda[ii, ] <- lambda.grid * factors[ii]
+        fold.args <- solver.args
+        fold.args$minlam <- solver.args$minlam * factors[ii]
         path.info <- tryCatch(
             .lpl.tf.genlasso.path(
                 y = y,
                 weights = train.weights,
                 D = D,
-                solver.args = solver.args,
+                solver.args = fold.args,
                 use.svd = use.svd,
                 D.fallback = D.fallback
             ),
@@ -907,7 +945,7 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
         if (is.null(path.info)) {
             next
         }
-        beta <- .ssrhe.hessian.l1.coef.matrix(path.info$path, lambda.grid, n)
+        beta <- .ssrhe.hessian.l1.coef.matrix(path.info$path, fold.lambda[ii, ], n)
         beta.test <- beta[test, , drop = FALSE]
         finite.pred <- colSums(is.finite(beta.test)) == nrow(beta.test)
         target <- matrix(y[test], nrow = length(test), ncol = length(lambda.grid))
@@ -921,10 +959,10 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
         cv.errors[ii, ] <- fold.error
     }
 
-    mean.error <- colMeans(cv.errors, na.rm = TRUE)
+    mean.error <- colMeans(cv.errors)
     mean.error[!is.finite(mean.error)] <- Inf
     se <- apply(cv.errors, 2L, function(x) {
-        x <- x[is.finite(x)]
+        if (any(!is.finite(x))) return(Inf)
         if (length(x) < 2L) return(Inf)
         stats::sd(x) / sqrt(length(x))
     })
@@ -942,6 +980,9 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
     }
     list(
         fold.id = fold.id,
+        cv.penalty.scale = cv.penalty.scale,
+        fold.penalty.factors = stats::setNames(factors, folds),
+        fold.lambda = fold.lambda,
         lambda.grid = lambda.grid,
         fold.errors = cv.errors,
         mean.error = mean.error,
@@ -1255,10 +1296,10 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
     }
     out <- cv
     out$fold.errors <- sqrt(out$fold.errors)
-    out$mean.error <- colMeans(out$fold.errors, na.rm = TRUE)
+    out$mean.error <- colMeans(out$fold.errors)
     out$mean.error[!is.finite(out$mean.error)] <- Inf
     out$se <- apply(out$fold.errors, 2L, function(x) {
-        x <- x[is.finite(x)]
+        if (any(!is.finite(x))) return(Inf)
         if (length(x) < 2L) return(Inf)
         stats::sd(x) / sqrt(length(x))
     })
@@ -1519,29 +1560,9 @@ predict.lpl_tf <- function(object, newdata = NULL, type = c("response"),
 }
 
 .lpl.tf.extract.graph.stage <- function(graph, graph.stage) {
-    if (!is.list(graph)) {
-        stop("'graph' must be a list-like graph object.", call. = FALSE)
-    }
-    keys <- switch(
-        graph.stage,
-        final = list(c("adj_list", "weight_list"),
-                     c("adj.list", "weight.list")),
-        raw = list(c("raw_adj_list", "raw_weight_list"),
-                   c("raw.adj.list", "raw.weight.list")),
-        pruned = list(c("pruned_adj_list", "pruned_weight_list"),
-                      c("pruned.adj.list", "pruned.weight.list"))
-    )
-    for (pair in keys) {
-        if (!is.null(graph[[pair[[1L]]]]) && !is.null(graph[[pair[[2L]]]])) {
-            return(list(
-                adj.list = graph[[pair[[1L]]]],
-                weight.list = graph[[pair[[2L]]]],
-                source = paste0("graph.", graph.stage)
-            ))
-        }
-    }
-    stop("Could not extract graph adjacency and weights for graph.stage = '",
-         graph.stage, "'.", call. = FALSE)
+    payload <- .geosmooth.graph.payload(graph, graph.stage)
+    list(adj.list = payload$adj.list, weight.list = payload$weight.list,
+         source = paste0("graph.", graph.stage))
 }
 
 .lpl.tf.scalar.integer <- function(x, name, min = -Inf, max = Inf) {

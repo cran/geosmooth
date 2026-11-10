@@ -85,31 +85,39 @@
     spec, n, seed.plan, rng.policy, streams = NULL, attempt = 1L) {
   geometry <- spec$geometry.spec
   response <- spec$response.spec
-  random.frame <- identical(
-    geometry$parameters$frame, "random.orthonormal")
-  if (rng.policy == "legacy") {
-    frame.matrix <- if (random.frame) {
-      .draw.synthetic.frame(geometry, seed.plan$frame.seed)
+  random.frame <- identical(geometry$parameters$frame, "random.orthonormal")
+  if (identical(geometry$family, "g4.segment.rectangle")) {
+    frame.matrix <- NULL
+    if (rng.policy == "legacy") {
+      set.seed(seed.plan$seed)
+      sample.out <- .draw.synthetic.g4(spec$sampling.spec, n, geometry)
     } else {
-      .draw.synthetic.frame(geometry)
+      sample.out <- .with.synthetic.state(
+        .synthetic.state.for.attempt(streams$sampling, attempt),
+        .draw.synthetic.g4(spec$sampling.spec, n, geometry))
     }
-    set.seed(seed.plan$seed)
-    sample.out <- .draw.synthetic.sampling(
-      spec$sampling.spec, n, geometry)
   } else {
-    sample.state <- .synthetic.state.for.attempt(
-      streams$sampling, attempt)
-    sample.out <- .with.synthetic.state(
-      sample.state,
-      .draw.synthetic.sampling(spec$sampling.spec, n, geometry))
-    if (random.frame) {
-      frame.state <- .synthetic.state.for.attempt(
-        streams$geometry.frame, attempt)
-      frame.matrix <- .with.synthetic.state(
-        frame.state, .draw.synthetic.frame(geometry))
+    state.for.seed <- function(seed) .with.synthetic.rng.preserved({
+      set.seed(seed)
+      get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    })
+    plan <- if (rng.policy == "legacy") {
+      list(version = 1L, order = "frame.sampling",
+           sampling = state.for.seed(seed.plan$seed),
+           frame = if (random.frame) state.for.seed(seed.plan$frame.seed) else NULL)
     } else {
-      frame.matrix <- .draw.synthetic.frame(geometry)
+      list(version = 1L, order = "sampling.frame",
+           sampling = .synthetic.state.for.attempt(streams$sampling, attempt),
+           frame = if (random.frame)
+             .synthetic.state.for.attempt(streams$geometry.frame, attempt) else NULL)
     }
+    realized <- dgraphs::sample.synthetic.geometry(
+      geometry, spec$sampling.spec, n, rng.plan = plan)
+    sample.out <- realized$sample
+    frame.matrix <- realized$frame.matrix
+    # The enclosing materializer preserves the caller; legacy responses may
+    # deliberately continue from the sampling state returned by dgraphs.
+    assign(".Random.seed", realized$rng$final.state, envir = .GlobalEnv)
   }
   tag <- spec$registry.tag %||% ""
   if (tag == "G3d" && !is.null(sample.out$latent)) {

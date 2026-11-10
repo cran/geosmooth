@@ -2,7 +2,7 @@
 #'
 #' Builds the weighted graph difference operators used by graph trend
 #' filtering. The default \code{operator.family = "graph.laplacian.recursive"}
-#' uses the phase-2 recursive graph operators
+#' uses recursive graph operators
 #' \deqn{k=0:\quad \Delta_w^{(1)} = D_w,}
 #' \deqn{k=1:\quad \Delta_w^{(2)} = L_w = D_w^\top D_w,}
 #' and
@@ -131,8 +131,8 @@ graph.trend.filtering.operator <- function(adj.list,
 
 #' Fit Graph Trend Filtering
 #'
-#' Fits graph trend filtering on a supplied undirected graph. Supported
-#' phase-2 orders are \code{0L}, \code{1L}, and \code{2L}:
+#' Fits graph trend filtering on a supplied undirected graph. Supported orders
+#' are \code{0L}, \code{1L}, and \code{2L}:
 #' \deqn{
 #' \widehat\beta_\lambda =
 #' \arg\min_{\beta\in\mathbb R^n}
@@ -154,6 +154,10 @@ graph.trend.filtering.operator <- function(adj.list,
 #'   \code{lambda.grid = NULL} and \code{lambda.selection = "cv"}.
 #' @param nfolds Number of CV folds.
 #' @param foldid Optional integer fold assignments of length \code{length(y)}.
+#' @param cv.penalty.scale \code{"training_mass"} (default) multiplies fold
+#'   lambda by the training/full observation-count ratio, keeping the penalty
+#'   coefficient on the mean-loss scale. \code{"none"} retains the earlier
+#'   same-numerical-lambda convention. Fixed-lambda fits are unchanged.
 #' @param maxsteps Maximum number of path steps passed to \pkg{genlasso}.
 #' @param minlam Minimum lambda passed to \pkg{genlasso}.
 #' @param approx Logical; passed to \pkg{genlasso}.
@@ -234,7 +238,8 @@ fit.graph.trend.filtering <- function(adj.list,
                                       rtol = 1e-7,
                                       btol = 1e-7,
                                       eps = 1e-4,
-                                      verbose = FALSE) {
+                                      verbose = FALSE,
+                                      cv.penalty.scale = c("training_mass", "none")) {
     if (!requireNamespace("genlasso", quietly = TRUE)) {
         stop("Package 'genlasso' is required for fit.graph.trend.filtering().",
              call. = FALSE)
@@ -245,6 +250,7 @@ fit.graph.trend.filtering <- function(adj.list,
     }
 
     lambda.selection <- match.arg(lambda.selection)
+    cv.penalty.scale <- match.arg(cv.penalty.scale)
     operator <- graph.trend.filtering.operator(
         adj.list = adj.list,
         weight.list = weight.list,
@@ -327,7 +333,8 @@ fit.graph.trend.filtering <- function(adj.list,
             lambda.grid = lambda.grid,
             foldid = foldid,
             solver.args = solver.args,
-            use.svd = penalty.solver$svd
+            use.svd = penalty.solver$svd,
+            cv.penalty.scale = cv.penalty.scale
         )
         cv$mean.error[!finite.beta] <- Inf
         best.idx <- cv$best.idx
@@ -384,7 +391,8 @@ fit.graph.trend.filtering <- function(adj.list,
         ),
         cv = cv,
         parameters = c(
-            list(lambda.selection = lambda.selection),
+            list(lambda.selection = lambda.selection,
+                 cv.penalty.scale = cv.penalty.scale),
             solver.args[setdiff(names(solver.args), "foldid")]
         )
     )
@@ -419,7 +427,7 @@ fit.graph.trend.filtering <- function(adj.list,
     }
     order <- as.integer(order)
     if (!(order %in% 0:2)) {
-        stop("Phase-2 graph trend filtering supports only order = 0L, 1L, or 2L.",
+        stop("Graph trend filtering supports only order = 0L, 1L, or 2L.",
              call. = FALSE)
     }
     weight.rule <- match.arg(weight.rule)
@@ -820,17 +828,23 @@ fit.graph.trend.filtering <- function(adj.list,
 }
 
 .graph.trend.filtering.cv <- function(y, D, lambda.grid, foldid, solver.args,
-                                      use.svd = FALSE) {
+                                      use.svd = FALSE,
+                                      cv.penalty.scale = c("training_mass", "none")) {
+    cv.penalty.scale <- match.arg(cv.penalty.scale)
     n <- length(y)
     folds <- sort(unique(foldid))
     cv.errors <- matrix(NA_real_, nrow = length(folds), ncol = length(lambda.grid))
     rownames(cv.errors) <- paste0("Fold", folds)
     colnames(cv.errors) <- format(signif(lambda.grid, 6), scientific = TRUE)
+    factors <- numeric(length(folds))
+    fold.lambda <- cv.errors
 
     for (ii in seq_along(folds)) {
         fold <- folds[ii]
         test <- which(foldid == fold)
         train <- which(foldid != fold)
+        factors[ii] <- .tf.cv.penalty.factor(length(train), n, cv.penalty.scale)
+        fold.lambda[ii, ] <- lambda.grid * factors[ii]
         X <- as.matrix(Matrix::sparseMatrix(
             i = seq_along(train),
             j = train,
@@ -844,7 +858,7 @@ fit.graph.trend.filtering <- function(adj.list,
             D = D,
             approx = solver.args$approx,
             maxsteps = solver.args$maxsteps,
-            minlam = solver.args$minlam,
+            minlam = solver.args$minlam * factors[ii],
             rtol = solver.args$rtol,
             btol = solver.args$btol,
             eps = solver.args$eps,
@@ -852,11 +866,11 @@ fit.graph.trend.filtering <- function(adj.list,
             svd = use.svd
         ))
         beta <- tryCatch(
-            as.matrix(stats::coef(path, lambda = lambda.grid)$beta),
+            as.matrix(stats::coef(path, lambda = fold.lambda[ii, ])$beta),
             error = function(e) NULL
         )
         if (is.null(beta) || ncol(beta) != length(lambda.grid)) {
-            beta <- vapply(lambda.grid, function(lambda) {
+            beta <- vapply(fold.lambda[ii, ], function(lambda) {
                 tryCatch(
                     as.vector(stats::coef(path, lambda = lambda)$beta),
                     error = function(e) rep(NA_real_, n)
@@ -884,6 +898,9 @@ fit.graph.trend.filtering <- function(adj.list,
     }
     list(
         foldid = foldid,
+        cv.penalty.scale = cv.penalty.scale,
+        fold.penalty.factors = stats::setNames(factors, folds),
+        fold.lambda = fold.lambda,
         lambda.grid = lambda.grid,
         fold.errors = cv.errors,
         mean.error = mean.error,
@@ -894,6 +911,7 @@ fit.graph.trend.filtering <- function(adj.list,
     )
 }
 
+#' @rdname geosmooth-print-methods
 #' @method print graph.trend.filtering.fit
 #' @export
 print.graph.trend.filtering.fit <- function(x, ...) {

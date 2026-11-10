@@ -17,3 +17,7 @@
 \description{
 Print a canonical synthetic dataset
 }
+\examples{
+x <- materialize.synthetic(synthetic.registry.spec("G1"), n = 20L, seed = 1L)
+print(x)
+}

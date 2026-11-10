@@ -35,7 +35,9 @@ positive retained mode at the upper endpoint.}
 }
 \value{
 A numeric vector with grid-construction metadata stored as
-attributes.
+attributes. Exact null modes alone are excluded; uniformly rescaling
+conductances inversely rescales heat times. Unrepresentable endpoints
+cause an error.
 }
 \description{
 Creates a positive heat-time grid from a

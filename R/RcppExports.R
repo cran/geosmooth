@@ -53,6 +53,30 @@ rcpp_local_second_order_svd_chart <- function(X_support, center, chart_dim, cent
     .Call(`_geosmooth_rcpp_local_second_order_svd_chart`, X_support, center, chart_dim, center_mode, weights, rank_tolerance, rank_absolute_tolerance, curvature_condition_max, curvature_ridge, min_curvature_support, rebase_to_anchor, orient_basis)
 }
 
+logistic_tf_native <- function(design, ridge_factor, response, weights, offsets, penalty_scale, lambdas, tolerance, gap_tolerance, max_iterations) {
+    .Call(`_geosmooth_logistic_tf_native`, design, ridge_factor, response, weights, offsets, penalty_scale, lambdas, tolerance, gap_tolerance, max_iterations)
+}
+
+gaussian_tf_native <- function(design, ridge_factor, response, weights, offsets, penalty_scale, lambdas, tolerance, gap_tolerance, max_iterations) {
+    .Call(`_geosmooth_gaussian_tf_native`, design, ridge_factor, response, weights, offsets, penalty_scale, lambdas, tolerance, gap_tolerance, max_iterations)
+}
+
+logistic_tf_structured_geometry <- function(u, knots, weights) {
+    .Call(`_geosmooth_logistic_tf_structured_geometry`, u, knots, weights)
+}
+
+logistic_tf_banded_predict <- function(knots, active, coefficients, u) {
+    .Call(`_geosmooth_logistic_tf_banded_predict`, knots, active, coefficients, u)
+}
+
+logistic_tf_banded_native <- function(u, knots, nuisance, response, weights, offsets, lambdas, nuisance_ridge, curve_ridge, tolerance, gap_tolerance, max_iterations) {
+    .Call(`_geosmooth_logistic_tf_banded_native`, u, knots, nuisance, response, weights, offsets, lambdas, nuisance_ridge, curve_ridge, tolerance, gap_tolerance, max_iterations)
+}
+
+gaussian_tf_banded_native <- function(u, knots, nuisance, response, weights, offsets, lambdas, nuisance_ridge, curve_ridge, tolerance, gap_tolerance, max_iterations) {
+    .Call(`_geosmooth_gaussian_tf_banded_native`, u, knots, nuisance, response, weights, offsets, lambdas, nuisance_ridge, curve_ridge, tolerance, gap_tolerance, max_iterations)
+}
+
 #' Kernel local polynomial CV RMSE for ambient coordinates
 #'
 #' Internal C++ backend for `fit.lps()`.
@@ -123,6 +147,22 @@ rcpp_metric_graph_lowpass_operator <- function(s_adj_list, s_weight_list, s_cond
 
 rcpp_metric_graph_lowpass_spectrum <- function(s_adj_list, s_weight_list, s_conductance_rule, s_conductance_epsilon, s_conductance_alpha, s_conductance_sigma, s_sigma_rule, s_sigma_quantile, s_local_k, s_laplacian_type, s_n_eigenpairs, s_eigen_solver, s_dense_eigen_threshold, s_dense_fallback_threshold, s_dense_fallback, s_verbose) {
     .Call(`_geosmooth_rcpp_metric_graph_lowpass_spectrum`, s_adj_list, s_weight_list, s_conductance_rule, s_conductance_epsilon, s_conductance_alpha, s_conductance_sigma, s_sigma_rule, s_sigma_quantile, s_local_k, s_laplacian_type, s_n_eigenpairs, s_eigen_solver, s_dense_eigen_threshold, s_dense_fallback_threshold, s_dense_fallback, s_verbose)
+}
+
+rcpp_neighbor_ann_index <- function(X, train, priority, group, y) {
+    .Call(`_geosmooth_rcpp_neighbor_ann_index`, X, train, priority, group, y)
+}
+
+rcpp_neighbor_intrinsic_index <- function(X, train) {
+    .Call(`_geosmooth_rcpp_neighbor_intrinsic_index`, X, train)
+}
+
+rcpp_neighbor_release_index <- function(neighbor_index, intrinsic) {
+    invisible(.Call(`_geosmooth_rcpp_neighbor_release_index`, neighbor_index, intrinsic))
+}
+
+rcpp_neighbor_probability <- function(X, query, distance, y, train, group, query_group, priority, sizes, method, metric, precomputed, diagnostics, neighbor_index, eps) {
+    .Call(`_geosmooth_rcpp_neighbor_probability`, X, query, distance, y, train, group, query_group, priority, sizes, method, metric, precomputed, diagnostics, neighbor_index, eps)
 }
 
 rcpp_ps_lps_local_pca_supports <- function(X, support_size, chart_dim_by_anchor, kernel) {

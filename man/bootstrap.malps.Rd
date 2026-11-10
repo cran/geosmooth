@@ -20,7 +20,7 @@ bootstrap.malps(
 }
 \arguments{
 \item{object}{A \code{"malps"} object from \code{\link{fit.malps}} or
-\code{\link{refit.malps}}.}
+\code{\link{refit}}.}
 
 \item{B}{Number of successful bootstrap replicates requested.}
 
@@ -65,7 +65,7 @@ empirical lower/upper intervals;
 Reuses the supports, local charts, prediction supports, averaging weights,
 selected degree, and local-solver controls from an existing
 \code{\link{fit.malps}} object, then repeatedly calls
-\code{\link{refit.malps}} with bootstrap-style case weights.  This is a
+\code{\link{refit}} with bootstrap-style case weights.  This is a
 fixed-selection uncertainty diagnostic: it measures refit variability
 conditional on the fitted MALPS support profile and does not rerun
 cross-validation or rebuild supports in each replicate.

@@ -62,7 +62,7 @@ weighted Laplacian, selected penalty operator, and nullity estimate.
 \description{
 Builds the weighted graph difference operators used by graph trend
 filtering. The default \code{operator.family = "graph.laplacian.recursive"}
-uses the phase-2 recursive graph operators
+uses recursive graph operators
 \deqn{k=0:\quad \Delta_w^{(1)} = D_w,}
 \deqn{k=1:\quad \Delta_w^{(2)} = L_w = D_w^\top D_w,}
 and

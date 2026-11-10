@@ -273,6 +273,27 @@ LPL-TF and S-LPL-TF.  The experimental
 \code{chart.dim = "local.auto"} mode estimates an input-only local chart
 dimension separately for each prediction anchor.
 }
+\section{Choosing controls}{
+
+\strong{First fit:} supply \code{X}, \code{y}, \code{foldid}, and small \code{support.grid},
+\code{degree.grid}, and \code{kernel.grid} candidates. See the installed function guide.
+
+\strong{Selection:} \code{cv.folds}, \code{cv.seed}, and \code{selection.strategy} control the
+search. Candidate combinations and folds multiply the fitting work; use
+\code{\link[=lps.nested.cv]{lps.nested.cv()}} for an outer assessment of the tuning procedure.
+
+\strong{Geometry:} \code{coordinate.method}, \code{chart.dim}, and local chart controls
+describe neighborhoods and coordinate systems, not a different response model.
+
+\strong{Numerics:} \code{backend}, \code{design.basis}, rank thresholds and ridge controls
+govern stable local solves. Inspect \code{\link[=lps.backend.diagnostics]{lps.backend.diagnostics()}} before
+changing them. A numerical ridge is distinct from neighborhood selection.
+
+\strong{Diagnostics:} \code{selected}, \code{cv.table}, and \code{diagnostics} retain selection
+and local-fit information. A dense \code{\link{smoother.matrix}} needs one entry per
+evaluation/training pair; it is restricted to supported configurations.
+}
+
 \examples{
 X <- matrix(seq(0, 1, length.out = 20), ncol = 1)
 y <- sin(2 * pi * X[, 1])

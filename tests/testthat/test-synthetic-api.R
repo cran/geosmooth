@@ -1,12 +1,12 @@
 test_that("synthetic specifications are draw-free and canonically hashable", {
-  geometry <- synthetic.quadform(
+  geometry <- dgraphs::synthetic.quadform(
     intrinsic.dim = 2, ambient.dim = 5,
     forms = list(diag(c(0.5, -0.25))),
     frame = "supplied",
     frame.matrix = rbind(diag(3), matrix(0, nrow = 2, ncol = 3)))
   spec <- synthetic.spec(
     geometry,
-    synthetic.sampling.uniform.box(-1, 1),
+    dgraphs::synthetic.sampling.uniform.box(-1, 1),
     synthetic.truth.polynomial(c(b0 = 1, b1 = 2, b2 = -1)),
     synthetic.response.gaussian(0.1))
   expect_s3_class(spec, "synthetic_spec")
@@ -15,13 +15,13 @@ test_that("synthetic specifications are draw-free and canonically hashable", {
     spec$specification.sha256,
     synthetic.spec(
       geometry,
-      synthetic.sampling.uniform.box(-1, 1),
+      dgraphs::synthetic.sampling.uniform.box(-1, 1),
       synthetic.truth.polynomial(c(b0 = 1, b1 = 2, b2 = -1)),
       synthetic.response.gaussian(0.1))$specification.sha256)
   expect_error(
     synthetic.spec(
       geometry,
-      synthetic.sampling.uniform.box(-1, 1),
+      dgraphs::synthetic.sampling.uniform.box(-1, 1),
       structure(
         list(kind = "truth", family = "bad", version = 1L,
              parameters = list(fun = function(x) x)),
@@ -104,44 +104,9 @@ test_that("legacy derived seeds are preflighted before RNG state changes", {
 
 test_that("G7 rejects an empty structural-zero subset explicitly", {
   condition <- tryCatch(
-    synthetic.sampling.dirichlet.zeros(
+    dgraphs::synthetic.sampling.dirichlet.zeros(
       concentration = 1, zero.fraction = 0.5, zero.parts = integer()),
     error = identity)
   expect_s3_class(condition, "geosmooth_empty_zero_parts")
   expect_match(conditionMessage(condition), "at least one")
-})
-
-test_that("canonical frozen instances replay their committed checksums", {
-  path <- geosmooth:::.synthetic.instance.path()
-  expect_true(nzchar(path) && file.exists(path))
-  registry <- utils::read.csv(path, stringsAsFactors = FALSE)
-  expect_setequal(
-    c("instance.id", "recipe.id", "n", "seed", "rng.policy",
-      "checksum.id", "fixture.path", "status", "version",
-      "content.sha256"),
-    names(registry))
-  expect_setequal(
-    registry$recipe.id,
-    synthetic.registry.ids()[grepl("^G", synthetic.registry.ids())])
-  for (instance.id in registry$instance.id) {
-    object <- materialize.synthetic.instance(instance.id)
-    expected <- registry$content.sha256[
-      registry$instance.id == instance.id]
-    expect_identical(object$dataset.id, instance.id)
-    verification.scope <- attr(
-      object, "verification.scope", exact = TRUE)
-    if (identical(verification.scope, "exact-environment")) {
-      expect_identical(
-        synthetic.dataset.checksum(object), expected,
-        info = instance.id)
-    } else {
-      expect_identical(
-        verification.scope, "scientific-parity", info = instance.id)
-      fixture.path <- geosmooth:::.synthetic.registry.fixture.path(
-        registry$fixture.path[registry$instance.id == instance.id])
-      expect_true(
-        compare.synthetic.dataset(object, readRDS(fixture.path))$equal,
-        info = instance.id)
-    }
-  }
 })

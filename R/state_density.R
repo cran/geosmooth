@@ -9,13 +9,19 @@
 #'   \code{nrow(X)}. Required by count-based density methods.
 #' @param method Density method identifier.
 #' @param graph Optional precomputed graph object.
-#' @param graph.control List of graph-method controls.
+#' @param graph.control Named list for random walks: \code{walk.steps} (or
+#'   \code{walk.step}), \code{affinity.method}, \code{affinity.scale},
+#'   \code{affinity.epsilon}, and logical \code{normalize}. Underscore aliases
+#'   are accepted, but conflicting aliases and unknown names are rejected.
+#'   Must be empty for the empirical estimator.
 #' @param density.control List controlling clipping, normalization, and
 #'   accounting checks.  Recognized entries are \code{mass.tol},
-#'   \code{neg.tol}, \code{clip.negative}, and \code{renormalize}.
+#'   \code{neg.tol}, logical \code{clip.negative} and \code{renormalize},
+#'   and diagnostic controls \code{smoothness.adj.list} and logical
+#'   \code{smoothness.auto.1d}. Unknown or duplicated names are errors.
 #' @param return.details Logical; if \code{TRUE}, keep diagnostic details in
 #'   the result.
-#' @param ... Additional method-specific arguments.
+#' @param ... Reserved for future methods; unused arguments are errors.
 #'
 #' @return A list of class \code{"density_fit"} with fields
 #'   \code{method.id}, \code{status}, \code{rho}, \code{empirical.rho},
@@ -37,6 +43,11 @@ fit.density <- function(
     ...) {
 
     method <- match.arg(method)
+    .validate.logical.scalar(return.details, "return.details")
+    if (method == "empirical") {
+        .validate.named.controls(graph.control, character(), "graph.control for empirical density")
+        if (!is.null(graph)) stop("empirical density does not use graph.", call. = FALSE)
+    }
     X <- .state.density.validate.X(X)
     ctrl <- .state.density.control(density.control)
 
@@ -72,6 +83,7 @@ fit.density <- function(
     dots <- .state.density.named.dots(...)
     .state.density.reject.chart.dots(
         dots, "fit.density(method = \"empirical\")")
+    .validate.named.controls(dots, character(), "...")
     X <- .state.density.validate.X(X)
     ctrl <- .state.density.control(density.control)
     weights <- .state.density.validate.weights(weights, nrow(X), "weights")
@@ -102,6 +114,7 @@ fit.density <- function(
     dots <- .state.density.named.dots(...)
     .state.density.reject.chart.dots(
         dots, "fit.density(method = \"graph_random_walk\")")
+    .validate.named.controls(dots, character(), "...")
     X <- .state.density.validate.X(X)
     ctrl <- .state.density.control(density.control)
     weights <- .state.density.validate.weights(weights, nrow(X), "weights")
@@ -175,6 +188,7 @@ normalize.density.numeric <- function(x,
                                       empirical.rho = NULL,
                                       return.details = TRUE,
                                       ...) {
+    .validate.named.controls(.state.density.named.dots(...), character(), "...")
     .normalize.density.vector(
         values = x,
         X = X,
@@ -200,6 +214,7 @@ normalize.density.default <- function(x,
                                       empirical.rho = NULL,
                                       return.details = TRUE,
                                       ...) {
+    .validate.named.controls(.state.density.named.dots(...), character(), "...")
     if (is.null(x$fitted.values)) {
         stop("normalize.density() requires a numeric vector or an object with fitted.values.",
              call. = FALSE)
@@ -227,6 +242,7 @@ normalize.density.lps <- function(x,
                                   empirical.rho = NULL,
                                   return.details = TRUE,
                                   ...) {
+    .validate.named.controls(.state.density.named.dots(...), character(), "...")
     .normalize.density.fit(
         x = x,
         X = X,
@@ -250,6 +266,7 @@ normalize.density.ps_lps <- function(x,
                                      empirical.rho = NULL,
                                      return.details = TRUE,
                                      ...) {
+    .validate.named.controls(.state.density.named.dots(...), character(), "...")
     .normalize.density.fit(
         x = x,
         X = X,
@@ -274,6 +291,7 @@ normalize.density.metric.graph.lowpass.fit <- function(
     empirical.rho = NULL,
     return.details = TRUE,
     ...) {
+    .validate.named.controls(.state.density.named.dots(...), character(), "...")
     .normalize.density.fit(
         x = x,
         X = X,
@@ -298,6 +316,7 @@ normalize.density.metric.graph.lowpass.refit <- function(
     empirical.rho = NULL,
     return.details = TRUE,
     ...) {
+    .validate.named.controls(.state.density.named.dots(...), character(), "...")
     .normalize.density.fit(
         x = x,
         X = X,
@@ -513,10 +532,8 @@ fit.subject.od <- function(
         !is.null(cv.result$candidate.caches[[best.idx]])) {
         final.dots$ps.lps.geometry.cache <- cv.result$candidate.caches[[best.idx]]
     }
-    final.graph.control <- utils::modifyList(
-        graph.control,
-        selected.scalar$graph.control
-    )
+    final.graph.control <- if (method == "graph_random_walk") selected.scalar$graph.control else
+        utils::modifyList(graph.control, selected.scalar$graph.control)
     final <- do.call(
         fit.subject.od,
         c(
@@ -644,6 +661,7 @@ fit.subject.od <- function(
     if (!is.list(graph.control)) {
         stop("'graph.control' must be a list.", call. = FALSE)
     }
+    .state.density.validate.graph.controls(graph.control, grids = TRUE)
     walk.step.grid <- .state.density.graph.control.value(
         graph.control,
         c("walk.step.grid", "walk_step_grid", "walk.steps.grid",
@@ -1362,10 +1380,8 @@ fit.subject.od <- function(
             method,
             candidates[cc, , drop = FALSE]
         )
-        cand.graph.control <- utils::modifyList(
-            graph.control,
-            cand.scalar$graph.control
-        )
+        cand.graph.control <- if (method == "graph_random_walk") cand.scalar$graph.control else
+            utils::modifyList(graph.control, cand.scalar$graph.control)
         cand.dots <- c(base.dots, cand.scalar$dots)
         if (method %in% c("lps_count", "lps_logistic_binary")) {
             local.pca.supports <- .state.density.ps.lps.shared.local.pca.supports(
@@ -3453,8 +3469,9 @@ fit.subject.od <- function(
         return(dots)
     }
     dot.names <- names(dots)
-    if (is.null(dot.names) || any(!nzchar(dot.names))) {
-        stop("OD smoother workflow arguments passed through ... must be named.",
+    if (is.null(dot.names) || anyNA(dot.names) || any(!nzchar(dot.names)) ||
+        anyDuplicated(dot.names)) {
+        stop("OD smoother workflow arguments passed through ... must have unique, nonempty names.",
              call. = FALSE)
     }
     dots
@@ -3532,6 +3549,9 @@ fit.subject.od <- function(
     if (!is.list(density.control)) {
         stop("density.control must be a list.", call. = FALSE)
     }
+    .validate.named.controls(density.control,
+        c("mass.tol", "neg.tol", "clip.negative", "renormalize",
+          "smoothness.adj.list", "smoothness.auto.1d"), "density.control")
     ctrl <- utils::modifyList(
         list(
             mass.tol = 1e-8,
@@ -3547,8 +3567,10 @@ fit.subject.od <- function(
     ctrl$neg.tol <- .state.density.validate.nonnegative.scalar(
         ctrl$neg.tol, "density.control$neg.tol"
     )
-    ctrl$clip.negative <- isTRUE(ctrl$clip.negative)
-    ctrl$renormalize <- isTRUE(ctrl$renormalize)
+    if (!is.null(ctrl$smoothness.auto.1d))
+        .validate.logical.scalar(ctrl$smoothness.auto.1d, "density.control$smoothness.auto.1d")
+    ctrl$clip.negative <- .validate.logical.scalar(ctrl$clip.negative, "density.control$clip.negative")
+    ctrl$renormalize <- .validate.logical.scalar(ctrl$renormalize, "density.control$renormalize")
     ctrl
 }
 
@@ -3804,7 +3826,7 @@ fit.subject.od <- function(
             stop(sprintf("graph weights for vertex %d must be numeric.", i),
                  call. = FALSE)
         }
-        nb <- as.integer(nb)
+        nb <- .validate.vertex.indices(nb, n, sprintf("graph adjacency for vertex %d", i))
         wt <- as.double(wt)
         if (length(nb) != length(wt)) {
             stop(sprintf("graph adjacency and weight lengths differ at vertex %d.", i),
@@ -3965,7 +3987,7 @@ fit.subject.od <- function(
         walk.steps <- c(0L, walk.step)
     }
     if (!is.numeric(walk.steps) || length(walk.steps) < 1L ||
-        any(!is.finite(walk.steps)) || any(walk.steps < 0) ||
+        any(!is.finite(walk.steps)) || any(walk.steps < 0 | walk.steps > .Machine$integer.max) ||
         any(walk.steps != floor(walk.steps))) {
         stop("walk.steps must be nonnegative integer values.", call. = FALSE)
     }
@@ -3973,6 +3995,7 @@ fit.subject.od <- function(
 }
 
 .state.density.random.walk <- function(empirical, graph, graph.control = list()) {
+    .state.density.validate.graph.controls(graph.control)
     affinity.method <- .state.density.graph.control.value(
         graph.control, c("affinity.method", "affinity_method"),
         "exp_neg_length_over_median"
@@ -3985,9 +4008,9 @@ fit.subject.od <- function(
     affinity.epsilon <- .state.density.graph.control.value(
         graph.control, c("affinity.epsilon", "affinity_epsilon"), 1e-12
     )
-    normalize <- isTRUE(.state.density.graph.control.value(
+    normalize <- .validate.logical.scalar(.state.density.graph.control.value(
         graph.control, c("normalize"), TRUE
-    ))
+    ), "graph.control$normalize")
     walk.steps <- .state.density.walk.steps(graph.control)
     selected.step <- max(walk.steps)
     tr <- .state.density.transition.matrix(
@@ -4274,7 +4297,7 @@ fit.subject.od <- function(
             stop("smoothness adjacency entries must be numeric/integer vectors.",
                  call. = FALSE)
         }
-        nb <- as.integer(nb)
+        nb <- .validate.vertex.indices(nb, length.out, sprintf("graph adjacency for vertex %d", i))
         if (anyNA(nb) || any(nb < 1L | nb > length.out)) {
             stop("smoothness adjacency contains invalid vertex indices.",
                  call. = FALSE)
@@ -4350,4 +4373,17 @@ fit.subject.od <- function(
         names(mass) <- c("basin", "mass")
     }
     list(raw.basin.size.summary = size, raw.basin.mass.summary = mass)
+}
+
+.state.density.validate.graph.controls <- function(graph.control, grids = FALSE) {
+    keys <- c("walk.steps", "walk.step", "affinity.method", "affinity.scale",
+              "affinity.epsilon", "normalize")
+    if (grids) keys <- c(keys, paste0(keys, ".grid"))
+    .validate.named.controls(graph.control, unique(c(keys, gsub(".", "_", keys, fixed = TRUE))),
+                             "graph.control")
+    canonical <- gsub("_", ".", names(graph.control), fixed = TRUE)
+    if (anyDuplicated(canonical) || all(c("walk.step", "walk.steps") %in% canonical)) {
+        stop("graph.control contains conflicting aliases for the same control.", call. = FALSE)
+    }
+    invisible(graph.control)
 }

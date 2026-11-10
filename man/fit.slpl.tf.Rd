@@ -53,7 +53,7 @@ fit.slpl.tf(
 folds and a deterministic Cartesian grid over \code{lambda1.grid} and
 \code{lambda2.grid}.}
 
-\item{operator.grid}{Optional Phase-S3 operator candidate grid. Supply a data
+\item{operator.grid}{Optional operator candidate grid. Supply a data
 frame with one row per candidate or a list of named lists.}
 
 \item{foldid}{Optional deterministic fold assignments for CV.}
@@ -65,7 +65,8 @@ frame with one row per candidate or a list of named lists.}
 
 \item{cv.seed}{Optional seed for reproducible generated folds.}
 
-\item{cv.repeats}{Phase S3 supports only one CV repeat.}
+\item{cv.repeats}{Number of CV repeats. The current implementation supports
+only one repeat.}
 
 \item{solver}{Current implementation supports only \code{"genlasso"}.}
 

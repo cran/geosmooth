@@ -1,0 +1,238 @@
+---
+title: "Observed-data heat fits with numerical cross-checks"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Observed-data heat fits with numerical cross-checks}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+A completed linear solve does not establish that a graph smoother is accurate.
+The default `numerical.policy = "conservative"` therefore retains the spectral,
+heat-time and missing-block condition checks. An opt-in policy,
+`"verified.fallback"`, offers a bounded alternative when the latter two checks
+refuse a calculation. It checks **every** requested positive time and observed
+response mask, even when the conservative checks would pass. It reports which
+calculations needed the fallback. It does not weaken the initial requirement
+that the graph's positive eigenvalues be numerically distinguishable from its
+known nullspace.
+
+The fallback currently supports a complete spectrum, the unnormalized
+Laplacian, the heat filter, and a fixed tuning grid. It uses two calculations
+in double precision. Their agreement is evidence for the tested calculation,
+not an interval certificate or a guarantee for arbitrary graphs. It costs an
+additional dense eigendecomposition and additional matrix solves. Partial
+spectra, normalized Laplacians, other filters and automatic grid expansion are
+outside this implementation's scope.
+
+## The fitted model
+
+Let $L$ be the unnormalized graph Laplacian and
+$H_t=\exp(-tL)$ its heat operator. For fully observed responses the fitted vector
+is $H_ty$. For observed vertices $O$, unobserved vertices $U$, and $q=|O|$,
+the observed-data extension minimizes
+
+$$\|y_O-f_O\|^2+f^T\{\exp(tL)-I\}f,\qquad t>0.$$
+
+Each connected component must have an observed response. A completely
+unobserved component is unidentified and causes an error. With only one
+observation in each component the extension is componentwise constant and GCV
+is undefined; the path is available but cannot tune a time.
+
+Directly forming $\exp(tL)$ can overflow. Instead, put
+$A=(I-H_t)/s$, where $s=\max_i(1-\exp(-t\lambda_i))$ and $\lambda_i$ are the
+Laplacian eigenvalues. The implementation computes the small complements with
+`-expm1(-t * lambda)`. Missing-block elimination gives
+
+$$X=A_{UU}^{-1}A_{UO},\qquad K=A_{OO}-A_{OU}X,$$
+$$\widehat f_U=-Xy_O,\qquad \widehat f_O=(I-sK)y_O.$$
+
+The implementation evaluates this Schur complement through a residual factor.
+Write $A=F^TF$, with
+$F=\operatorname{diag}(\sqrt{(1-\exp(-t\lambda_i))/s})V^T$ for the checked
+eigenvector matrix $V$. Then
+
+$$R=F_O-F_UX,\qquad K=R^TR.$$
+
+This is the same matrix in exact arithmetic. It avoids subtracting two large,
+nearly equal matrices when the observed vertices are separated by a weak edge.
+That subtraction can corrupt a small residual trace and hence GCV even when
+predictions and the missing-block solve appear accurate. The factor calculation
+adds no ridge or denominator adjustment. The independent bordered reference
+and all acceptance tolerances below remain unchanged.
+
+Scaling cancels from GCV, giving a stable expression even when $t$ is very small:
+
+$$\operatorname{df}=q-s\operatorname{tr}(K),\qquad
+\operatorname{GCV}=q\frac{\|Ky_O\|^2}{\operatorname{tr}(K)^2}.$$
+
+The sample size here is the number of observed responses, not the number of
+vertices. The identity endpoint $t=0$ is returned separately with undefined
+GCV and unknown values still missing. There is no denominator floor, ridge,
+edge removal or removal of a failed positive grid point.
+
+## The alternative calculation and acceptance checks
+
+A separate base-R LAPACK eigendecomposition starts from the actual Laplacian.
+Both eigensystems undergo the existing nullspace, residual and orthogonality
+checks. The alternative route constructs $P=A^+$, the Moore--Penrose
+pseudoinverse of its own normalized heat complement. With $Q$ the component
+constant orthonormal basis, it solves
+
+$$\begin{pmatrix}P_{OO}&Q_O\\Q_O^T&0\end{pmatrix}
+  \begin{pmatrix}K_{\mathrm{ref}}\\C\end{pmatrix}
+  =\begin{pmatrix}I_q\\0\end{pmatrix}.$$
+
+It predicts unobserved responses with
+$(P_{UO}K_{\mathrm{ref}}+Q_U C)y_O$ and observed responses with
+$(I-s_{\mathrm{ref}}K_{\mathrm{ref}})y_O$. Thus the two routes eliminate different
+blocks. When all responses are observed the reference simply applies its own
+heat operator; neither block solve is necessary.
+
+Acceptance requires all these checks, for every positive time and distinct
+observed-vertex mask:
+
+| Check | Maximum accepted value |
+|:---|---:|
+| Candidate missing-block scaled solve residual | $10^{-8}$ |
+| Reference bordered scaled solve residual | $10^{-9}$ |
+| Maximum absolute row sum of prediction-operator difference | $10^{-7}$ |
+| Maximum entry of error preserving the component nullspace, either operator | $10^{-7}$ |
+| Maximum prediction difference for centered, training-RMS-scaled responses | $10^{-7}$ |
+| Absolute effective-degrees-of-freedom difference | $10^{-7}$ |
+| Standardized-response GCV difference | $10^{-10}+10^{-7}|\operatorname{GCV}_{\mathrm{ref}}|$ |
+| Final original-unit GCV difference used for tuning | $10^{-10}+10^{-7}|\operatorname{GCV}^{\mathrm{original}}_{\mathrm{ref}}|$ |
+
+For a solve $BX=C$, its scaled residual is
+$\max|BX-C|/\max(1,\max|C|,\|B\|_\infty\max|X|)$.
+The reference uses the analogous expression with an identity-and-zero right
+hand side. A nonfinite check, a failed solve, unresolved residual degrees of
+freedom, or a failed tolerance stops the entire path. All returned positive-time
+predictions and valid GCV scores must be finite.
+
+The final scores use the same centered calculation as the numerical check.
+For each response, subtract its observed mean **within each connected
+component**, then divide by its training root-mean-square deviation $\sigma$.
+Means are calculated relative to an observed anchor in that component, avoiding
+summing a large additive baseline. Write $y_O=c_O+\sigma z$, where $c$ is
+constant within each component. Since $Kc_O=0$ and the prediction operator $T$
+preserves those component constants, the package computes
+
+$$\widehat f=c+\sigma Tz,\qquad
+\operatorname{GCV}_{\mathrm{original}}=\sigma^2\operatorname{GCV}(z).$$
+
+These are algebraic identities, not a change of regression model. The same
+observed component means and scale are used for the independent calculation.
+Both the standardized scores and these final original-unit scores must pass
+their stated agreement tests **before** being returned or used to select a time.
+The implementation never recomputes GCV by multiplying $K$ by the uncentered
+measurements. `gcv.scaled.error` records the standardized comparison, while
+`gcv.final.scaled.error` records the final-score comparison; each is divided by
+its allowed tolerance and must not exceed one. A response constant within every
+component uses scale one and has exactly zero residual score whenever residual
+degrees of freedom exist. Component means use observed training measurements
+only. The operator nullspace-preservation check remains mandatory.
+
+`numerical$diagnostics` retains both conservative diagnostics and agreement
+checks. `response.mask` maps response columns to distinct masks; matrix
+factorizations are shared for responses with the same mask. The declared
+limits and reference eigensystem diagnostics are also returned. These two
+computations can share floating-point limitations; no claim of arbitrary
+forward accuracy follows from their agreement.
+
+## Score accuracy and time selection are different decisions
+
+Passing a numerical score check does not imply that a difference between two
+scores is resolved. For example, two scores $1-7\times10^{-8}$ and
+$1+7\times10^{-8}$ are each within approximately $10^{-7}$ of the same exact
+value. Their difference exceeds $10^{-7}$; it still provides no evidence that
+one time is better. The verified fallback therefore uses a separate selection
+rule, without changing any numerical acceptance limit.
+
+At time $j$, let $c_j$ and $r_j$ be the checked candidate and reference scores
+in original response units, and define the per-score resolution radius
+$e(x)=10^{-10}+10^{-7}|x|$. The combined band covers both formulations:
+
+$$\ell_j=\max\{0,\min(c_j-e(c_j),r_j-e(r_j))\},\qquad
+u_j=\max\{c_j+e(c_j),r_j+e(r_j)\}.$$
+
+These are **operational numerical-resolution bands**, not statistical
+confidence intervals or certified enclosures of exact values. Their scale is
+explicitly tied to the existing pointwise score budgets. When the formulations
+agree exactly, comparing two times accounts for the sum of their two budgets,
+not just one budget. Using the envelope of both formulations also prevents a
+nominal preference in one calculation from concealing disagreement in the other.
+
+Automatic selection among distinct times requires a single time $j$ satisfying
+
+$$u_j < \min_{k:\,t_k\ne t_j}\ell_k.$$
+
+The separation must be strict: overlapping or touching bands do not justify
+selection. Duplicate copies of a time are one alternative, with their bands
+enveloped and all original indices retained. With one prescribed distinct time,
+application remains available and is labeled `single_candidate`; there is no
+claim of an identified optimum.
+
+The returned `tuning` record provides:
+
+- `unique_grid_minimum` only when a time is separated from every alternative.
+  Endpoint flags remain explicit. `bracketed` means interior to the supplied
+  grid, not proven optimal over continuous time.
+- `unresolved_flat_gcv` if all bands share a common value, or structural flatness
+  is known as described below. No time is selected.
+- `multiple_near_minima` if several possible minima remain, even if other times
+  are clearly worse. No time is selected. This is stricter than the earlier
+  behavior that chose the smallest nominal score in this situation.
+- `no_valid_candidate` when there are no valid positive scores.
+
+`near.minimum.indices` contains every index whose time has a lower band endpoint
+no greater than the smallest upper endpoint, except known structurally flat
+paths, for which every valid time is retained. `selection.allowed`,
+`structural.flat.reason`, `resolution` (both scores, their radii and combined
+bands), and `separation.margin` make the decision inspectable. Raw candidate
+and reference minimum indices are diagnostics, not selected smoothing times.
+The reference score matrix is also in `numerical$reference.gcv.scores`.
+
+Both unresolved statuses stop automatic selection in `fit()` and automatically
+tuned `refit()`. The path and a fixed-time application remain available.
+
+### Structurally flat cases do not depend on rounding
+
+If there are $q$ observations and $c$ connected components, all observed, the
+observed residual space has dimension $q-c$. When $q-c=1$, its direction is fixed
+and its residual matrix has the form $K=\kappa vv^T$ for a fixed unit contrast
+$v$. Hence
+
+$$\operatorname{GCV}=q\frac{\|\kappa vv^Ty\|^2}{\kappa^2}
+=q(v^Ty)^2,$$
+
+which is independent of time. Two observations on a connected graph give the
+familiar special case $(y_1-y_2)^2$. Such paths are marked structurally flat
+regardless of their numerical spread and cannot tune a time. Responses constant
+within each observed component likewise have exactly zero residual score and
+are structurally flat when GCV is defined. When $q=c$, residual degrees of
+freedom vanish and GCV remains undefined instead.
+
+These structural checks accompany, rather than replace, all numerical acceptance
+checks. An inaccurate or nonfinite path still fails. The absolute part of the
+score budget has squared-response units; changing units can still change whether
+a numerical difference is resolved. This is distinct from the additive-shift
+invariance provided by componentwise centering.
+
+```{r}
+library(geosmooth)
+adj <- list(2L, c(1L,3L), c(2L,4L), c(3L,5L), 4L)
+w <- list(1, c(1,2), c(2,3), c(3,4), 4)
+basis <- metric.graph.lowpass.basis(
+  adj, w, weight.type="conductance", spectrum="full",
+  numerical.policy="verified.fallback")
+path <- apply.metric.graph.lowpass.path(
+  basis, c(2,NA,4,NA,-1), eta.grid=c(0,.01,.1,1))
+path$tuning
+path$numerical$diagnostics[,c("eta","n.observed","fallback.used",
+                              "candidate.residual","operator.error")]
+```
+
+`fit.metric.graph.lowpass()` accepts the same policy explicitly.
+`apply.metric.graph.lowpass.path()` and `refit()` inherit it unless overridden.
+The conservative default, including its previous refusals, is unchanged.

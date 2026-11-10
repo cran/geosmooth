@@ -17,6 +17,25 @@ Invisibly returns the input object.
 \description{
 Prints the summary of harmonic smoother results in a formatted manner.
 }
+\examples{
+object <- structure(
+  list(
+    stable_iteration = 2L,
+    iterations_recorded = 1L,
+    initial_extrema = 1L,
+    initial_maxima = 1L,
+    initial_minima = 0L,
+    final_extrema = 1L,
+    final_maxima = 1L,
+    final_minima = 0L,
+    extrema_reduction = 0L,
+    topology_diff_summary = NULL
+  ),
+  class = "summary.harmonic_smoother"
+)
+print(object)
+
+}
 \seealso{
 \code{\link{summary.harmonic_smoother}}
 }

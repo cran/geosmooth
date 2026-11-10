@@ -17,14 +17,15 @@ metric.graph.lowpass.operator(
   conductance.local.k = 5L,
   laplacian.type = c("unnormalized", "symmetric.normalized"),
   return.sparse = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  weight.type = c("length", "conductance")
 )
 }
 \arguments{
 \item{adj.list}{List of integer neighbor vectors using 1-based vertex indices.}
 
-\item{weight.list}{List of positive metric edge lengths parallel to
-\code{adj.list}. These are interpreted as edge lengths, not conductances.}
+\item{weight.list}{List of weights parallel to \code{adj.list}: positive
+metric lengths or nonnegative conductances, according to \code{weight.type}.}
 
 \item{conductance.rule}{Character scalar. One of
 \code{"inverse.length.power"}, \code{"exp.length"},
@@ -55,6 +56,11 @@ uses \eqn{L_{\mathrm{sym}} = I - D^{-1/2} C D^{-1/2}}.}
 Laplacian when \pkg{Matrix} is available.}
 
 \item{verbose}{Logical. Reserved for future diagnostic messages.}
+
+\item{weight.type}{Weight interpretation. \code{"length"} transforms lengths;
+\code{"conductance"} uses positive weights unchanged and removes zero edges.
+Reciprocal conductances must agree; self-loops must be removed by the caller.
+Conductance-transform settings are unused for direct conductances.}
 }
 \value{
 A list of class \code{"metric.graph.lowpass.operator"} containing
@@ -62,8 +68,9 @@ the edge table, conductances, degree vector, Laplacian triplets, summaries,
 and optionally a sparse Laplacian matrix.
 }
 \description{
-Builds a weighted graph Laplacian by transforming metric edge lengths into
-conductances. This operator is a direct metric-conductance comparator to
+Builds a weighted graph Laplacian from supplied conductances or by
+transforming metric edge lengths into conductances. This operator is a direct
+metric-conductance comparator to
 the legacy rdgraph regression smoother, not a replacement for the
 Riemannian-complex/overlap-density smoother.
 }
@@ -76,7 +83,7 @@ where \eqn{\rho_1(e)} is computed by the Riemannian-complex density machinery.
 
 This function instead constructs conductances directly from metric lengths:
 \deqn{c_{ij} = \phi(\ell_{ij}).}
-Supported phase-1 transforms are
+Supported transforms are
 \deqn{c_{ij}=(\ell_{ij}+\epsilon)^{-\alpha},}
 \deqn{c_{ij}=\exp(-\ell_{ij}/\sigma),}
 \deqn{c_{ij}=\exp(-\ell_{ij}^{2}/\sigma^{2}),}

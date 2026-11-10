@@ -13,7 +13,7 @@
 #'   \code{adj.list}.
 #' @param graph Graph source. \code{"rknn"} builds an adaptive-radius graph from
 #'   \code{X}; \code{"supplied"} uses \code{adj.list} and \code{weight.list}.
-#' @param tangent.dim Fixed global tangent dimension for phase-1 geometry.
+#' @param tangent.dim Fixed global tangent dimension for local geometry.
 #' @param local.support Local support construction rule. \code{"graph.disk"}
 #'   uses graph-hop disks; \code{"neighbors"} starts from the closed one-hop
 #'   neighborhood and tops up by graph-hop expansion.
@@ -26,13 +26,13 @@
 #' @param graph.k.scale,graph.radius.factor,graph.radius.rule Adaptive-radius
 #'   graph controls passed to \code{dgraphs::create.rknn.graph()} when
 #'   \code{graph = "rknn"}.
-#' @param transport.rule Edge transport rule. Phase 1 implements
+#' @param transport.rule Edge transport rule. The current implementation uses
 #'   \code{"procrustes"}.
 #' @param synchronize.orientation Logical. If \code{TRUE}, return deterministic
-#'   spanning-tree orientation-synchronization metadata. Phase 1 does not mutate
-#'   the returned frames.
-#' @param density.method Sampling-density metadata rule. Phase 1 implements
-#'   \code{"support.radius"}.
+#'   spanning-tree orientation-synchronization metadata. This metadata does not
+#'   mutate the returned frames.
+#' @param density.method Sampling-density metadata rule. The current
+#'   implementation uses \code{"support.radius"}.
 #' @param alpha Numeric exponent used only to report proposed future
 #'   density-normalization weights.
 #' @param diagnostics Logical. If \code{TRUE}, compute cycle diagnostics.
@@ -254,8 +254,9 @@ pttf.geometry <- function(
         connect.method = "component.mst",
         graph.detail = "full"
     )
-    validated <- .validate.metric.graph.lowpass.graph(built$adj_list,
-                                                      built$weight_list)
+    payload <- .geosmooth.graph.payload(built)
+    validated <- .validate.metric.graph.lowpass.graph(payload$adj.list,
+                                                      payload$weight.list)
     list(
         adj.list = validated$adj.list,
         weight.list = validated$weight.list,

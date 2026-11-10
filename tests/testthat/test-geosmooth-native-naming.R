@@ -20,5 +20,9 @@ test_that("native symbols use the geosmooth package prefix", {
 })
 
 test_that("dgraphs exports the shortest-path contract required by geosmooth", {
-    expect_true("shortest.path" %in% getNamespaceExports("dgraphs"))
+        exports <- getNamespaceExports("dgraphs")
+    expected <- if ("dgraph" %in% exports) {
+        c("dgraph", "graph.geodesic.distances", "graph.adjacency", "graph.lengths")
+    } else "shortest.path"
+    expect_true(all(expected %in% exports))
 })

@@ -15,9 +15,11 @@
 \arguments{
 \item{object}{A \code{"lpl_tf"} object.}
 
-\item{newdata}{Must be \code{NULL} in Phase 2.}
+\item{newdata}{Must be \code{NULL}; prediction is currently available only
+at the training points.}
 
-\item{type}{Prediction type. Phase 2 supports only \code{"response"}.}
+\item{type}{Prediction type. The current implementation supports only
+\code{"response"}.}
 
 \item{allow.incomplete}{Reserved.}
 
@@ -28,4 +30,13 @@ Fitted values at the training points.
 }
 \description{
 Predict From A Local Polynomial Lifting Trend Filter
+}
+\examples{
+if (requireNamespace("genlasso", quietly = TRUE)) {
+  X <- matrix(seq(0, 1, length.out = 18), ncol = 1)
+  fit <- fit.lpl.tf(X, sin(2 * pi * X[, 1]), degree = 1L,
+                    support.type = "knn", support.size = 7L,
+                    lambda = 0.1, lambda.selection = "fixed")
+  predict(fit)
+}
 }

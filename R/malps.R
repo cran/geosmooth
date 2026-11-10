@@ -102,7 +102,7 @@
 #' @param duplicate.action How duplicate coordinate rows should be handled.
 #'   \code{"keep"} allows duplicates, records duplicate diagnostics, and
 #'   preserves observed-anchor self-inclusion.  \code{"error"} rejects duplicate
-#'   rows.  Jittering duplicates is deliberately not implemented in Phase 1.
+#'   rows.  Jittering duplicates is deliberately not implemented.
 #' @param coordinate.method Coordinate system used for each local polynomial
 #'   design.  \code{"coordinates"} uses supplied coordinates centered at the
 #'   anchor.  \code{"local.pca"} uses a deterministic local PCA chart estimated
@@ -169,6 +169,25 @@
 #' fit <- fit.malps(X, sin(2 * pi * X[, 1]), degree = 1L,
 #'                  support.type = "knn", support.size = 8L)
 #' head(fit$fitted.values)
+#' @section Choosing controls:
+#' **First fit:** supply `X`, `y`, `degree`, and `support.type` with a suitable
+#' `support.size` or `radius`. Coordinate-distance fits support new predictions.
+#'
+#' **Selection:** support and degree grids, `foldid`, and `cv.folds` govern
+#' held-out selection. Robust refits recompute residual weights; selection is
+#' not automatically repeated by \code{\link{refit}}.
+#'
+#' **Geometry:** `support.metric`, graph inputs, anchors, and chart controls
+#' determine the local models. Graph-geodesic fits require aligned vertices
+#' and do not currently predict at new targets.
+#'
+#' **Numerics:** `local.solver`, conditioning controls, and robust weighting
+#' have distinct meanings. Keep their defaults until diagnostics identify a need.
+#'
+#' **Diagnostics:** inspect `selected`, model weights, and stored local fits.
+#' \code{\link{smoother.matrix}} allocates a dense matrix and applies only to fixed
+#' weighting; its `max.n` guard makes that cost explicit.
+#'
 #' @export
 fit.malps <- function(
     X,
@@ -254,7 +273,7 @@ fit.malps <- function(
         stop(sprintf(
             paste0("X contains %d duplicate coordinate row(s). ",
                    "Duplicate rows are allowed with duplicate.action = 'keep'; ",
-                   "jittering duplicates is not implemented in Phase 1a."),
+                   "jittering duplicates is not implemented."),
             duplicate.info$n.duplicate.rows
         ), call. = FALSE)
     }
@@ -501,6 +520,11 @@ fit.malps <- function(
 #' @param ... Reserved for future extensions.
 #'
 #' @return Numeric vector of fitted values.
+#' @examples
+#' X <- matrix(seq(0, 1, length.out = 12), ncol = 1)
+#' fit <- fit.malps(X, sin(2 * pi * X[, 1]), support.size = 6L)
+#' predict(fit)
+#' @method predict malps
 #' @export
 predict.malps <- function(object, newdata = NULL, type = c("response"),
                           allow.incomplete = FALSE, ...) {
@@ -575,7 +599,9 @@ predict.malps <- function(object, newdata = NULL, type = c("response"),
 #' X <- matrix(seq(0, 1, length.out = 20), ncol = 1)
 #' fit <- fit.malps(X, X[, 1]^2, degree = 1L,
 #'                  support.type = "knn", support.size = 8L)
-#' refit.malps(fit, y = X[, 1]^3)
+#' refit(fit, y = X[, 1]^3)
+#' @seealso \code{\link{refit}} for supported fitted objects and migration.
+#' @method refit malps
 #' @export
 refit.malps <- function(
     object,
@@ -591,16 +617,16 @@ refit.malps <- function(
     }
     dots <- list(...)
     if (length(dots)) {
-        stop("Unused arguments in refit.malps(): ",
+        stop("Unused arguments in refit(): ",
              paste(names(dots), collapse = ", "), call. = FALSE)
     }
     weights <- .malps.validate.refit.weights(weights, nrow(object$X))
     if (!isTRUE(reuse.selection)) {
-        stop("refit.malps() currently requires reuse.selection = TRUE.",
+        stop("refit() currently requires reuse.selection = TRUE.",
              call. = FALSE)
     }
     if (!isTRUE(refit.local.coefficients)) {
-        stop("refit.malps() currently requires refit.local.coefficients = TRUE.",
+        stop("refit() currently requires refit.local.coefficients = TRUE.",
              call. = FALSE)
     }
     if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) {
@@ -652,7 +678,7 @@ refit.malps <- function(
 #' as the exact response-to-fit map.
 #'
 #' @param object A \code{"malps"} object from \code{\link{fit.malps}} or
-#'   \code{\link{refit.malps}}.
+#'   \code{\link{refit}}.
 #' @param max.n Maximum number of training observations for which a dense
 #'   smoother matrix may be constructed.  Use \code{Inf} to disable this guard.
 #' @param allow.robust Logical; allow fixed-final-weight linearization for fits
@@ -666,17 +692,20 @@ refit.malps <- function(
 #' X <- matrix(seq(0, 1, length.out = 20), ncol = 1)
 #' fit <- fit.malps(X, X[, 1]^2, degree = 1L,
 #'                  support.type = "knn", support.size = 8L)
-#' S <- malps.smoother.matrix(fit)
+#' S <- smoother.matrix(fit)
 #' max(abs(S %*% fit$y - fit$fitted.values))
+#' @seealso \code{\link{smoother.matrix}} for supported fitted objects and migration.
+#' @method smoother.matrix malps
+#' @aliases malps.smoother.matrix
 #' @export
-malps.smoother.matrix <- function(object, max.n = 1000L,
+smoother.matrix.malps <- function(object, max.n = 1000L,
                                   allow.robust = FALSE, ...) {
     if (!inherits(object, "malps")) {
         stop("object must be a 'malps' object.", call. = FALSE)
     }
     dots <- list(...)
     if (length(dots)) {
-        stop("Unused arguments in malps.smoother.matrix(): ",
+        stop("Unused arguments in smoother.matrix(): ",
              paste(names(dots), collapse = ", "), call. = FALSE)
     }
     if (!is.logical(allow.robust) || length(allow.robust) != 1L ||
@@ -699,7 +728,7 @@ malps.smoother.matrix <- function(object, max.n = 1000L,
     if (robust.used && !allow.robust) {
         stop(
             paste(
-                "malps.smoother.matrix() is exact only for fixed-weight",
+                "smoother.matrix() is exact only for fixed-weight",
                 "linear MALPS fits. Robust residual weights are",
                 "response-dependent; use allow.robust = TRUE only for the",
                 "fixed-final-weight linearization."
@@ -759,7 +788,7 @@ malps.smoother.matrix <- function(object, max.n = 1000L,
 #' These diagnostics are exact for fixed-support, fixed-weight linear MALPS
 #' fits.  For cross-validated fits they are conditional on the selected support
 #' profile.  Robust fits are rejected by default for the same reason described
-#' in \code{\link{malps.smoother.matrix}}.
+#' in \code{\link{smoother.matrix}}.
 #'
 #' The GCV score is computed as
 #' \deqn{
@@ -774,15 +803,15 @@ malps.smoother.matrix <- function(object, max.n = 1000L,
 #' }
 #'
 #' @param object A \code{"malps"} object from \code{\link{fit.malps}} or
-#'   \code{\link{refit.malps}}.
+#'   \code{\link{refit}}.
 #' @param y Optional response vector.  Defaults to \code{object$y}.
 #' @param smoother.matrix Optional precomputed matrix from
-#'   \code{\link{malps.smoother.matrix}}.
+#'   \code{\link{smoother.matrix}}.
 #' @param include.loocv Logical; include analytic leave-one-out residuals and
 #'   mean squared error.
 #' @param max.n Maximum dense smoother size passed to
-#'   \code{\link{malps.smoother.matrix}} when \code{smoother.matrix = NULL}.
-#' @param allow.robust Logical; passed to \code{\link{malps.smoother.matrix}}.
+#'   \code{\link{smoother.matrix}} when \code{smoother.matrix = NULL}.
+#' @param allow.robust Logical; passed to \code{\link{smoother.matrix}}.
 #' @param ... Reserved for future extensions.
 #'
 #' @return A list with residual, fitted-value, EDF, GCV, and optional LOOCV
@@ -810,7 +839,7 @@ malps.gcv <- function(object, y = NULL, smoother.matrix = NULL,
     }
     y <- .malps.validate.y(y, n, "y")
     if (is.null(smoother.matrix)) {
-        smoother.matrix <- malps.smoother.matrix(
+        smoother.matrix <- smoother.matrix(
             object,
             max.n = max.n,
             allow.robust = allow.robust
@@ -873,7 +902,7 @@ malps.gcv <- function(object, y = NULL, smoother.matrix = NULL,
 #' Reuses the supports, local charts, prediction supports, averaging weights,
 #' selected degree, and local-solver controls from an existing
 #' \code{\link{fit.malps}} object, then repeatedly calls
-#' \code{\link{refit.malps}} with bootstrap-style case weights.  This is a
+#' \code{\link{refit}} with bootstrap-style case weights.  This is a
 #' fixed-selection uncertainty diagnostic: it measures refit variability
 #' conditional on the fitted MALPS support profile and does not rerun
 #' cross-validation or rebuild supports in each replicate.
@@ -887,7 +916,7 @@ malps.gcv <- function(object, y = NULL, smoother.matrix = NULL,
 #' support, and such failures are recorded.
 #'
 #' @param object A \code{"malps"} object from \code{\link{fit.malps}} or
-#'   \code{\link{refit.malps}}.
+#'   \code{\link{refit}}.
 #' @param B Number of successful bootstrap replicates requested.
 #' @param weight.type Bootstrap weight generator, one of \code{"bayesian"} or
 #'   \code{"multinomial"}.
@@ -974,7 +1003,7 @@ bootstrap.malps <- function(object, B = 200L,
         attempts <- attempts + 1L
         weights <- .malps.bootstrap.weights(n, weight.type, probs)
         refit <- tryCatch(
-            refit.malps(object, y = y, weights = weights),
+            refit(object, y = y, weights = weights),
             error = function(e) e
         )
         if (inherits(refit, "error")) {
@@ -1058,6 +1087,7 @@ bootstrap.malps <- function(object, B = 200L,
     out
 }
 
+#' @rdname geosmooth-print-methods
 #' @method print malps
 #' @export
 print.malps <- function(x, ...) {
@@ -1075,6 +1105,7 @@ print.malps <- function(x, ...) {
     invisible(x)
 }
 
+#' @rdname geosmooth-print-methods
 #' @method print malps_bootstrap
 #' @export
 print.malps_bootstrap <- function(x, ...) {
@@ -1761,9 +1792,10 @@ print.malps_bootstrap <- function(x, ...) {
         ))
     }
 
-    fields <- .graph.geodesic.fields(graph, stage = graph.stage)
-    adj <- graph[[fields$adj]]
-    weights <- graph[[fields$weight]]
+    payload <- .geosmooth.graph.payload(graph, stage = graph.stage)
+    fields <- payload$fields
+    adj <- payload$adj.list
+    weights <- payload$weight.list
     .validate.graph.geodesic.payload(adj, weights, fields)
     validated <- .validate.metric.graph.lowpass.graph(adj, weights)
     if (length(validated$adj.list) != n) {

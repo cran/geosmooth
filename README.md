@@ -1,10 +1,58 @@
 # geosmooth
 
-`geosmooth` provides geometric smoothing and conditional expectation methods
-for ordinary coordinate data, point-cloud embeddings, and weighted graphs. It
-includes local polynomial smoothers, graph-aware trend filtering, graph
-low-pass filtering, occupation-density estimators, and Hessian-energy
-regression.
+`geosmooth` provides geometric methods for nonparametric regression and density
+estimation on data represented as coordinate matrices or weighted graphs. It
+includes local polynomial smoothing, model-averaged local polynomial smoothing,
+local polynomial lifting trend filtering, synchronized local polynomial lifting
+trend filtering, one-dimensional logistic trend filtering, graph low-pass
+filtering, and Hessian-energy regression.
+
+![Noisy observations along a sine curve; the solid blue fitted response follows the dashed orange synthetic truth.](man/figures/first-fit.png)
+
+The points are observations, the solid line is a selected local polynomial fit,
+and the dashed line is known synthetic truth. The
+[first-fit guide](https://pgajer.github.io/geosmooth/articles/function-guide.html#a-first-regression-fit)
+shows the code, selected settings, and how to interpret the tuning score.
+
+For a task-based catalog of every exported function, prediction capabilities,
+and examples, read [Finding your way around geosmooth](https://pgajer.github.io/geosmooth/articles/function-guide.html).
+In an installed package, use `vignette("function-guide", package = "geosmooth")`
+or start with `help("geosmooth-package", package = "geosmooth")`.
+
+Browse the [reference by task](https://pgajer.github.io/geosmooth/reference/index.html),
+[functions A–Z](https://pgajer.github.io/geosmooth/reference/alphabetical.html), or
+[synthetic datasets guide](https://pgajer.github.io/geosmooth/articles/synthetic-datasets.html).
+See [NEWS](https://pgajer.github.io/geosmooth/news/index.html) for migration details.
+
+## Installation
+
+For the version currently on CRAN:
+
+```r
+install.packages("geosmooth")
+help("geosmooth-package", package = "geosmooth")
+```
+
+The 0.2.0 release candidate includes the guides below and requires R >= 4.1.0
+and dgraphs >= 0.4.0. Its optional GRIP and edge-KK embeddings require
+grip >= 0.3.0. These dependency releases must be available before the candidate
+can complete CRAN-only validation. A source installation needs an R compilation
+toolchain.
+
+Once those dependencies are published on CRAN, install the candidate with:
+
+```r
+install.packages("pak")
+pak::pkg_install("pgajer/geosmooth")
+vignette("function-guide", package = "geosmooth")
+```
+
+The package-check and website workflows now resolve dependencies from CRAN.
+Their next builds and the final **CRAN dependency check** remain pending until
+dgraphs >= 0.4.0 and grip >= 0.3.0 are published. Earlier successful checks used
+development dependencies and do not establish CRAN-only release readiness.
+See [the submission draft](https://github.com/pgajer/geosmooth/blob/main/cran-comments.md) for the recorded status and
+remaining validation.
 
 ## Quick Start
 
@@ -23,7 +71,7 @@ lps.fit <- fit.lps(
     foldid = foldid,
     support.grid = c(8L, 12L, 16L),
     degree.grid = 0:1,
-    kernel.grid = c("gaussian", "tricube")
+    kernel.grid = "gaussian"
 )
 
 head(predict(lps.fit))
@@ -34,7 +82,7 @@ selects support size, local polynomial degree, and kernel by cross-validation.
 
 ## Method Map
 
-Current public payload:
+Choose by the structure of your data and the penalty you need:
 
 - **LPS**: local polynomial smoother, `fit.lps()`.
   Use this as the direct local-regression baseline.  It predicts by fitting a
@@ -47,12 +95,35 @@ Current public payload:
 - **LPL-TF**: local polynomial lifting trend filtering, `fit.lpl.tf()` and
   `lpl.tf.operator()`.
   Use this when the local polynomial residual operator should be regularized by
-  an \(\ell_1\) trend-filtering penalty.
+  an L1 (absolute-value) trend-filtering penalty.
 
 - **SLPLiFT / S-LPL-TF**: synchronized local polynomial lifting trend
   filtering, `fit.slpl.tf()` and `slpl.tf.operator()`.
   Use this when you want LPL-TF plus a quadratic synchronization penalty across
   overlapping local predictions.
+
+- **Graph low-pass**: `fit.metric.graph.lowpass()` smooths a response on an
+  undirected graph with positive edge lengths or supplied nonnegative
+  conductances. The
+  [graph workflow](https://pgajer.github.io/geosmooth/articles/function-guide.html#from-a-constructed-graph-to-a-fitted-response)
+  explains vertex alignment, length-to-conductance conversion, and basis reuse.
+  The [observed-data heat guide](https://pgajer.github.io/geosmooth/articles/verified-heat-fallback.html)
+  covers missing responses, numerical cross-checks, and unresolved tuning choices.
+
+- **One-dimensional Gaussian trend filtering**: `fit.gaussian.trend.filtering()`
+  fits continuous outcomes with an order-2 piecewise-quadratic curve.
+  `assess.gaussian.trend.filtering()` retunes on each outcome permutation,
+  compares held-out MSE/MAE with a training-only mean, and reports absolute
+  deviation and total variation. The permutation null requires exchangeability;
+  constant mean alone under arbitrary heteroskedasticity is insufficient.
+- **One-dimensional logistic trend filtering**: `fit.logistic.trend.filtering()`
+  fits a binary outcome over a continuous predictor. The
+  [assessment function](https://pgajer.github.io/geosmooth/reference/assess.logistic.trend.filtering.html)
+  tests constancy by permutation and measures predictive improvement.
+  Likelihood remains the default test; absolute-deviation and total-variation
+  summaries have optional permutation tests with Holm adjustment. The
+  [logistic trend-filtering guide](https://pgajer.github.io/geosmooth/articles/logistic-trend-filtering.html)
+  illustrates fitting and assessment on synthetic and Pima data.
 
 - **SSRHE**: SSRHE-style Hessian-energy smoothing,
   `fit.ssrhe.hessian.regression()` and
@@ -150,6 +221,17 @@ ssrhe.fit <- fit.ssrhe.hessian.regression(
     tangent.dim = 2L,
     lambda1 = 0.05,
     return.local.diagnostics = FALSE
+)
+
+# Select penalties with the same fitter (use "gcv" for fully observed data).
+ssrhe.cv <- fit.ssrhe.hessian.regression(
+    X = X2,
+    y = y2,
+    k = 12L,
+    tangent.dim = 2L,
+    lambda.selection = "cv",
+    lambda1.grid = c(0.01, 0.05, 0.2),
+    cv.control = list(cv.folds = 5L)
 )
 ```
 

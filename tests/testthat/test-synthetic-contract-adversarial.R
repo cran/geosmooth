@@ -124,8 +124,8 @@ test_that("named atomic vectors have a literal canonical checksum", {
 
   make.spec <- function(value) {
     synthetic.spec(
-      synthetic.quadform(1L, 1L),
-      synthetic.sampling.uniform.interval(0, 1),
+      dgraphs::synthetic.quadform(1L, 1L),
+      dgraphs::synthetic.sampling.uniform.interval(0, 1),
       synthetic.truth.polynomial(value),
       synthetic.response.gaussian(0))
   }

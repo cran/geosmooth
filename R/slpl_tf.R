@@ -7,8 +7,8 @@
 #' over overlapping supports.
 #'
 #' @inheritParams lpl.tf.operator
-#' @param sync.row.normalize Synchronization-row normalization. Phase S2 uses
-#'   \code{"l2"} by default.
+#' @param sync.row.normalize Synchronization-row normalization. The current
+#'   implementation uses \code{"l2"} by default.
 #' @param sync.min.norm Minimum raw synchronization-row norm. Rows below this
 #'   threshold are dropped with metadata.
 #'
@@ -155,6 +155,7 @@ slpl.tf.operator <- function(
     out
 }
 
+#' @rdname geosmooth-print-methods
 #' @method print slpl_tf_operator
 #' @export
 print.slpl_tf_operator <- function(x, ...) {
@@ -190,14 +191,15 @@ print.slpl_tf_operator <- function(x, ...) {
 #' @param lambda.selection \code{"fixed"} or \code{"cv"}. CV uses materialized
 #'   folds and a deterministic Cartesian grid over \code{lambda1.grid} and
 #'   \code{lambda2.grid}.
-#' @param operator.grid Optional Phase-S3 operator candidate grid. Supply a data
+#' @param operator.grid Optional operator candidate grid. Supply a data
 #'   frame with one row per candidate or a list of named lists.
 #' @param foldid Optional deterministic fold assignments for CV.
 #' @param cv.folds Number of generated folds when \code{foldid = NULL}.
 #' @param cv.loss Cross-validation loss, \code{"mse"}, \code{"rmse"}, or
 #'   \code{"mae"}.
 #' @param cv.seed Optional seed for reproducible generated folds.
-#' @param cv.repeats Phase S3 supports only one CV repeat.
+#' @param cv.repeats Number of CV repeats. The current implementation supports
+#'   only one repeat.
 #' @param solver Current implementation supports only \code{"genlasso"}.
 #' @param selection Selection rule, \code{"min"} or \code{"one.se"}. For the
 #'   two-parameter one-standard-error rule, the most regularized eligible pair
@@ -252,7 +254,7 @@ fit.slpl.tf <- function(
     cv.folds <- .validate.ssrhe.positive.integer(cv.folds, "cv.folds")
     cv.repeats <- .validate.ssrhe.positive.integer(cv.repeats, "cv.repeats")
     if (cv.repeats != 1L) {
-        stop("Phase S3 fit.slpl.tf() supports cv.repeats = 1 only.",
+        stop("fit.slpl.tf() supports cv.repeats = 1 only.",
              call. = FALSE)
     }
     if (identical(lambda.selection, "fixed")) {
@@ -479,10 +481,13 @@ fit.slpl.tf <- function(
 #'                      support.type = "knn", support.size = 7L,
 #'                      lambda1 = 0.1, lambda2 = 0,
 #'                      lambda.selection = "fixed")
-#'   refit.slpl.tf(fit, y = X[, 1]^3)
+#'   refit(fit, y = X[, 1]^3)
 #' }
+#' @seealso \code{\link{refit}} for supported fitted objects and migration.
+#' @method refit slpl_tf
+#' @aliases refit.slpl.tf
 #' @export
-refit.slpl.tf <- function(object, y, lambda1 = NULL, lambda2 = NULL,
+refit.slpl_tf <- function(object, y, lambda1 = NULL, lambda2 = NULL,
                           reuse.lambda = TRUE, verbose = FALSE, ...) {
     if (!inherits(object, "slpl_tf")) {
         stop("'object' must be an slpl_tf fit.", call. = FALSE)
@@ -518,11 +523,22 @@ refit.slpl.tf <- function(object, y, lambda1 = NULL, lambda2 = NULL,
 #' Predict From A Fixed-Operator Synchronized LPL-TF Model
 #'
 #' @param object A \code{"slpl_tf"} fit.
-#' @param newdata Must be \code{NULL} in Phase S2.
-#' @param type Prediction type. Phase S2 supports only \code{"response"}.
+#' @param newdata Must be \code{NULL}; prediction is currently available only
+#'   at the training points.
+#' @param type Prediction type. The current implementation supports only
+#'   \code{"response"}.
 #' @param ... Reserved.
 #'
 #' @return Fitted values at the training points.
+#' @examples
+#' if (requireNamespace("genlasso", quietly = TRUE)) {
+#'   X <- matrix(seq(0, 1, length.out = 18), ncol = 1)
+#'   fit <- fit.slpl.tf(X, sin(2 * pi * X[, 1]), degree = 1L,
+#'                      support.type = "knn", support.size = 7L,
+#'                      lambda1 = 0.1, lambda2 = 0,
+#'                      lambda.selection = "fixed")
+#'   predict(fit)
+#' }
 #' @method predict slpl_tf
 #' @export
 predict.slpl_tf <- function(object, newdata = NULL, type = c("response"),
@@ -534,7 +550,7 @@ predict.slpl_tf <- function(object, newdata = NULL, type = c("response"),
              call. = FALSE)
     }
     if (!is.null(newdata)) {
-        stop("Phase S2 predict() for slpl_tf supports training-point ",
+        stop("predict() for slpl_tf supports training-point ",
              "prediction only; 'newdata' must be NULL.", call. = FALSE)
     }
     object$fitted.values

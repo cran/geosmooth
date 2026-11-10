@@ -41,7 +41,9 @@ harmonic residual fell below \code{tolerance};
 vertex counts for the requested region and its boundary/interior split;
 \item \code{num_iterations}: the number of relaxation iterations run;
 \item \code{max_change} and \code{max_residual}: per-iteration convergence
-diagnostics.
+diagnostics;
+\item \code{status}: \code{converged}, \code{iteration_limit},
+\code{no_boundary}, or \code{no_interior}.
 }
 }
 \description{
@@ -51,21 +53,20 @@ interpolating interior values. This function implements a discrete Laplace
 equation solution using weighted averaging.
 }
 \details{
-Harmonic smoothing preserves the overall shape of a function defined on a
-graph while removing local fluctuations. It works by iteratively updating
-interior vertex values as weighted averages of their neighbors until
-convergence, while keeping boundary values fixed.
+Boundary vertices are exactly the region vertices with a neighbor outside
+the region. Degree-one vertices are not automatically boundary vertices.
+Boundary values and values outside the region remain fixed. Each synchronous
+relaxation step replaces interior values by neighbor averages with conductance
+\eqn{1 / (w + 10^{-10})}, where \eqn{w} is the supplied edge length.
 
-The algorithm:
-\enumerate{
-\item Identifies boundary vertices (vertices with neighbors outside the
-region or degree 1 vertices)
-\item Iteratively updates interior vertex values using edge-weighted averaging
-\item Continues until convergence or maximum iterations reached
-}
-
-Edge weights are incorporated by using their inverse as weighting factors,
-respecting the geometric structure of the graph.
+With no boundary, this function returns the input unchanged, with status
+\code{"no_boundary"} and \code{converged = FALSE}. With no interior there
+is nothing to solve: status is \code{"no_interior"} and convergence is true.
+On a disconnected region, components without a connection to fixed boundary
+values are not uniquely anchored; relaxation can oscillate. Inspect convergence
+before using the result as a harmonic solution. Unlike this basic function,
+\code{harmonic.smoother()} also runs relaxation when the whole region has no
+boundary, retaining its historical behavior.
 }
 \examples{
 adj.list <- list(2L, c(1L, 3L), c(2L, 4L), 3L)

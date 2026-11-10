@@ -28,8 +28,8 @@ pttf.operator(
 \code{2L}, or \code{3L}.}
 
 \item{edge.status.policy}{Edge transport policy. \code{"ok.only"} uses only
-Phase 1 transports with status \code{"ok"}. \code{"frame.fallback"} also
-allows direct-frame fallback transports for non-OK shared-support statuses.}
+transports with status \code{"ok"}. \code{"frame.fallback"} also allows
+direct-frame fallback transports for non-OK shared-support statuses.}
 
 \item{regression.weight.rule}{Local regression edge-weight rule.}
 
@@ -41,8 +41,8 @@ Hilbert--Schmidt norms. \code{"raw"} stores unscaled unique symmetric
 components.}
 
 \item{row.mass.rule}{Final row-mass multiplier. \code{"node.mass"} multiplies
-rows for vertex \eqn{i} by \eqn{\sqrt{\mu_i}} from the Phase 1 density
-metadata. \code{"none"} leaves rows unweighted.}
+rows for vertex \eqn{i} by \eqn{\sqrt{\mu_i}} from the density metadata.
+\code{"none"} leaves rows unweighted.}
 
 \item{row.normalize}{Optional final row normalization.}
 
@@ -73,8 +73,8 @@ This is an operator-construction function only: it does not fit a response,
 tune a penalty parameter, or run an \eqn{\ell_1}/\eqn{\ell_2} smoother.
 }
 \details{
-Phase 2 keeps a full logical vertex/component layout internally. For order
-\eqn{r}, the logical field has one block of
+The operator keeps a full logical vertex/component layout internally. For
+order \eqn{r}, the logical field has one block of
 \eqn{q_r=\binom{m+r-1}{r}} components at each vertex. The returned
 \code{A} is compact: it includes rows only for accepted final-order
 vertex/component blocks, and \code{row.table$full.row} records the original

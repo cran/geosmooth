@@ -17,6 +17,19 @@ Invisibly returns the input object.
 \description{
 Prints a concise summary of harmonic smoother results.
 }
+\examples{
+fit <- structure(
+  list(
+    stable_iteration = 2L,
+    i_harmonic_predictions = matrix(1:4, nrow = 2),
+    i_basins = list(matrix(c(1, 1), ncol = 2)),
+    topology_differences = numeric()
+  ),
+  class = "harmonic_smoother"
+)
+print(fit)
+
+}
 \seealso{
 \code{\link{harmonic.smoother}}, \code{\link{summary.harmonic_smoother}}
 }

@@ -25,16 +25,22 @@ fit.density(
 
 \item{graph}{Optional precomputed graph object.}
 
-\item{graph.control}{List of graph-method controls.}
+\item{graph.control}{Named list for random walks: \code{walk.steps} (or
+\code{walk.step}), \code{affinity.method}, \code{affinity.scale},
+\code{affinity.epsilon}, and logical \code{normalize}. Underscore aliases
+are accepted, but conflicting aliases and unknown names are rejected.
+Must be empty for the empirical estimator.}
 
 \item{density.control}{List controlling clipping, normalization, and
 accounting checks.  Recognized entries are \code{mass.tol},
-\code{neg.tol}, \code{clip.negative}, and \code{renormalize}.}
+\code{neg.tol}, logical \code{clip.negative} and \code{renormalize},
+and diagnostic controls \code{smoothness.adj.list} and logical
+\code{smoothness.auto.1d}. Unknown or duplicated names are errors.}
 
 \item{return.details}{Logical; if \code{TRUE}, keep diagnostic details in
 the result.}
 
-\item{...}{Additional method-specific arguments.}
+\item{...}{Reserved for future methods; unused arguments are errors.}
 }
 \value{
 A list of class \code{"density_fit"} with fields

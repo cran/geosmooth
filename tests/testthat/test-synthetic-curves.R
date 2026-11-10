@@ -5,8 +5,8 @@ test_that("circle grid absorbs the historical noise-free convention", {
   expected <- radius * cbind(cos(angles), sin(angles))
 
   spec <- synthetic.spec(
-    geometry = synthetic.circle(radius = radius),
-    sampling = synthetic.sampling.grid.interval(
+    geometry = dgraphs::synthetic.circle(radius = radius),
+    sampling = dgraphs::synthetic.sampling.grid.interval(
       0, 2 * pi, endpoints = "exclude.lower"),
     truth = synthetic.truth.polynomial(c(b0 = 0)),
     response = synthetic.response.gaussian(0))
@@ -22,8 +22,8 @@ test_that("random circle angles preserve the legacy base-R draw", {
   set.seed(73L)
   expected <- sort(stats::runif(12L, 0, 2 * pi))
   spec <- synthetic.spec(
-    geometry = synthetic.circle(),
-    sampling = synthetic.sampling.uniform.interval(
+    geometry = dgraphs::synthetic.circle(),
+    sampling = dgraphs::synthetic.sampling.uniform.interval(
       0, 2 * pi, order = "ascending"),
     truth = synthetic.truth.polynomial(c(b0 = 0)),
     response = synthetic.response.gaussian(0))
@@ -41,8 +41,8 @@ test_that("trefoil grid absorbs the historical parameterization", {
     scale * cos(tt) - 2 * cos(2 * tt),
     -scale * sin(3 * tt))
   spec <- synthetic.spec(
-    geometry = synthetic.trefoil(scale = scale),
-    sampling = synthetic.sampling.grid.interval(
+    geometry = dgraphs::synthetic.trefoil(scale = scale),
+    sampling = dgraphs::synthetic.sampling.grid.interval(
       0, 2 * pi, endpoints = "include.both"),
     truth = synthetic.truth.polynomial(c(b0 = 0)),
     response = synthetic.response.gaussian(0))
@@ -53,13 +53,13 @@ test_that("trefoil grid absorbs the historical parameterization", {
 
 test_that("curve domains and ambient frames are validated", {
   expect_error(
-    embed.synthetic.geometry(synthetic.circle(), matrix(2 * pi + 1e-4)),
+    dgraphs::embed.synthetic.geometry(dgraphs::synthetic.circle(), matrix(2 * pi + 1e-4)),
     "outside")
-  geometry <- synthetic.circle(
+  geometry <- dgraphs::synthetic.circle(
     ambient.dim = 5L, frame = "random.orthonormal")
   spec <- synthetic.spec(
     geometry = geometry,
-    sampling = synthetic.sampling.grid.interval(0, 2 * pi),
+    sampling = dgraphs::synthetic.sampling.grid.interval(0, 2 * pi),
     truth = synthetic.truth.polynomial(c(b0 = 0)),
     response = synthetic.response.gaussian(0))
   data <- materialize.synthetic(spec, n = 8L, seed = 9L)
@@ -73,8 +73,8 @@ test_that("curve domains and ambient frames are validated", {
 
 test_that("synthetic dataset plot method is shared across families", {
   spec <- synthetic.spec(
-    geometry = synthetic.circle(),
-    sampling = synthetic.sampling.grid.interval(0, 2 * pi),
+    geometry = dgraphs::synthetic.circle(),
+    sampling = dgraphs::synthetic.sampling.grid.interval(0, 2 * pi),
     truth = synthetic.truth.polynomial(c(b0 = 0)),
     response = synthetic.response.gaussian(0))
   data <- materialize.synthetic(spec, n = 8L, seed = 1L)

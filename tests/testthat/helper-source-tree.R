@@ -1,5 +1,5 @@
-geosmooth.test.source.root <- function() {
-    starts <- c(
+geosmooth.test.source.root <- function(starts = NULL) {
+    if (is.null(starts)) starts <- c(
         tryCatch(
             testthat::test_path("..", ".."),
             error = function(e) NA_character_
@@ -17,7 +17,15 @@ geosmooth.test.source.root <- function() {
                     read.dcf(description, fields = "Package")[[1L]],
                     error = function(e) NA_character_
                 )
-                if (identical(package, "geosmooth")) return(root)
+                # Installed packages have DESCRIPTION too, but no canonical
+                # Rcpp R source and their sources are replaced by lazy-load data.
+                source.marker <- file.path(root, "R", "RcppExports.R")
+                installed.marker <- file.path(root, "Meta", "package.rds")
+                if (identical(package, "geosmooth") &&
+                    file.exists(source.marker) && !file.exists(installed.marker)) {
+                    # dirname() changes Windows separators while walking upward.
+                    return(normalizePath(root, mustWork = TRUE))
+                }
             }
             parent <- dirname(root)
             if (identical(parent, root)) break

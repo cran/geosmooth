@@ -4,20 +4,46 @@
 \alias{plot.synthetic_dataset}
 \title{Plot a canonical synthetic dataset}
 \usage{
-\method{plot}{synthetic_dataset}(x, color = c("response", "truth", "region"), ...)
+\method{plot}{synthetic_dataset}(
+  x,
+  color = c("response", "truth", "region"),
+  ...,
+  view = c("auto", "geometry", "response"),
+  legend = TRUE,
+  col = NULL
+)
 }
 \arguments{
 \item{x}{A \code{synthetic_dataset}.}
 
-\item{color}{Color mapping: response, truth, or region.}
+\item{color}{Color mapping for points: response, truth, or region. Region
+mapping requires stored region labels. Numeric keys display the actual range.}
 
-\item{...}{Additional arguments passed to \code{\link[graphics:plot]{graphics::plot()}}.}
+\item{...}{Additional arguments passed to \code{\link[graphics:plot]{graphics::plot()}}, including
+overrides for axis labels, point shape, or color.}
+
+\item{view}{\code{"auto"}, \code{"geometry"}, or \code{"response"}. Geometry requires at
+least two predictor coordinates. Named-only, after \code{...}, for compatibility.}
+
+\item{legend}{Logical; show point-color and response/truth keys. A user-supplied
+\code{col} suppresses the automatic color key.}
+
+\item{col}{Optional explicit point color, overriding the color mapping.}
 }
 \value{
 \code{x}, invisibly.
 }
 \description{
-One-dimensional datasets show response and truth against the first latent
-coordinate. Higher-dimensional datasets show the first two predictor
-coordinates, colored by response or region.
+The default \code{view = "auto"} preserves the dimension-dependent display:
+one latent coordinate shows response and truth against that coordinate;
+otherwise the first two predictor coordinates show a geometry projection.
+Select \code{"geometry"} explicitly to see a curve's embedding, or \code{"response"}
+to see responses against the first latent coordinate (observation index when
+latent coordinates are absent). A two-coordinate projection can hide
+separation in higher ambient dimensions. Plotting does not draw random values.
+}
+\examples{
+x <- materialize.synthetic(synthetic.registry.spec("G1"), n = 20L, seed = 1L)
+plot(x)
+plot(x, view = "geometry", color = "truth")
 }

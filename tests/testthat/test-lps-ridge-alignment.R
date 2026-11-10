@@ -1,8 +1,6 @@
 # E2.13 — ridge-penalty structure alignment (Tier 2 GATEs).
 #
-# Contract S C / E2.13 + the S G4 resolution
-# (dev/methods/lps/audit_contracts/lps_g4_ridge_resolution_2026-06-12.md):
-# the aligned ridge
+# The aligned ridge
 # is OPT-IN via ridge.shrinkage.target = "local.mean" (weighted-centering
 # reparametrization, gaussian/least-squares solve only); the default
 # "zero" preserves the historical penalty structure bit-for-bit.

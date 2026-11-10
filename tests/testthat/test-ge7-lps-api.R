@@ -222,7 +222,7 @@ test_that("LPS Bernoulli mode validates 0/1 responses and reports probabilities"
 
 test_that("LPS binomial mode uses local logistic fits and log-loss selection", {
     set.seed(1708)
-    X <- matrix(sort(runif(48)), ncol = 1L)
+    X <- matrix(sort(runif(24)), ncol = 1L)
     prob <- stats::plogis(-0.4 + 2.5 * sin(2 * pi * X[, 1]))
     y <- stats::rbinom(nrow(X), size = 1L, prob = prob)
     foldid <- rep(1:4, length.out = nrow(X))

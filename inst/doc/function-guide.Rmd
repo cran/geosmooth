@@ -1,0 +1,641 @@
+---
+title: "Finding your way around geosmooth"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Finding your way around geosmooth}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<style>
+td, th { vertical-align: top; }
+td code { white-space: normal; overflow-wrap: anywhere; }
+</style>
+
+```{r standalone-width, echo=FALSE, results='asis'}
+# Let pkgdown own the site layout; widen only the standalone installed vignette.
+if (!identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+  cat("<style>body { max-width: 1120px; }</style>")
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+read.recipe <- getExportedValue("knitr", "read_chunk")
+read.recipe(system.file("doc-tools/first-fit.R", package = "geosmooth"))
+read.recipe(system.file("doc-tools/graph-workflow.R", package = "geosmooth"))
+```
+
+`geosmooth` estimates a response or probability mass on coordinate data and
+graphs. Start with the task you want to perform, then choose a method. You do
+not need to learn the operator constructors or synthetic-data helpers to fit
+your first model.
+
+## Choose a starting point
+
+| Your task | Start here | What to know before choosing |
+|---|---|---|
+| Regress a response on coordinates | [`fit.lps()`](https://pgajer.github.io/geosmooth/reference/fit.lps.html) | Local polynomial smoothing; selects neighborhood size, degree, and kernel by cross-validation. |
+| Average predictions from overlapping local models | [`fit.malps()`](https://pgajer.github.io/geosmooth/reference/fit.malps.html) | Model-averaged local polynomial smoothing; supports coordinate and graph-geodesic neighborhoods. |
+| Couple local polynomial predictions across overlaps | [`fit.ps.lps()`](https://pgajer.github.io/geosmooth/reference/fit.ps.lps.html) | Prediction-synchronized local polynomial smoothing; experimental R reference implementation. |
+| Fit a locally adaptive trend with a sparse difference penalty | [`fit.lpl.tf()`](https://pgajer.github.io/geosmooth/reference/fit.lpl.tf.html) | Local polynomial lifting trend filtering; requires optional package `genlasso`. |
+| Fit a one-dimensional continuous response | `fit.gaussian.trend.filtering()` | Order-2 Gaussian trend filtering with squared-error loss, explicit penalties and convergence diagnostics. |
+| Fit a one-dimensional binary or binomial response | `fit.logistic.trend.filtering()` | Order-2 logistic trend filtering with a native C++ solver, explicit penalties, optional covariates/offsets, and convergence diagnostics. |
+| Add synchronization to a lifting trend filter | [`fit.slpl.tf()`](https://pgajer.github.io/geosmooth/reference/fit.slpl.tf.html) | Synchronized local polynomial lifting trend filtering; adds a second, quadratic penalty. |
+| Smooth a response already attached to graph vertices | [`fit.metric.graph.lowpass()`](https://pgajer.github.io/geosmooth/reference/fit.metric.graph.lowpass.html) or [`fit.graph.trend.filtering()`](https://pgajer.github.io/geosmooth/reference/fit.graph.trend.filtering.html) | Choose spectral low-pass smoothing or a graph-difference penalty. Edge-weight meanings differ; see below. |
+| Penalize local second derivatives on a point cloud | [`fit.ssrhe.hessian.regression()`](https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.regression.html) | Hessian-energy regression, following semi-supervised regression using Hessian energy (SSRHE); use `lambda.selection = "cv"` or `"gcv"` to select penalties. |
+| Use an absolute-value Hessian penalty | [`fit.ssrhe.hessian.l1.regression()`](https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.l1.regression.html) | Different regularization from quadratic Hessian energy; has its own solver and tuning controls. |
+| Interpolate graph values while fixing a region boundary | [`perform.harmonic.smoothing()`](https://pgajer.github.io/geosmooth/reference/perform.harmonic.smoothing.html) | Iterative harmonic relaxation; [`harmonic.smoother()`](https://pgajer.github.io/geosmooth/reference/harmonic.smoother.html) also records extrema and topology diagnostics. |
+| Estimate probability mass over a fixed support | [`fit.density()`](https://pgajer.github.io/geosmooth/reference/fit.density.html) | Takes nonnegative counts or masses; returns mass over the rows of `X`. |
+| Estimate where one subject visits that support | [`fit.subject.od()`](https://pgajer.github.io/geosmooth/reference/fit.subject.od.html) | Takes visit indices, including repeats; handles occupation-density fitting and optional visit-level validation. |
+| Build reproducible synthetic examples | [`synthetic.spec()`](https://pgajer.github.io/geosmooth/reference/synthetic.spec.html) then [`materialize.synthetic()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html) | Combine geometry, sampling, truth, and response noise. |
+
+These choices describe different estimators, not a ranking of predictive
+performance. Parallel-transport trend filtering and transported graph Hessians
+have their own [experimental section](#experimental-transport-methods).
+
+## A first regression fit
+
+For binary outcomes, `fit.neighbor.probability()` offers `method = "knn"`,
+`"case_raw"` and `"case_corrected"` through one C++ backend. Supply fixed `k`
+or participant-safe `foldid` for Brier tuning. Here `k` counts people for kNN
+and cases for the two stopping rules. IDs determine distance ties; group IDs
+exclude all visits of a held-out person. Missing answers never become controls.
+For repeated records the closest answering visit represents each training
+participant. `predict(fit)` excludes each query participant; new queries need
+`query.group` when they belong to an existing participant. Probability paths
+and neighborhood diagnostics use the same ordering. Unreachable or insufficient
+neighborhoods return `NA`, without an automatic baseline substitution.
+
+For Euclidean coordinates, `search = "auto"` uses exact ANN (`eps = 0`).
+`search = "brute"` selects the exhaustive reference implementation. Set
+`search = "ann", eps = 0.1` to request approximate Euclidean neighborhoods;
+the ANN distance tolerance does not bound probability error. Approximate searches
+retain the closest answering visit for each retrieved participant but can miss
+other participants or tied records. Complete tied-shell diagnostics require
+exact search. Chebyshev, intrinsic surface and precomputed distances always
+use exhaustive candidate search; explicit ANN or positive `eps` requests for
+those inputs are rejected.
+
+For surface geodesics on the nonnegative max-normalized simplex, use
+`metric = "linf.simplex", normalization = "max"`. This streams exact distances
+from dgraphs' shared C++ solver, allowing intermediate faces. It prepares sparse
+training profiles once per prediction call or CV split and keeps one query's
+neighborhood in memory. No all-pairs distance matrix or sample graph is needed.
+With `normalization = "none"`, rows must already be max-normalized within
+`sqrt(.Machine$double.eps)`; admitted rows are divided by their maxima.
+`normalization = "sum"` is rejected for this metric.
+Max normalization with `metric = "euclidean"` still measures ambient chords,
+which can produce different neighbors. Cached trees or sparse profiles are
+reused within prediction and CV splits, then rebuilt on the next prediction
+call. Fits remain serializable.
+
+```{r neighbor-probability, eval=FALSE}
+fit <- fit.neighbor.probability(X, y, method = "case_corrected", k = 3,
+                                id = record_id, group = participant_id,
+                                normalization = "max", metric = "linf.simplex")
+predict(fit, newdata = query_X, query.group = query_participant_id,
+        type = "diagnostics")
+```
+
+This estimator has a nonlinear, response-dependent neighborhood when stopping
+at cases. Shared linear-smoother operations such as `smoother.matrix()` are not
+provided. Use external grouped outer folds to assess a tuned model.
+
+Use `X` with one observation per row and a response `y` of matching length.
+A local chart is a coordinate system fitted near an observation, often using
+principal component analysis (PCA). Start in the supplied coordinates before
+adding local charts or changing numerical controls.
+
+```{r first-fit-model}
+```
+
+```{r first-fit-plot, echo=FALSE, fig.width=7.2, fig.height=4, out.width="100%", fig.cap="The points are noisy observations. The solid blue line is the selected fit; the dashed orange line is known only because these data are synthetic.", fig.alt="Noisy observations along a sine curve, with a fitted solid curve close to the dashed synthetic truth."}
+```
+
+Here CV selected `r fit$selected$support.size`-point neighborhoods, degree
+`r fit$selected$degree`, and the Gaussian kernel, with a tuning RMSE of
+`r format(fit$selected$cv.rmse.observed, digits = 3)` response units. A larger support averages more
+nearby responses; the polynomial degree determines the local shape. The selected
+CV score was used for tuning, so it is not an independent measure of performance.
+This small illustration shows how to read a fit; it does not rank estimators.
+
+```{r first-predictions}
+head(fitted(fit))
+new.X <- matrix(seq(0.1, 0.9, length.out = 5), ncol = 1)
+predict(fit, newdata = new.X)
+```
+
+Cross-validation (CV) holds out responses to choose tuning parameters. A
+support is the neighborhood used for a local fit; a grid lists candidate
+values. The local support size and polynomial degree jointly determine whether
+a local fit has enough observations. For grouped observations, use
+[`lps.grouped.foldid()`](https://pgajer.github.io/geosmooth/reference/lps.grouped.foldid.html) to keep each group in one fold. Use [`lps.nested.cv()`](https://pgajer.github.io/geosmooth/reference/lps.nested.cv.html) when
+you need an outer assessment of the whole tuning procedure.
+
+### Prediction and reusable fits
+
+| Fitted object | How to get predictions | Scope |
+|---|---|---|
+| Local polynomial smoother | `predict(fit)` or `predict(fit, newdata = Xnew)` | Existing evaluation points or new coordinate rows. |
+| Model-averaged local polynomial smoother | `predict(fit)` or `predict(fit, newdata = Xnew)` | New coordinates are supported for coordinate-distance fits; graph-geodesic fits currently reject new targets. |
+| Either lifting trend filter | `predict(fit)` | Training points only; `newdata` must be `NULL`. |
+| Prediction-synchronized, chart-kernel, local-likelihood, graph low-pass, graph trend-filtering, Hessian, or parallel-transport fit | `fitted(fit)` | No registered `predict()` method for these classes in this version. Chart-kernel and local-likelihood fits can receive `X.eval` when fitting. |
+| Density or occupation-density result | `fit$rho` | Probability mass on the evaluation support. |
+| Tracked harmonic result (`harmonic.smoother()`) | `fitted(fit)` | Values on the original graph vertices. |
+| Basic harmonic result (`perform.harmonic.smoothing()`) | `fit$harmonic_predictions` | An unclassed list; retains the basic function's original contract. |
+
+Use `summary(fit)` for selected settings and stored diagnostics. The summary
+explicitly says when convergence information is unavailable. `fitted(fit)`
+preserves the vector or matrix stored by each regression fit. `residuals(fit)`
+preserves missing-label masks and requires an aligned response: a fit evaluated
+at other coordinates has no training residuals. These are response-scale
+residuals, including for binomial fits; they are not Pearson or deviance residuals.
+See `help("model-values", package = "geosmooth")` and
+`help("model-summary", package = "geosmooth")` for the contracts. Probability
+mass remains `fit$rho`; it is a different quantity.
+
+A *refit* changes the response while reusing geometry or an operator. It does
+not automatically rerun the original model-selection procedure. Each refit
+method documents whether penalties remain fixed or can be selected again.
+An *operator* describes the differences or derivatives being penalized; it is
+not itself a fitted response. A *spectral basis* stores graph eigenvectors so
+many responses can be smoothed without recomputing them.
+
+### Refit and extract smoother matrices
+
+Use `refit(fit, y = new.y, ...)` for all six reusable model families.
+R chooses the method from the fitted object's class. The controls in the
+last column belong to that method; they are not shared by every model.
+
+| Fitted model | Accepted response | Geometry reused and tuning behavior |
+|---|---|---|
+| MALPS | Vector; omitted or `NULL` reuses the stored response | Supports and averaging weights stay fixed. Optional `weights` affect local coefficient estimation; robust residual weights are recomputed. |
+| Lifting trend filter | Vector required | Reuses the residual operator and stored penalty, or accepts a fixed `lambda`. |
+| Synchronized lifting trend filter | Vector required | Reuses both operators and stored penalties, or accepts fixed `lambda1` and `lambda2`. |
+| Metric graph low-pass | Vector or matrix required | Reuses the spectral basis and smoothing parameter; `per.column.gcv = TRUE` selects a parameter for each response column. |
+| Quadratic Hessian-energy regression | Vector or matrix; omitted or `NULL` reuses the stored response | Reuses the operator and fixed penalties; accepts `lambda1`, `lambda2`, `weights`, and `ridge`. CV/GCV fits dispatch here and retain their selected penalties by default. |
+| Hessian L1 regression | One response; omitted or `NULL` reuses the stored response | Reuses the derivative operator; accepts `lambda.grid`, fixed or CV `lambda.selection`, and solver controls. |
+
+For repeated metric graph low-pass or quadratic Hessian refits, keep using
+the original fitted object. Their returned refit summaries cannot themselves
+be refitted. The other four families return reusable fitted objects.
+
+Use `smoother.matrix(fit, ...)` for LPS and MALPS. LPS accepts `check.tol`
+and returns a map from training responses to evaluation predictions under
+its fixed-configuration restrictions. MALPS accepts `max.n` and
+`allow.robust` and returns a training-point matrix conditional on stored
+supports and weights. For robust MALPS, `allow.robust = TRUE` freezes the final
+robust weights; it does not capture their response-dependent changes.
+
+```{r shared-generics}
+malps.fit <- fit.malps(
+  X, y, degree = 1L, support.type = "knn", support.size = 12L
+)
+new.y <- cos(2 * pi * X[, 1])
+malps.refit <- refit(malps.fit, y = new.y)
+S <- smoother.matrix(malps.fit)
+max(abs(as.vector(S %*% new.y) - predict(malps.refit)))
+```
+
+The former six `refit.*()` entry points and two `*.smoother.matrix()` entry
+points are no longer exported. Replace `fitted.model =` with `object =` and
+`y.new =` with `y =` in old refit calls. Other method-specific arguments and
+return classes are unchanged. `help("refit", package = "geosmooth")` and
+`help("smoother.matrix", package = "geosmooth")` link to each method's full
+argument list; former help names remain available.
+
+## Function catalog
+
+Each row in the geosmooth catalog gives one exported name and its purpose. In an R session,
+open the corresponding help with, for example,
+`help("fit.lps", package = "geosmooth")`. The final two sections explicitly
+list related functions owned by `dgraphs`; they are not geosmooth exports, and
+their detailed help lives in dgraphs.
+
+### Shared model operations
+
+| Function | Purpose |
+|---|---|
+| [`refit()`](https://pgajer.github.io/geosmooth/reference/refit.html) | Refit a supported model with a new response using stored geometry and method-specific tuning controls. |
+| [`smoother.matrix()`](https://pgajer.github.io/geosmooth/reference/smoother.matrix.html) | Extract the conditional linear map for a supported LPS or MALPS fit. |
+
+### Local regression and prediction synchronization
+
+| Function | Purpose |
+|---|---|
+| `fit.neighbor.probability()` | Fit C++ ordinary kNN, raw nearest-case or corrected nearest-case binary estimators, with deterministic ties and grouped tuning. |
+| [`fit.lps()`](https://pgajer.github.io/geosmooth/reference/fit.lps.html) | Fit and tune local polynomial regression, including supported Gaussian and binary response modes. |
+| [`fit.malps()`](https://pgajer.github.io/geosmooth/reference/fit.malps.html) | Fit and optionally tune a model-averaged collection of local polynomial models. |
+| [`fit.ps.lps()`](https://pgajer.github.io/geosmooth/reference/fit.ps.lps.html) | Fit experimental local polynomial models whose predictions are synchronized on overlaps. |
+| [`fit.chart.kernel()`](https://pgajer.github.io/geosmooth/reference/fit.chart.kernel.html) | Fit a chart-kernel field, with optional reference-measure quadrature weights. |
+| [`fit.local.likelihood()`](https://pgajer.github.io/geosmooth/reference/fit.local.likelihood.html) | Fit local density or Bernoulli likelihood models; returns a fitted field. |
+| `unfold.simplex.chart()` | Certify and unfold a local one/two-face simplex neighborhood before constructing charts. |
+| `fit.masked.graph.field()` | Fit a graph field from partially observed responses. |
+| `support.masked.graph.field()` | Identify graph components supported by observed responses. |
+| `cv.masked.graph.field()` | Assess masked fields using participant-grouped nested cross-validation. |
+| `compare.masked.graph.fields()` | Compare candidate graph fields with independent workers. |
+| `select.masked.graph.field()` | Assemble nested graph-selection predictions from inner-fold choices. |
+
+### Model assessment and uncertainty
+
+| Function | Purpose |
+|---|---|
+| `assess.logistic.trend.filtering()` | Test constant binary probability by retuned outcome permutations and measure nested-CV improvement over a training-only constant. Summarize absolute probability deviation and total variation; optionally test them using the same fits, with Holm adjustment. Requires independent unit-weight binary observations without covariates or offsets. |
+| `assess.gaussian.trend.filtering()` | Assess continuous outcomes with retuned squared-error permutation tests, optional absolute-deviation/total-variation tests and nested-CV MSE/MAE improvement. Requires independent unit-weight observations without covariates or offsets, exchangeable under a common-distribution null. |
+| [`lps.grouped.foldid()`](https://pgajer.github.io/geosmooth/reference/lps.grouped.foldid.html) | Assign whole groups of observations to validation folds. |
+| [`lps.nested.cv()`](https://pgajer.github.io/geosmooth/reference/lps.nested.cv.html) | Assess a tuned local polynomial smoother using outer and inner validation folds. |
+| [`lps.backend.diagnostics()`](https://pgajer.github.io/geosmooth/reference/lps.backend.diagnostics.html) | Inspect the computational backend, chart dimensions, and selected controls. |
+| [`lps.pointwise.band()`](https://pgajer.github.io/geosmooth/reference/lps.pointwise.band.html) | Calculate pointwise uncertainty for a supported fixed-configuration Gaussian fit. |
+| [`malps.gcv()`](https://pgajer.github.io/geosmooth/reference/malps.gcv.html) | Calculate generalized cross-validation and optional leave-one-out diagnostics for a stored model-averaged fit. |
+| [`bootstrap.malps()`](https://pgajer.github.io/geosmooth/reference/bootstrap.malps.html) | Measure refit variability by bootstrap case weights while holding the selected geometry fixed. |
+
+Generalized cross-validation (GCV) uses a smoother's effective degrees of
+freedom to estimate prediction error without explicitly fitting every
+leave-one-out model. It is not interchangeable with every form of CV.
+
+The two uncertainty workflows have different assumptions. LPS uncertainty
+requires a Gaussian fit, the R backend, the documented orthogonal polynomial
+basis, a single candidate configuration, and a fixed chart dimension. Its
+pointwise band also requires evaluation at the training points. MALPS matrix
+and bootstrap diagnostics condition on the selected supports and weights;
+they do not repeat model selection. Neither workflow provides simultaneous
+coverage or automatic uncertainty for a full data-selected pipeline.
+
+### Lifting trend filters
+
+| Function | Purpose |
+|---|---|
+| [`lpl.tf.operator()`](https://pgajer.github.io/geosmooth/reference/lpl.tf.operator.html) | Build a local polynomial residual operator. |
+| [`fit.lpl.tf()`](https://pgajer.github.io/geosmooth/reference/fit.lpl.tf.html) | Fit a trend filter with an absolute-value penalty on those residuals. |
+| [`slpl.tf.operator()`](https://pgajer.github.io/geosmooth/reference/slpl.tf.operator.html) | Build the residual operator together with an overlap synchronization operator. |
+| [`fit.slpl.tf()`](https://pgajer.github.io/geosmooth/reference/fit.slpl.tf.html) | Fit the residual penalty plus quadratic synchronization. |
+
+Both fitters accept a prebuilt operator or can construct one. For a single fit,
+start with the fitter. Build operators explicitly when comparing responses,
+studying neighborhoods, or reusing expensive geometry. Both fitters currently
+require `genlasso`; their supported prediction domain is the training set.
+
+### Graph spectral smoothing and graph trend filtering
+
+| Function | Purpose |
+|---|---|
+| [`fit.metric.graph.lowpass()`](https://pgajer.github.io/geosmooth/reference/fit.metric.graph.lowpass.html) | Select a graph-spectral smoothing parameter by GCV and fit a response. |
+| [`metric.graph.lowpass.operator()`](https://pgajer.github.io/geosmooth/reference/metric.graph.lowpass.operator.html) | Construct a graph Laplacian from edge lengths or explicit conductances. |
+| [`metric.graph.lowpass.basis()`](https://pgajer.github.io/geosmooth/reference/metric.graph.lowpass.basis.html) | Construct and retain a partial or complete graph spectrum for repeated smoothing. |
+| [`apply.metric.graph.lowpass.path()`](https://pgajer.github.io/geosmooth/reference/apply.metric.graph.lowpass.path.html) | Apply a supplied basis over a parameter grid; retain the candidate fits. |
+| [`metric.graph.heat.eta.grid()`](https://pgajer.github.io/geosmooth/reference/metric.graph.heat.eta.grid.html) | Choose heat-time candidates using spectral information. |
+| [`metric.graph.heat.extend.lower()`](https://pgajer.github.io/geosmooth/reference/metric.graph.heat.extend.lower.html) | Propose a smaller heat time for an external search, subject to resolution safeguards. |
+| [`graph.trend.filtering.operator()`](https://pgajer.github.io/geosmooth/reference/graph.trend.filtering.operator.html) | Construct graph differences or experimental path divided differences. |
+| [`fit.graph.trend.filtering()`](https://pgajer.github.io/geosmooth/reference/fit.graph.trend.filtering.html) | Fit an absolute-value graph-difference penalty; requires `genlasso`. |
+
+Graph construction and shortest paths are supplied by `dgraphs`. A graph's
+adjacency list contains 1-based vertex indices; a parallel weight list gives
+the corresponding edge values. **Check their meaning for the chosen method:**
+metric low-pass smoothing defaults to lengths and converts them to
+conductances; use `weight.type = "conductance"` for supplied connection
+strengths. Recursive graph trend filtering uses conductance-like weights,
+whereas its path divided-difference option uses lengths. Conductance measures
+connection strength; it is not the same quantity as distance.
+
+Heat time (`eta`) controls the amount of spectral smoothing. A truncated basis
+can fail to resolve small positive heat times; use the returned spectral
+diagnostics when constructing or extending a path yourself.
+
+Full-spectrum heat smoothing also supports missing responses, provided each
+connected component has an observed response. The
+[observed-data heat guide](verified-heat-fallback.html) explains this objective
+and the opt-in `numerical.policy = "verified.fallback"` cross-checks. Automatic
+tuning under that policy refuses structurally flat paths and score differences
+that cannot be resolved numerically. Its resolution bands are numerical
+diagnostics, not confidence intervals.
+
+#### From a constructed graph to a fitted response
+
+This example uses the tested development dependency described in the README;
+the compatible dgraphs release must be on CRAN before geosmooth 0.2.0 is submitted.
+The 20 locations form an undirected chain because the construction radius joins
+only adjacent sites. Vertex *i*, coordinate row *i*, and response entry *i* refer
+to the same observation. Retain your identifiers in a separate table and join
+by those identifiers before fitting; a smoother cannot detect a shuffled response.
+
+```{r graph-workflow}
+```
+
+With `conductance.alpha = 1`, a length of 2 becomes a conductance of
+`1 / (2 + 1e-8)`, approximately 0.5. Longer edges therefore connect responses
+less strongly. This choice changes the smoothing operator; it is not just a
+change of labels. The example retains all eigenvectors, so no spectral
+truncation is involved. For large graphs, use the spectral diagnostics described
+in `help("metric.graph.lowpass.basis")` when retaining fewer eigenvectors.
+The second response reuses those eigenvectors and the selected heat time.
+The printed GCV score is a tuning criterion, not held-out predictive error.
+
+| Input context | Meaning | Consequence |
+|---|---|---|
+| Coordinate neighborhoods | Distances in the supplied coordinate units | Rescaling coordinates changes supports. |
+| Graph-geodesic neighborhoods | Sums of edge lengths along paths | Unreachable vertices have infinite distance; support rules must handle connectivity. |
+| Metric low-pass, `weight.type = "length"` (default) | Positive lengths transformed to conductances | Reciprocal edges and matching lengths are required; zero lengths are rejected. |
+| Metric low-pass, `weight.type = "conductance"` | Supplied nonnegative connection strengths | Reciprocal weights must agree; zero-weight edges are removed and positive weights are used unchanged. |
+| Recursive graph differences | Conductance-like weights | Greater weight penalizes differences more strongly. |
+| Path divided differences | Edge lengths | The operator uses metric spacing, not conductance. |
+
+For example, `metric.graph.lowpass.operator(list(2L, integer()), list(1, numeric()))`
+is rejected because the edge has no reciprocal entry. Resolve the meaning of
+directed or zero-length input before constructing an undirected graph. A zero
+conductance denotes no connection; a zero length is invalid for the length
+transformation.
+
+### One-dimensional Gaussian and logistic trend filtering
+
+| Function | Purpose |
+|---|---|
+| `fit.logistic.trend.filtering()` | Fit a univariate piecewise-quadratic logit curve using the native C++ backend. |
+| `fit.gaussian.trend.filtering()` | Fit a univariate piecewise-quadratic mean curve with squared-error loss using the same order-2 geometry and native C++ solvers. |
+
+For continuous outcomes, fit an explicit penalty path and assess both association
+and held-out prediction:
+
+```{r gaussian-trend-filtering-assessment}
+x.continuous <- seq(0, 1, length.out = 40)
+y.continuous <- sin(2*pi*x.continuous) + 0.2*cos(seq_along(x.continuous))
+gaussian.fit <- fit.gaussian.trend.filtering(
+  x.continuous, y.continuous, lambda = c(Inf, 0.01), backend = "banded")
+# Nine permutations keep this API example short; use more for inference.
+gaussian.assessment <- assess.gaussian.trend.filtering(
+  gaussian.fit, permutations = 9, inner.folds = 3, outer.folds = 3, seed = 42,
+  additional.tests = c("absolute.deviation", "total.variation"))
+gaussian.assessment$tests
+gaussian.assessment$prediction$scores
+```
+
+The global statistic is residual sum-of-squares reduction from the sample mean.
+Its permutations repeat tuning and require exchangeable outcomes under the null;
+equal means with arbitrary predictor-dependent variances are insufficient.
+Nested CV separately compares the smoother with outer-training means, using MSE
+and MAE on the same held-out rows. Curve summaries are in response units.
+The example demonstrates the workflow; it is not a calibration or power study.
+`lambda=Inf` gives a quadratic curve, while the assessment baseline is constant.
+
+The [logistic trend-filtering vignette](logistic-trend-filtering.html) walks
+through synthetic probabilities, trial weights and held-out Pima predictions.
+
+The univariate logistic trend filter accepts binary observations or binomial
+proportions with trial weights. Supply a `lambda` path explicitly; its units
+refer to predictor locations normalized to the training range. Exact ties share
+the curve while retaining distinct covariates and offsets. Optional cross-validation
+requires `foldid`, which can keep repeated observations from the same subject
+together. Inspect `fit$diagnostics`: iteration limits, detected separation, and
+numerical failures are not successful fits. `predict()` reuses the training
+transformations and holds the curve constant beyond either boundary. Ridge
+stabilization is explicit and defaults to zero. `backend="auto"` selects the
+banded C++ backend above 256 distinct locations or when the dense workspace
+estimate exceeds its guard. The banded solver and predictor avoid full dense
+knot matrices; every stopping check scans all knot coefficients, without
+thinning. `backend="dense"` retains the small-problem reference solver. Both
+backends check an estimated workspace bound before allocation.
+
+Gaussian, logistic, local-polynomial lifting and graph trend-filtering CV use
+`cv.penalty.scale="training_mass"` by default: fold penalties scale with the
+training/full data-loss mass. This holds their coefficient relative to mean
+loss constant. Set `"none"` explicitly for the earlier same-numerical-penalty
+convention. One-dimensional fits also scale explicit ridge penalties and record
+the actual fold settings. The assessment functions propagate this convention
+through outer and inner training sets; older saved fits without the setting
+retain the legacy convention. Fixed-penalty objectives are unchanged.
+
+### Hessian-energy regression
+
+| Function | Purpose |
+|---|---|
+| [`ssrhe.hessian.operator()`](https://pgajer.github.io/geosmooth/reference/ssrhe.hessian.operator.html) | Estimate local derivative operators and Hessian-energy matrices from point-cloud neighborhoods. |
+| [`fit.ssrhe.hessian.regression()`](https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.regression.html) | Fit quadratic Hessian-energy regression using fixed penalties, label CV, or GCV; optionally select supports. |
+| [`fit.ssrhe.hessian.l1.regression()`](https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.l1.regression.html) | Fit an absolute-value derivative penalty with fixed or CV-selected regularization. |
+| [`ssrhe.support.grid()`](https://pgajer.github.io/geosmooth/reference/ssrhe.support.grid.html) | Build candidate adaptive-radius support profiles for tuning. |
+
+The Hessian describes local second derivatives. A quadratic penalty spreads
+curvature reduction across the fitted field; an absolute-value penalty can
+set derivative components to zero. These are different estimators.
+
+Label CV supports semi-supervised use: some vertices may lack an observed
+response. GCV currently requires one fully observed response vector and
+strictly positive observation weights. Exact GCV traces and randomized trace
+estimates have different computational costs and reproducibility properties.
+For the absolute-value fitter, `solver = "admm"` selects the implemented
+alternating direction method of multipliers; the `genlasso` solver requires
+that optional package.
+
+To select quadratic Hessian penalties, use the same fitter with an explicit
+selection mode. Mode-specific settings belong in `cv.control` or `gcv.control`.
+Scalar penalties and candidate grids cannot be combined.
+
+```{r hessian-selection}
+hessian.fit <- fit.ssrhe.hessian.regression(
+  X, y, k = 12L, tangent.dim = 1L,
+  lambda.selection = "cv", lambda1.grid = c(0.01, 0.1),
+  cv.control = list(foldid = rep(1:5, length.out = nrow(X)))
+)
+hessian.fit$lambda
+```
+
+The former `.cv()` and `.gcv()` fitter names have been retired. Their old help
+names still lead to the unified fitter's migration instructions. Existing
+fixed calls with `lambda1` and optional `lambda2` continue to work.
+
+### Harmonic interpolation
+
+| Function | Purpose |
+|---|---|
+| [`perform.harmonic.smoothing()`](https://pgajer.github.io/geosmooth/reference/perform.harmonic.smoothing.html) | Relax interior values while holding the region boundary fixed; return convergence diagnostics. |
+| [`harmonic.smoother()`](https://pgajer.github.io/geosmooth/reference/harmonic.smoother.html) | Run relaxation while recording extrema, prediction history, and topology stability. |
+| [`get.region.boundary()`](https://pgajer.github.io/geosmooth/reference/get.region.boundary.html) | Find region vertices with a neighbor outside the region. |
+
+Use `print()`, `summary()`, and `plot()` on the tracked `harmonic_smoother`
+object. The two smoothing functions currently differ in boundary-free behavior
+so they should not be treated as aliases. In the
+current native implementation, boundary vertices are defined by a neighbor
+outside the region; a degree-one vertex inside a whole-graph region is not
+automatically fixed. The basic function returns unchanged input with
+`status = "no_boundary"` when no boundary exists; the tracked function still
+runs relaxation. Both require small value changes and a small harmonic residual
+for numerical convergence. Extrema stability is a separate diagnostic:
+`stability_detected` records whether a window was found, and `stable_iteration`
+is `NA` otherwise. On an alternating path, recording every second iteration
+can appear stable while the values continue to oscillate. Check `converged`
+and `max_residual`; a stability detection does not establish optimal smoothing.
+
+### Probability mass and subject occupation
+
+| Function | Purpose |
+|---|---|
+| [`fit.density()`](https://pgajer.github.io/geosmooth/reference/fit.density.html) | Fit empirical or graph-random-walk mass estimates from nonnegative weights on a support. |
+| [`normalize.density()`](https://pgajer.github.io/geosmooth/reference/normalize.density.html) | Convert a numeric field or supported fitted object to probability mass, with normalization diagnostics. |
+| [`fit.subject.od()`](https://pgajer.github.io/geosmooth/reference/fit.subject.od.html) | Convert repeated visit indices into counts and fit a subject-occupation distribution. |
+
+```{r occupation}
+support <- matrix(seq(0, 1, length.out = 6), ncol = 1)
+occupation <- fit.subject.od(
+  support, subject.index = c(1L, 3L, 3L, 6L), method = "empirical"
+)
+occupation$rho
+sum(occupation$rho)
+```
+
+Here the third support point receives twice as many visits as the first or
+sixth. `rho` is a probability **mass** vector over support points, summing to
+one; it is not automatically a continuous density per unit volume.
+[`normalize.density()`](https://pgajer.github.io/geosmooth/reference/normalize.density.html) is an explicit conversion step, not another regression
+fit. Inspect its clipping and normalization accounting when the source field
+contains negative values.
+
+[`fit.subject.od()`](https://pgajer.github.io/geosmooth/reference/fit.subject.od.html) offers more methods than [`fit.density()`](https://pgajer.github.io/geosmooth/reference/fit.density.html): it can fit ordinary
+smoothers and normalize their output. Visit-level CV holds out visits and uses
+`visit.foldid`; ordinary regression CV holds out support rows and uses
+`foldid` (or the method-specific spelling). Keep these validation units distinct.
+
+### Experimental transport methods
+
+| Function | Purpose |
+|---|---|
+| [`pttf.geometry()`](https://pgajer.github.io/geosmooth/reference/pttf.geometry.html) | Build local tangent frames and their transport across a graph. |
+| [`pttf.operator()`](https://pgajer.github.io/geosmooth/reference/pttf.operator.html) | Construct parallel-transport trend-filtering differences from that geometry. |
+| [`pttf.operator.filter.rows()`](https://pgajer.github.io/geosmooth/reference/pttf.operator.filter.rows.html) | Select operator rows while maintaining provenance and related operator data. |
+| [`fit.pttf.trend.filtering()`](https://pgajer.github.io/geosmooth/reference/fit.pttf.trend.filtering.html) | Fit a parallel-transport trend filter with an absolute-value or quadratic penalty. |
+| [`transported.graph.hessian.operator()`](https://pgajer.github.io/geosmooth/reference/transported.graph.hessian.operator.html) | Build a separate experimental graph Hessian diagnostic with several direction-matching rules. |
+
+Parallel transport aligns local tangent directions before comparing
+derivatives. These experimental interfaces expose geometry, operator, and
+solver diagnostics deliberately. The transported graph Hessian constructor is
+a separate diagnostic workflow; it does not fit a response and is not an
+interchangeable spelling of [`pttf.operator()`](https://pgajer.github.io/geosmooth/reference/pttf.operator.html).
+
+### Synthetic datasets: specifications, responses, and reproducibility
+
+| Function | Purpose |
+|---|---|
+| [`synthetic.spec()`](https://pgajer.github.io/geosmooth/reference/synthetic.spec.html) | Combine geometry, sampling, truth, and response descriptors without drawing data. |
+| [`materialize.synthetic()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html) | Draw a dataset from a specification with an explicit seed and random-number policy. |
+| [`materialize.synthetic.instance()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.instance.html) | Reproduce a registered frozen instance and optionally validate its checksum. |
+| [`synthetic.registry.ids()`](https://pgajer.github.io/geosmooth/reference/synthetic.registry.ids.html) | List maintained recipe identifiers. |
+| [`synthetic.registry.spec()`](https://pgajer.github.io/geosmooth/reference/synthetic.registry.spec.html) | Look up a recipe specification; some recipe families allow parameter overrides. |
+| [`synthetic.registry.seed()`](https://pgajer.github.io/geosmooth/reference/synthetic.registry.seed.html) | Reproduce legacy SSRHE recipe seeds; this is not a seed generator for every registry family. |
+| [`validate.synthetic.dataset()`](https://pgajer.github.io/geosmooth/reference/validate.synthetic.dataset.html) | Check the structure and consistency of a materialized dataset. |
+| [`compare.synthetic.dataset()`](https://pgajer.github.io/geosmooth/reference/compare.synthetic.dataset.html) | Compare two datasets with explicit numerical tolerances. |
+| [`synthetic.dataset.checksum()`](https://pgajer.github.io/geosmooth/reference/synthetic.dataset.checksum.html) | Compute a content checksum for reproducibility checks. |
+| [`synthetic.sampling.stratified()`](https://pgajer.github.io/geosmooth/reference/synthetic.sampling.stratified.html) | Describe allocation between the supported synthetic strata. |
+| [`synthetic.truth.named()`](https://pgajer.github.io/geosmooth/reference/synthetic.truth.named.html) | Select a named truth specification with optional parameters. |
+| [`synthetic.truth.polynomial()`](https://pgajer.github.io/geosmooth/reference/synthetic.truth.polynomial.html) | Specify polynomial truth in the chosen evaluation coordinates. |
+| [`synthetic.truth.gaussian.mixture()`](https://pgajer.github.io/geosmooth/reference/synthetic.truth.gaussian.mixture.html) | Specify Gaussian-mixture truth using centers, scales, and weights. |
+| [`synthetic.truth.occupation.mixture()`](https://pgajer.github.io/geosmooth/reference/synthetic.truth.occupation.mixture.html) | Specify occupation-mixture truth with covariance and probability controls. |
+| [`synthetic.truth.logit()`](https://pgajer.github.io/geosmooth/reference/synthetic.truth.logit.html) | Specify a logit-based truth with prevalence and clipping controls. |
+| [`synthetic.response.gaussian()`](https://pgajer.github.io/geosmooth/reference/synthetic.response.gaussian.html) | Specify Gaussian response noise with a supplied standard deviation. |
+| [`synthetic.response.heteroskedastic.gaussian()`](https://pgajer.github.io/geosmooth/reference/synthetic.response.heteroskedastic.gaussian.html) | Specify Gaussian noise whose scale depends on truth. |
+| [`synthetic.response.clustered.gaussian()`](https://pgajer.github.io/geosmooth/reference/synthetic.response.clustered.gaussian.html) | Specify within-cluster correlated Gaussian noise. |
+| [`synthetic.response.laplace.outlier()`](https://pgajer.github.io/geosmooth/reference/synthetic.response.laplace.outlier.html) | Specify Laplace noise and an outlier component. |
+| [`synthetic.response.bernoulli()`](https://pgajer.github.io/geosmooth/reference/synthetic.response.bernoulli.html) | Specify binary response draws and optional positive-count requirements. |
+
+The constructors create specifications; [`materialize.synthetic()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html) performs
+random draws. Use `print()`, `plot()`, and `as.data.frame()` on a resulting
+`synthetic_dataset`. For complete examples, read
+`vignette("synthetic-datasets", package = "geosmooth")`. Use the named-stream
+random-number policy for new work; historical seed and algorithm controls
+preserve frozen examples and should not be changed casually.
+
+### Geometry constructors and helpers supplied by dgraphs
+
+These names are available from `dgraphs`, and are no longer exported by
+`geosmooth`. Replace former `geosmooth::` calls with `dgraphs::`. See, for example,
+`help("synthetic.circle", package = "dgraphs")`.
+
+| Function | Purpose |
+|---|---|
+| `dgraphs::synthetic.circle()` | Describe a circle or circular arc and its embedding. |
+| `dgraphs::synthetic.helix()` | Describe a helical curve. |
+| `dgraphs::synthetic.trefoil()` | Describe a trefoil curve. |
+| `dgraphs::synthetic.torus.patch()` | Describe a patch of a torus. |
+| `dgraphs::synthetic.sphere.cap()` | Describe a spherical cap. |
+| `dgraphs::synthetic.quadform()` | Describe a flat or quadratic geometry with intrinsic and ambient dimensions. |
+| `dgraphs::synthetic.simplex()` | Describe a simplex with a given number of parts. |
+| `dgraphs::synthetic.stratified()` | Combine strata and optional junctions. |
+| `dgraphs::synthetic.stratum.point()` | Describe a point stratum. |
+| `dgraphs::synthetic.stratum.segment()` | Describe a line-segment stratum. |
+| `dgraphs::synthetic.stratum.rectangle()` | Describe a rectangular stratum. |
+| `dgraphs::synthetic.point.line.junction()` | Describe a point-and-line junction geometry. |
+| `dgraphs::embed.synthetic.geometry()` | Map latent coordinates to the ambient space. |
+| `dgraphs::edge.lengths.synthetic.geometry()` | Evaluate geometry-aware lengths between latent endpoints. |
+| `dgraphs::quadform.gradient()` | Evaluate the gradient of a quadratic geometry. |
+| `dgraphs::quadform.metric()` | Evaluate its induced metric. |
+
+### Sampling constructors supplied by dgraphs
+
+| Function | Purpose |
+|---|---|
+| `dgraphs::synthetic.sampling.uniform.interval()` | Describe uniform draws on an interval. |
+| `dgraphs::synthetic.sampling.uniform.box()` | Describe uniform draws in a box. |
+| `dgraphs::synthetic.sampling.uniform.rectangle()` | Describe uniform draws in a rectangle with its specified draw algorithm. |
+| `dgraphs::synthetic.sampling.uniform.disk()` | Describe uniform draws in a disk. |
+| `dgraphs::synthetic.sampling.grid.interval()` | Describe an interval grid with an endpoint convention. |
+| `dgraphs::synthetic.sampling.gapped.uniform()` | Describe sampling across separated intervals. |
+| `dgraphs::synthetic.sampling.truncated.normal()` | Describe bounded Gaussian draws. |
+| `dgraphs::synthetic.sampling.clustered()` | Describe clustered observations around random centers. |
+| `dgraphs::synthetic.sampling.dirichlet.zeros()` | Describe Dirichlet sampling with structural zeros. |
+
+Similar geometric domains do not imply identical random-number sequences:
+these descriptors also preserve ordering and algorithm choices.
+
+## Finding detailed help
+
+Function links in this guide open the rendered online reference. When working
+without an internet connection, the same help is installed with the package:
+use `help("fit.lps", package = "geosmooth")`, replacing `fit.lps` with the
+function name. Start at `help("geosmooth-package", package = "geosmooth")`
+for clickable task links in installed help, or use
+`browseVignettes("geosmooth")` for the installed HTML guides.
+
+The [synthetic datasets guide](synthetic-datasets.html) develops reproducible
+geometry, sampling, truth, and response specifications in more detail.
+
+
+```{r help-navigation, eval=FALSE}
+help(package = "geosmooth")
+help("geosmooth-package", package = "geosmooth")
+help("fit.lps", package = "geosmooth")
+help("predict.lps", package = "geosmooth")
+vignette("function-guide", package = "geosmooth")
+vignette("synthetic-datasets", package = "geosmooth")
+```
+
+The package's help pages give exact arguments, defaults, return values, and
+examples. Use this guide to find the appropriate family, then read the chosen
+function's help before configuring its advanced controls.
+
+## Advanced controls without a new fitter
+
+Each main fitter's installed help groups controls for a first fit, selection,
+geometry, numerical solving, and returned diagnostics. Begin with a small
+statistical grid; numerical tolerances do not replace statistical tuning.
+
+| Family | Fold and selection vocabulary | Meaning and main cost |
+|---|---|---|
+| LPS / MALPS | `foldid`, `cv.folds`, support/degree/kernel grids | Held-out response selection; candidate combinations multiply fitting work. |
+| Quadratic Hessian | `lambda.selection`, `cv.control`, `gcv.control` | Label CV or GCV; exact trace calculation is more expensive than sampled traces. |
+| Hessian L1 | `fold.id`, `nfolds`, `lambda.grid`, `admm.*` | CV excludes unconverged solves; each candidate and fold needs a solve. |
+| Graph low-pass | `eta.grid`, `n.eigenpairs` | GCV over heat times; a full spectral basis uses quadratic storage. |
+
+`smoother.matrix()` returns a dense evaluation-by-training matrix. Retained
+candidate fits and solver histories also consume memory. Request them for an
+actual diagnostic purpose. These differences are deliberate method contracts;
+matching argument names would not make the criteria equivalent.
+
+The catalog covers all explicitly exported functions in geosmooth 0.2.0.
+Geometry and sampling functions are owned by dgraphs. Registered methods are
+accessed through familiar generics; use the installed package index for the
+complete method list rather than treating methods as additional fitters.
+
+For intrinsic simplex charts, weighted PCA/PLS and their limits, see the
+[local simplex charts guide](local-simplex-charts.html).
+
+For worked synthetic comparisons, held-out prediction figures and reproducible
+PCA/PLS examples, see [PCA and PLS charts](pca-pls-chart-comparison.html).

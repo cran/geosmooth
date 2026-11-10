@@ -1,7 +1,7 @@
 #' Fit A Parallel-Transport Trend Filter From A PTTF Operator
 #'
-#' Fits the first experimental PTTF regression models from a transported
-#' difference operator produced by \code{\link{pttf.operator}}. Phase 3 focuses
+#' Fits experimental PTTF regression models from a transported difference
+#' operator produced by \code{\link{pttf.operator}}. The implementation focuses
 #' on one response vector and explicit operator-row policies, especially the
 #' 1-D boundary policy used to separate interior transported rows from endpoint
 #' rows.
@@ -28,8 +28,8 @@
 #'   RNG state.
 #' @param cv.loss Cross-validation loss, \code{"mse"} or \code{"mae"}.
 #' @param selection Lambda selection rule, \code{"min"} or \code{"one.se"}.
-#' @param lambda.extension Currently recorded as metadata. Phase 3 implements no
-#'   new extension heuristic.
+#' @param lambda.extension Currently recorded as metadata; no extension
+#'   heuristic is implemented.
 #' @param solver L1 solver backend.
 #' @param operator.row.policy Which operator rows to use for fitting.
 #' @param line.order Vertex order for 1-D boundary-row policies.
@@ -42,7 +42,12 @@
 #' @param weights Optional nonnegative observation weights.
 #' @param maxsteps,minlam,approx,rtol,btol,eps Genlasso controls for L1 fits.
 #' @param admm.rho,admm.maxiter,admm.abstol,admm.reltol ADMM controls used when
-#'   the L1 backend is \code{"admm"} or falls back to ADMM.
+#'   the L1 backend is \code{"admm"} or falls back to ADMM. A \code{NULL}
+#'   initial penalty is chosen from the operator scale. The shared solver's
+#'   convergence checks, failure behavior, and CV eligibility rules are
+#'   described in \code{\link{fit.ssrhe.hessian.l1.regression}}.
+#' @param admm.adaptive.rho Logical; adapt the ADMM penalty during the initial
+#'   iterations. Set \code{FALSE} to keep its initial value fixed.
 #' @param verbose Logical.
 #' @param ... Additional arguments passed to \code{\link{pttf.geometry}} or
 #'   \code{\link{pttf.operator}} when those objects are built internally.
@@ -90,11 +95,12 @@ fit.pttf.trend.filtering <- function(
     rtol = 1e-7,
     btol = 1e-7,
     eps = 1e-4,
-    admm.rho = 1,
+    admm.rho = NULL,
     admm.maxiter = 2000L,
     admm.abstol = 1e-4,
     admm.reltol = 1e-3,
     verbose = FALSE,
+    admm.adaptive.rho = TRUE,
     ...) {
 
     if (!requireNamespace("Matrix", quietly = TRUE)) {
@@ -168,6 +174,7 @@ fit.pttf.trend.filtering <- function(
             admm.maxiter = admm.maxiter,
             admm.abstol = admm.abstol,
             admm.reltol = admm.reltol,
+            admm.adaptive.rho = admm.adaptive.rho,
             verbose = verbose
         )
         raw.fit <- tryCatch(
@@ -581,6 +588,7 @@ fit.pttf.trend.filtering <- function(
     )
 }
 
+#' @rdname geosmooth-print-methods
 #' @method print pttf.trend.filtering.fit
 #' @export
 print.pttf.trend.filtering.fit <- function(x, ...) {

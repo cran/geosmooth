@@ -32,7 +32,11 @@ Repeated indices are allowed.}
 
 \item{graph}{Optional precomputed graph object.}
 
-\item{graph.control}{List of graph-method controls.}
+\item{graph.control}{Named list for random walks: \code{walk.steps} (or
+\code{walk.step}), \code{affinity.method}, \code{affinity.scale},
+\code{affinity.epsilon}, and logical \code{normalize}. Underscore aliases
+are accepted, but conflicting aliases and unknown names are rejected.
+Must be empty for the empirical estimator.}
 
 \item{od.control}{OD-facing alias for \code{density.control}.}
 
@@ -56,7 +60,7 @@ supplied.}
 \item{visit.cv.epsilon}{Positive floor used in held-out
 \code{-log(rho[visit])} scoring.}
 
-\item{...}{Additional method-specific arguments.}
+\item{...}{Reserved for future methods; unused arguments are errors.}
 }
 \value{
 A list of class \code{"density_fit"}.  Its \code{rho} component is

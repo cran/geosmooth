@@ -32,11 +32,12 @@ fit.pttf.trend.filtering(
   rtol = 1e-07,
   btol = 1e-07,
   eps = 1e-04,
-  admm.rho = 1,
+  admm.rho = NULL,
   admm.maxiter = 2000L,
   admm.abstol = 1e-04,
   admm.reltol = 0.001,
   verbose = FALSE,
+  admm.adaptive.rho = TRUE,
   ...
 )
 }
@@ -76,8 +77,8 @@ RNG state.}
 
 \item{selection}{Lambda selection rule, \code{"min"} or \code{"one.se"}.}
 
-\item{lambda.extension}{Currently recorded as metadata. Phase 3 implements no
-new extension heuristic.}
+\item{lambda.extension}{Currently recorded as metadata; no extension
+heuristic is implemented.}
 
 \item{solver}{L1 solver backend.}
 
@@ -98,9 +99,15 @@ L1 solver row scaling for the supplied fit operator.}
 \item{maxsteps, minlam, approx, rtol, btol, eps}{Genlasso controls for L1 fits.}
 
 \item{admm.rho, admm.maxiter, admm.abstol, admm.reltol}{ADMM controls used when
-the L1 backend is \code{"admm"} or falls back to ADMM.}
+the L1 backend is \code{"admm"} or falls back to ADMM. A \code{NULL}
+initial penalty is chosen from the operator scale. The shared solver's
+convergence checks, failure behavior, and CV eligibility rules are
+described in \code{\link{fit.ssrhe.hessian.l1.regression}}.}
 
 \item{verbose}{Logical.}
+
+\item{admm.adaptive.rho}{Logical; adapt the ADMM penalty during the initial
+iterations. Set \code{FALSE} to keep its initial value fixed.}
 
 \item{...}{Additional arguments passed to \code{\link{pttf.geometry}} or
 \code{\link{pttf.operator}} when those objects are built internally.}
@@ -109,8 +116,8 @@ the L1 backend is \code{"admm"} or falls back to ADMM.}
 A list of class \code{"pttf.trend.filtering.fit"}.
 }
 \description{
-Fits the first experimental PTTF regression models from a transported
-difference operator produced by \code{\link{pttf.operator}}. Phase 3 focuses
+Fits experimental PTTF regression models from a transported difference
+operator produced by \code{\link{pttf.operator}}. The implementation focuses
 on one response vector and explicit operator-row policies, especially the
 1-D boundary policy used to separate interior transported rows from endpoint
 rows.

@@ -21,7 +21,7 @@ fit.local.likelihood(
   foldid = NULL,
   cv.folds = 5L,
   cv.seed = 1L,
-  coordinate.method = c("coordinates", "local.pca"),
+  coordinate.method = c("coordinates", "local.pca", "local.pls"),
   chart.dim = NULL,
   chart.dim.grid = NULL,
   selection.strategy = c("grid", "sparse_kd", "plateau_kd"),
@@ -37,7 +37,10 @@ fit.local.likelihood(
   optimizer = c("newton", "optim"),
   max.iter = 50L,
   tol = 1e-08,
-  return.details = TRUE
+  return.details = TRUE,
+  chart.geometry = c("legacy", "euclidean", "linf.simplex"),
+  unfold.faces = FALSE,
+  intercept.mass = 0.5
 )
 }
 \arguments{
@@ -149,6 +152,26 @@ is implemented; \code{"optim"} is accepted and delegates to BFGS.}
 
 \item{return.details}{Logical; if \code{TRUE}, keep per-evaluation
 diagnostics.}
+
+\item{chart.geometry}{Opt-in chart implementation. Default \code{"legacy"}
+preserves existing behavior. \code{"euclidean"} uses ambient distances;
+\code{"linf.simplex"} max-normalizes rows and uses intrinsic Euclidean
+distances, including intermediate faces. Both new modes support Bernoulli
+degree 0/1 fits, weighted \code{"local.pca"} or \code{"local.pls"}, numeric
+dimensions and grid CV only. Supports and kernels use the original metric,
+independent of projection. Directions, weighted centering and score scaling
+are learned from training rows only, including within every CV fold.}
+
+\item{unfold.faces}{Certify and unfold local simplex neighborhoods using
+\code{\link{unfold.simplex.chart}}? Requires simplex geometry. Unsupported
+charts use the declared \code{fallback}: \code{"degree0"} or \code{"na"}.}
+
+\item{intercept.mass}{In nonlegacy modes, positive symmetric pseudo-count
+for successes and failures at the weighted chart center. Default 0.5 keeps
+constant-response supports finite. Kernel times quadrature weights are
+normalized to support.size before fitting; slopes have the ridge penalty.
+Convergence requires the maximum absolute gradient below tol, not just a
+small step. Failed fits retain diagnostic status and use the fallback.}
 }
 \value{
 A list with class \code{"local_likelihood"} containing

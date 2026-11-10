@@ -22,7 +22,7 @@
 
 .validate.positive.integer.scalar <- function(x, name) {
     if (!is.numeric(x) || length(x) != 1L || is.na(x) || !is.finite(x) ||
-        x < 1 || x != floor(x)) {
+        x < 1 || x > .Machine$integer.max || x != floor(x)) {
         stop(sprintf("%s must be a positive integer scalar.", name))
     }
     as.integer(x)
@@ -58,7 +58,7 @@
         if (!is.numeric(wts)) {
             stop(sprintf("weight.list[[%d]] must be numeric.", i))
         }
-        nbrs <- as.integer(nbrs)
+        nbrs <- .validate.vertex.indices(nbrs, n, sprintf("adj.list[[%d]]", i))
         wts <- as.double(wts)
         if (length(nbrs) != length(wts)) {
             stop(sprintf(
@@ -109,4 +109,34 @@
         adj.list.0based = lapply(adj.norm, function(v) as.integer(v - 1L)),
         weight.list.cpp = lapply(weight.norm, as.double)
     )
+}
+
+# Validate before coercion: fractional values must never select another vertex.
+.validate.vertex.indices <- function(x, n, name) {
+    if (!is.numeric(x) || !is.null(dim(x)) || any(!is.finite(x)) ||
+        any(x != floor(x)) || any(x < 1 | x > n | x > .Machine$integer.max)) {
+        stop(name, " must contain finite integer vertex indices in 1..", n, ".",
+             call. = FALSE)
+    }
+    as.integer(x)
+}
+
+.validate.named.controls <- function(x, allowed, name) {
+    if (!is.list(x)) stop(name, " must be a list.", call. = FALSE)
+    if (!length(x)) return(invisible(x))
+    nm <- names(x)
+    if (is.null(nm) || anyNA(nm) || any(!nzchar(nm)) || anyDuplicated(nm)) {
+        stop(name, " must have unique, nonempty names.", call. = FALSE)
+    }
+    unknown <- setdiff(nm, allowed)
+    if (length(unknown)) stop(name, " has unsupported control(s): ",
+                             paste(unknown, collapse = ", "), call. = FALSE)
+    invisible(x)
+}
+
+.validate.logical.scalar <- function(x, name) {
+    if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+        stop(name, " must be TRUE or FALSE.", call. = FALSE)
+    }
+    x
 }

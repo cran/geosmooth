@@ -96,6 +96,117 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// logistic_tf_native
+Rcpp::List logistic_tf_native(Rcpp::NumericMatrix design, Rcpp::NumericMatrix ridge_factor, Rcpp::NumericVector response, Rcpp::NumericVector weights, Rcpp::NumericVector offsets, Rcpp::NumericVector penalty_scale, Rcpp::NumericVector lambdas, double tolerance, double gap_tolerance, int max_iterations);
+RcppExport SEXP _geosmooth_logistic_tf_native(SEXP designSEXP, SEXP ridge_factorSEXP, SEXP responseSEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP penalty_scaleSEXP, SEXP lambdasSEXP, SEXP toleranceSEXP, SEXP gap_toleranceSEXP, SEXP max_iterationsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type design(designSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type ridge_factor(ridge_factorSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type response(responseSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type penalty_scale(penalty_scaleSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
+    Rcpp::traits::input_parameter< double >::type gap_tolerance(gap_toleranceSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iterations(max_iterationsSEXP);
+    rcpp_result_gen = Rcpp::wrap(logistic_tf_native(design, ridge_factor, response, weights, offsets, penalty_scale, lambdas, tolerance, gap_tolerance, max_iterations));
+    return rcpp_result_gen;
+END_RCPP
+}
+// gaussian_tf_native
+Rcpp::List gaussian_tf_native(Rcpp::NumericMatrix design, Rcpp::NumericMatrix ridge_factor, Rcpp::NumericVector response, Rcpp::NumericVector weights, Rcpp::NumericVector offsets, Rcpp::NumericVector penalty_scale, Rcpp::NumericVector lambdas, double tolerance, double gap_tolerance, int max_iterations);
+RcppExport SEXP _geosmooth_gaussian_tf_native(SEXP designSEXP, SEXP ridge_factorSEXP, SEXP responseSEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP penalty_scaleSEXP, SEXP lambdasSEXP, SEXP toleranceSEXP, SEXP gap_toleranceSEXP, SEXP max_iterationsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type design(designSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type ridge_factor(ridge_factorSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type response(responseSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type penalty_scale(penalty_scaleSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
+    Rcpp::traits::input_parameter< double >::type gap_tolerance(gap_toleranceSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iterations(max_iterationsSEXP);
+    rcpp_result_gen = Rcpp::wrap(gaussian_tf_native(design, ridge_factor, response, weights, offsets, penalty_scale, lambdas, tolerance, gap_tolerance, max_iterations));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logistic_tf_structured_geometry
+Rcpp::List logistic_tf_structured_geometry(Rcpp::NumericVector u, Rcpp::NumericVector knots, Rcpp::NumericVector weights);
+RcppExport SEXP _geosmooth_logistic_tf_structured_geometry(SEXP uSEXP, SEXP knotsSEXP, SEXP weightsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type u(uSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type knots(knotsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type weights(weightsSEXP);
+    rcpp_result_gen = Rcpp::wrap(logistic_tf_structured_geometry(u, knots, weights));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logistic_tf_banded_predict
+Rcpp::NumericVector logistic_tf_banded_predict(Rcpp::NumericVector knots, Rcpp::IntegerVector active, Rcpp::NumericVector coefficients, Rcpp::NumericVector u);
+RcppExport SEXP _geosmooth_logistic_tf_banded_predict(SEXP knotsSEXP, SEXP activeSEXP, SEXP coefficientsSEXP, SEXP uSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type knots(knotsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type active(activeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type coefficients(coefficientsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type u(uSEXP);
+    rcpp_result_gen = Rcpp::wrap(logistic_tf_banded_predict(knots, active, coefficients, u));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logistic_tf_banded_native
+Rcpp::List logistic_tf_banded_native(Rcpp::NumericVector u, Rcpp::NumericVector knots, Rcpp::NumericMatrix nuisance, Rcpp::NumericVector response, Rcpp::NumericVector weights, Rcpp::NumericVector offsets, Rcpp::NumericVector lambdas, double nuisance_ridge, double curve_ridge, double tolerance, double gap_tolerance, int max_iterations);
+RcppExport SEXP _geosmooth_logistic_tf_banded_native(SEXP uSEXP, SEXP knotsSEXP, SEXP nuisanceSEXP, SEXP responseSEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP lambdasSEXP, SEXP nuisance_ridgeSEXP, SEXP curve_ridgeSEXP, SEXP toleranceSEXP, SEXP gap_toleranceSEXP, SEXP max_iterationsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type u(uSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type knots(knotsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type nuisance(nuisanceSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type response(responseSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< double >::type nuisance_ridge(nuisance_ridgeSEXP);
+    Rcpp::traits::input_parameter< double >::type curve_ridge(curve_ridgeSEXP);
+    Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
+    Rcpp::traits::input_parameter< double >::type gap_tolerance(gap_toleranceSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iterations(max_iterationsSEXP);
+    rcpp_result_gen = Rcpp::wrap(logistic_tf_banded_native(u, knots, nuisance, response, weights, offsets, lambdas, nuisance_ridge, curve_ridge, tolerance, gap_tolerance, max_iterations));
+    return rcpp_result_gen;
+END_RCPP
+}
+// gaussian_tf_banded_native
+Rcpp::List gaussian_tf_banded_native(Rcpp::NumericVector u, Rcpp::NumericVector knots, Rcpp::NumericMatrix nuisance, Rcpp::NumericVector response, Rcpp::NumericVector weights, Rcpp::NumericVector offsets, Rcpp::NumericVector lambdas, double nuisance_ridge, double curve_ridge, double tolerance, double gap_tolerance, int max_iterations);
+RcppExport SEXP _geosmooth_gaussian_tf_banded_native(SEXP uSEXP, SEXP knotsSEXP, SEXP nuisanceSEXP, SEXP responseSEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP lambdasSEXP, SEXP nuisance_ridgeSEXP, SEXP curve_ridgeSEXP, SEXP toleranceSEXP, SEXP gap_toleranceSEXP, SEXP max_iterationsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type u(uSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type knots(knotsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type nuisance(nuisanceSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type response(responseSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< double >::type nuisance_ridge(nuisance_ridgeSEXP);
+    Rcpp::traits::input_parameter< double >::type curve_ridge(curve_ridgeSEXP);
+    Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
+    Rcpp::traits::input_parameter< double >::type gap_tolerance(gap_toleranceSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iterations(max_iterationsSEXP);
+    rcpp_result_gen = Rcpp::wrap(gaussian_tf_banded_native(u, knots, nuisance, response, weights, offsets, lambdas, nuisance_ridge, curve_ridge, tolerance, gap_tolerance, max_iterations));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_kernel_local_polynomial_cv_coordinates
 NumericVector rcpp_kernel_local_polynomial_cv_coordinates(const NumericMatrix& X, const NumericVector& y, const IntegerVector& foldid, const IntegerVector& support_size, const IntegerVector& degree, const CharacterVector& kernel);
 RcppExport SEXP _geosmooth_rcpp_kernel_local_polynomial_cv_coordinates(SEXP XSEXP, SEXP ySEXP, SEXP foldidSEXP, SEXP support_sizeSEXP, SEXP degreeSEXP, SEXP kernelSEXP) {
@@ -238,6 +349,69 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rcpp_neighbor_ann_index
+SEXP rcpp_neighbor_ann_index(const NumericMatrix& X, const IntegerVector& train, const IntegerVector& priority, const IntegerVector& group, const NumericVector& y);
+RcppExport SEXP _geosmooth_rcpp_neighbor_ann_index(SEXP XSEXP, SEXP trainSEXP, SEXP prioritySEXP, SEXP groupSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type train(trainSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type priority(prioritySEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type group(groupSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_neighbor_ann_index(X, train, priority, group, y));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rcpp_neighbor_intrinsic_index
+SEXP rcpp_neighbor_intrinsic_index(const NumericMatrix& X, const IntegerVector& train);
+RcppExport SEXP _geosmooth_rcpp_neighbor_intrinsic_index(SEXP XSEXP, SEXP trainSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type train(trainSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_neighbor_intrinsic_index(X, train));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rcpp_neighbor_release_index
+void rcpp_neighbor_release_index(SEXP neighbor_index, bool intrinsic);
+RcppExport SEXP _geosmooth_rcpp_neighbor_release_index(SEXP neighbor_indexSEXP, SEXP intrinsicSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type neighbor_index(neighbor_indexSEXP);
+    Rcpp::traits::input_parameter< bool >::type intrinsic(intrinsicSEXP);
+    rcpp_neighbor_release_index(neighbor_index, intrinsic);
+    return R_NilValue;
+END_RCPP
+}
+// rcpp_neighbor_probability
+List rcpp_neighbor_probability(const NumericMatrix& X, const NumericMatrix& query, const NumericMatrix& distance, const NumericVector& y, const IntegerVector& train, const IntegerVector& group, const IntegerVector& query_group, const IntegerVector& priority, const IntegerVector& sizes, int method, int metric, bool precomputed, bool diagnostics, SEXP neighbor_index, double eps);
+RcppExport SEXP _geosmooth_rcpp_neighbor_probability(SEXP XSEXP, SEXP querySEXP, SEXP distanceSEXP, SEXP ySEXP, SEXP trainSEXP, SEXP groupSEXP, SEXP query_groupSEXP, SEXP prioritySEXP, SEXP sizesSEXP, SEXP methodSEXP, SEXP metricSEXP, SEXP precomputedSEXP, SEXP diagnosticsSEXP, SEXP neighbor_indexSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type query(querySEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type distance(distanceSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type train(trainSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type group(groupSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type query_group(query_groupSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type priority(prioritySEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type sizes(sizesSEXP);
+    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< int >::type metric(metricSEXP);
+    Rcpp::traits::input_parameter< bool >::type precomputed(precomputedSEXP);
+    Rcpp::traits::input_parameter< bool >::type diagnostics(diagnosticsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type neighbor_index(neighbor_indexSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_neighbor_probability(X, query, distance, y, train, group, query_group, priority, sizes, method, metric, precomputed, diagnostics, neighbor_index, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_ps_lps_local_pca_supports
 List rcpp_ps_lps_local_pca_supports(const NumericMatrix& X, const int support_size, const IntegerVector& chart_dim_by_anchor, const std::string& kernel);
 RcppExport SEXP _geosmooth_rcpp_ps_lps_local_pca_supports(SEXP XSEXP, SEXP support_sizeSEXP, SEXP chart_dim_by_anchorSEXP, SEXP kernelSEXP) {
@@ -346,6 +520,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_geosmooth_rcpp_harmonic_smoother", (DL_FUNC) &_geosmooth_rcpp_harmonic_smoother, 9},
     {"_geosmooth_rcpp_local_pca_chart", (DL_FUNC) &_geosmooth_rcpp_local_pca_chart, 9},
     {"_geosmooth_rcpp_local_second_order_svd_chart", (DL_FUNC) &_geosmooth_rcpp_local_second_order_svd_chart, 12},
+    {"_geosmooth_logistic_tf_native", (DL_FUNC) &_geosmooth_logistic_tf_native, 10},
+    {"_geosmooth_gaussian_tf_native", (DL_FUNC) &_geosmooth_gaussian_tf_native, 10},
+    {"_geosmooth_logistic_tf_structured_geometry", (DL_FUNC) &_geosmooth_logistic_tf_structured_geometry, 3},
+    {"_geosmooth_logistic_tf_banded_predict", (DL_FUNC) &_geosmooth_logistic_tf_banded_predict, 4},
+    {"_geosmooth_logistic_tf_banded_native", (DL_FUNC) &_geosmooth_logistic_tf_banded_native, 12},
+    {"_geosmooth_gaussian_tf_banded_native", (DL_FUNC) &_geosmooth_gaussian_tf_banded_native, 12},
     {"_geosmooth_rcpp_kernel_local_polynomial_cv_coordinates", (DL_FUNC) &_geosmooth_rcpp_kernel_local_polynomial_cv_coordinates, 6},
     {"_geosmooth_rcpp_kernel_local_polynomial_cv_local_pca", (DL_FUNC) &_geosmooth_rcpp_kernel_local_polynomial_cv_local_pca, 7},
     {"_geosmooth_rcpp_kernel_local_polynomial_cv_local_pca_profile", (DL_FUNC) &_geosmooth_rcpp_kernel_local_polynomial_cv_local_pca_profile, 7},
@@ -354,6 +534,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_geosmooth_rcpp_kernel_local_polynomial_neighbor_probe", (DL_FUNC) &_geosmooth_rcpp_kernel_local_polynomial_neighbor_probe, 3},
     {"_geosmooth_rcpp_metric_graph_lowpass_operator", (DL_FUNC) &_geosmooth_rcpp_metric_graph_lowpass_operator, 10},
     {"_geosmooth_rcpp_metric_graph_lowpass_spectrum", (DL_FUNC) &_geosmooth_rcpp_metric_graph_lowpass_spectrum, 16},
+    {"_geosmooth_rcpp_neighbor_ann_index", (DL_FUNC) &_geosmooth_rcpp_neighbor_ann_index, 5},
+    {"_geosmooth_rcpp_neighbor_intrinsic_index", (DL_FUNC) &_geosmooth_rcpp_neighbor_intrinsic_index, 2},
+    {"_geosmooth_rcpp_neighbor_release_index", (DL_FUNC) &_geosmooth_rcpp_neighbor_release_index, 2},
+    {"_geosmooth_rcpp_neighbor_probability", (DL_FUNC) &_geosmooth_rcpp_neighbor_probability, 15},
     {"_geosmooth_rcpp_ps_lps_local_pca_supports", (DL_FUNC) &_geosmooth_rcpp_ps_lps_local_pca_supports, 4},
     {"_geosmooth_rcpp_ps_lps_prepare_sync_rows", (DL_FUNC) &_geosmooth_rcpp_ps_lps_prepare_sync_rows, 3},
     {"_geosmooth_rcpp_ps_lps_rhs_matrix", (DL_FUNC) &_geosmooth_rcpp_ps_lps_rhs_matrix, 2},

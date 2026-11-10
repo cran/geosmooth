@@ -266,7 +266,9 @@ metric_operator_t build_metric_operator(
     for (auto& e : op.edges) {
         double c = NA_REAL;
         const double ell = e.length;
-        if (conductance_rule == "inverse.length.power") {
+        if (conductance_rule == "identity") {
+            c = ell;
+        } else if (conductance_rule == "inverse.length.power") {
             c = std::pow(ell + epsilon, -alpha);
         } else if (conductance_rule == "exp.length") {
             c = std::exp(-ell / sigma);
@@ -283,10 +285,10 @@ metric_operator_t build_metric_operator(
             op.n_nonfinite_conductance++;
             c = (c > 0.0) ? max_conductance : min_conductance;
         }
-        if (c < min_conductance) {
+        if (conductance_rule != "identity" && c < min_conductance) {
             c = min_conductance;
             op.n_clipped_conductance++;
-        } else if (c > max_conductance) {
+        } else if (conductance_rule != "identity" && c > max_conductance) {
             c = max_conductance;
             op.n_clipped_conductance++;
         }
@@ -295,6 +297,9 @@ metric_operator_t build_metric_operator(
         op.degree[e.v] += c;
     }
 
+    for (double d : op.degree) {
+        if (!std::isfinite(d)) Rf_error("Conductance degree sum overflowed");
+    }
     std::vector<Eigen::Triplet<double>> triplets;
     triplets.reserve(4 * op.edges.size() + n);
     if (laplacian_type == "unnormalized") {
@@ -309,7 +314,7 @@ metric_operator_t build_metric_operator(
     } else {
         for (const auto& e : op.edges) {
             if (op.degree[e.u] > 0.0 && op.degree[e.v] > 0.0) {
-                const double c_norm = e.conductance / std::sqrt(op.degree[e.u] * op.degree[e.v]);
+                const double c_norm = (e.conductance / std::sqrt(op.degree[e.u])) / std::sqrt(op.degree[e.v]);
                 triplets.emplace_back(e.u, e.v, -c_norm);
                 triplets.emplace_back(e.v, e.u, -c_norm);
             }
@@ -529,7 +534,10 @@ void compute_spectrum(const spmat_t& L,
         return true;
     };
 
-    if (force_dense || auto_dense) {
+    if (force_sparse && n_eigenpairs > n - 2) {
+        Rf_error("Sparse solver cannot return more than n-2 eigenpairs; use auto or dense");
+    }
+    if (force_dense || auto_dense || n_eigenpairs > n - 2) {
         if (!dense_decomp()) Rf_error("Dense eigendecomposition failed");
         return;
     }
@@ -690,9 +698,21 @@ extern "C" SEXP S_metric_graph_lowpass_spectrum(
     Eigen::VectorXd eigenvalues;
     Eigen::MatrixXd eigenvectors;
     std::string backend;
-    compute_spectrum(op.laplacian, n_eigenpairs, eigen_solver,
+    // Normalize only the numerical eigensolve, not graph conductances or times.
+    // This avoids an absolute solver scale depending on conductance units.
+    double spectral_scale = 0.0;
+    for (int k = 0; k < op.laplacian.outerSize(); ++k)
+        for (spmat_t::InnerIterator it(op.laplacian, k); it; ++it)
+            spectral_scale = std::max(spectral_scale, std::abs(it.value()));
+    if (spectral_scale == 0.0) spectral_scale = 1.0;
+    spmat_t spectral_matrix = op.laplacian;
+    for (int k = 0; k < spectral_matrix.outerSize(); ++k)
+        for (spmat_t::InnerIterator it(spectral_matrix, k); it; ++it)
+            it.valueRef() /= spectral_scale;
+    compute_spectrum(spectral_matrix, n_eigenpairs, eigen_solver,
                      dense_eigen_threshold, dense_fallback_threshold,
                      dense_fallback, verbose, eigenvalues, eigenvectors, backend);
+    eigenvalues *= spectral_scale;
 
     SEXP out = PROTECT(Rf_allocVector(VECSXP, 2));
     SEXP names = PROTECT(Rf_allocVector(STRSXP, 2));

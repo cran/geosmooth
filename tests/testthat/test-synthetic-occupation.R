@@ -6,8 +6,8 @@ test_that("occupation mixtures distinguish density from Bernoulli truth", {
     gamma = 1.2,
     probability.maximum = 0.65)
   spec <- synthetic.spec(
-    synthetic.quadform(2, 2, frame = "canonical"),
-    synthetic.sampling.uniform.box(-1, 1),
+    dgraphs::synthetic.quadform(2, 2, frame = "canonical"),
+    dgraphs::synthetic.sampling.uniform.box(-1, 1),
     truth,
     synthetic.response.bernoulli(
       minimum.positive = 10, maximum.attempts = 5),

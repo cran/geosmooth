@@ -21,14 +21,17 @@ metric.graph.lowpass.basis(
   dense.eigen.threshold = 200L,
   dense.fallback.threshold = 5000L,
   dense.fallback = c("auto", "never", "always"),
-  verbose = FALSE
+  verbose = FALSE,
+  weight.type = c("length", "conductance"),
+  spectrum = c("partial", "full"),
+  numerical.policy = c("conservative", "verified.fallback")
 )
 }
 \arguments{
 \item{adj.list}{List of integer neighbor vectors using 1-based vertex indices.}
 
-\item{weight.list}{List of positive metric edge lengths parallel to
-\code{adj.list}. These are interpreted as edge lengths, not conductances.}
+\item{weight.list}{List of weights parallel to \code{adj.list}: positive
+metric lengths or nonnegative conductances, according to \code{weight.type}.}
 
 \item{conductance.rule}{Character scalar. One of
 \code{"inverse.length.power"}, \code{"exp.length"},
@@ -67,6 +70,28 @@ fallback when sparse decomposition fails and fallback is allowed.}
 \item{dense.fallback}{\code{"auto"}, \code{"never"}, or \code{"always"}.}
 
 \item{verbose}{Logical. Reserved for future diagnostic messages.}
+
+\item{weight.type}{Weight interpretation. \code{"length"} transforms lengths;
+\code{"conductance"} uses positive weights unchanged and removes zero edges.
+Reciprocal conductances must agree; self-loops must be removed by the caller.
+Conductance-transform settings are unused for direct conductances.}
+
+\item{spectrum}{\code{"partial"} retains the requested number of modes.
+\code{"full"} requests and verifies all vertex eigenpairs with a dense
+solver, overriding \code{n.eigenpairs}; sparse-only requests are rejected.}
+
+\item{numerical.policy}{Numerical acceptance policy. The default
+\code{"conservative"} retains the heat-time and missing-block condition
+guards. Opt-in \code{"verified.fallback"} requires a full spectrum,
+unnormalized Laplacian, heat filter, and fixed tuning grid. It compares
+every requested positive time and response mask with a separate LAPACK
+eigensystem and a bordered pseudoinverse calculation. Failed residual or
+agreement checks stop the entire path. This double-precision agreement
+check is not a rigorous forward-error certificate. Structurally flat paths
+and overlapping score-resolution bands cannot select a time automatically;
+they remain available from the path function or at a prespecified time.
+Endpoint and near-minimum flags are retained in \code{tuning}.
+See \code{vignette("verified-heat-fallback")} for equations and limits.}
 }
 \value{
 A list of class \code{"metric.graph.lowpass.basis"} containing the
@@ -80,6 +105,15 @@ response-independent and can be reused for many responses and filter
 parameters.
 }
 \details{
+Numerical verification anchors the known component nullspace (square-root
+degree for the normalized operator), and rejects unresolved positive modes
+rather than clamping them to zero. Heat paths, fits and refits additionally
+check spectral error at the requested times. Missing-response blocks must
+pass a conditioning check as well as Cholesky and residual checks; failure
+returns an error without deleting positive edges or adding a ridge.
+These are conservative double-precision diagnostics, not rigorous interval
+error bounds. A complete basis alone does not certify arbitrary long times.
+
 The basis is complete only when it contains one eigenvector per graph
 vertex. A truncated basis represents only the retained low-frequency
 subspace. The largest retained eigenvalue supplies a conservative proxy for

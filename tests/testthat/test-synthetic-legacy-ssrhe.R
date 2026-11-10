@@ -6,13 +6,13 @@
   ""
 }
 
-.expect.ssrhe.numeric.parity <- function(actual, expected, info) {
-  expect_identical(dim(actual), dim(expected), info = info)
+.ssrhe.numeric.parity <- function(actual, expected) {
+  if (!identical(dim(actual), dim(expected))) return(FALSE)
   actual <- as.numeric(actual)
   expected <- as.numeric(expected)
   difference <- abs(actual - expected)
   bound <- 1e-14 + 1e-12 * abs(expected)
-  expect_true(all(difference <= bound), info = info)
+  isTRUE(all(difference <= bound))
 }
 
 .ssrhe.canonical.field <- function(object, field) {
@@ -59,17 +59,23 @@ test_that("all 48 one-dimensional recipes preserve the frozen legacy grid", {
   fixture <- readRDS(fixture.path)
   expect_identical(attr(fixture, "contract"), "ssrhe-legacy-parity-v1")
   expect_length(fixture$one.d, 720L)
+  # Reuse recipe definitions, while regenerating every size/seed combination.
+  ids <- unique(vapply(fixture$one.d, function(case) case$recipe.id, character(1)))
+  specs <- setNames(lapply(ids, synthetic.registry.spec), ids)
+  failures <- character()
   for (case.id in names(fixture$one.d)) {
     case <- fixture$one.d[[case.id]]
     actual <- materialize.synthetic(
-      synthetic.registry.spec(case$recipe.id),
+      specs[[case$recipe.id]],
       n = case$n, seed = case$seed, rng.policy = "legacy")
     for (field in names(case$scientific)) {
-      .expect.ssrhe.numeric.parity(
-        .ssrhe.canonical.field(actual, field), case$scientific[[field]],
-        paste(case.id, field))
+      if (!.ssrhe.numeric.parity(
+          .ssrhe.canonical.field(actual, field), case$scientific[[field]])) {
+        failures <- c(failures, paste(case.id, field))
+      }
     }
   }
+  expect_true(length(failures) == 0L, info = paste(failures, collapse = "; "))
 })
 
 test_that("flat and quadform recipes preserve dimensions 2--4", {
@@ -77,17 +83,23 @@ test_that("flat and quadform recipes preserve dimensions 2--4", {
   skip_if(!nzchar(fixture.path), "SSRHE parity fixture is unavailable")
   fixture <- readRDS(fixture.path)
   expect_length(fixture$surfaces, 126L)
+  # Reuse recipe definitions, while regenerating every size/seed combination.
+  ids <- unique(vapply(fixture$surfaces, function(case) case$recipe.id, character(1)))
+  specs <- setNames(lapply(ids, synthetic.registry.spec), ids)
+  failures <- character()
   for (case.id in names(fixture$surfaces)) {
     case <- fixture$surfaces[[case.id]]
     actual <- materialize.synthetic(
-      synthetic.registry.spec(case$recipe.id),
+      specs[[case$recipe.id]],
       n = case$n, seed = case$seed, rng.policy = "legacy")
     for (field in names(case$scientific)) {
-      .expect.ssrhe.numeric.parity(
-        .ssrhe.canonical.field(actual, field), case$scientific[[field]],
-        paste(case.id, field))
+      if (!.ssrhe.numeric.parity(
+          .ssrhe.canonical.field(actual, field), case$scientific[[field]])) {
+        failures <- c(failures, paste(case.id, field))
+      }
     }
   }
+  expect_true(length(failures) == 0L, info = paste(failures, collapse = "; "))
 })
 
 test_that("one-dimensional variants retain their named mechanisms", {

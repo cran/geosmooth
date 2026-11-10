@@ -41,7 +41,7 @@ one canonically hashable specification.
 }
 \examples{
 spec <- synthetic.spec(
-  synthetic.circle(), synthetic.sampling.uniform.interval(0, 2 * pi),
+  dgraphs::synthetic.circle(), dgraphs::synthetic.sampling.uniform.interval(0, 2 * pi),
   synthetic.truth.named("helix.sin.v1"), synthetic.response.gaussian(0.1)
 )
 spec$specification.sha256

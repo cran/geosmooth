@@ -36,7 +36,7 @@ indices.}
 \item{graph}{Graph source. \code{"rknn"} builds an adaptive-radius graph from
 \code{X}; \code{"supplied"} uses \code{adj.list} and \code{weight.list}.}
 
-\item{tangent.dim}{Fixed global tangent dimension for phase-1 geometry.}
+\item{tangent.dim}{Fixed global tangent dimension for local geometry.}
 
 \item{local.support}{Local support construction rule. \code{"graph.disk"}
 uses graph-hop disks; \code{"neighbors"} starts from the closed one-hop
@@ -55,15 +55,15 @@ metric distance, with vertex-index tie breaking.}
 graph controls passed to \code{dgraphs::create.rknn.graph()} when
 \code{graph = "rknn"}.}
 
-\item{transport.rule}{Edge transport rule. Phase 1 implements
+\item{transport.rule}{Edge transport rule. The current implementation uses
 \code{"procrustes"}.}
 
 \item{synchronize.orientation}{Logical. If \code{TRUE}, return deterministic
-spanning-tree orientation-synchronization metadata. Phase 1 does not mutate
-the returned frames.}
+spanning-tree orientation-synchronization metadata. This metadata does not
+mutate the returned frames.}
 
-\item{density.method}{Sampling-density metadata rule. Phase 1 implements
-\code{"support.radius"}.}
+\item{density.method}{Sampling-density metadata rule. The current
+implementation uses \code{"support.radius"}.}
 
 \item{alpha}{Numeric exponent used only to report proposed future
 density-normalization weights.}

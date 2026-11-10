@@ -9,8 +9,8 @@
 #' @param derivative.order Integer derivative order, one of \code{1L},
 #'   \code{2L}, or \code{3L}.
 #' @param edge.status.policy Edge transport policy. \code{"ok.only"} uses only
-#'   Phase 1 transports with status \code{"ok"}. \code{"frame.fallback"} also
-#'   allows direct-frame fallback transports for non-OK shared-support statuses.
+#'   transports with status \code{"ok"}. \code{"frame.fallback"} also allows
+#'   direct-frame fallback transports for non-OK shared-support statuses.
 #' @param regression.weight.rule Local regression edge-weight rule.
 #' @param edge.length.epsilon Positive numeric edge-length floor.
 #' @param tensor.scaling Symmetric tensor coordinate scaling. \code{"hs"} uses
@@ -18,8 +18,8 @@
 #'   Hilbert--Schmidt norms. \code{"raw"} stores unscaled unique symmetric
 #'   components.
 #' @param row.mass.rule Final row-mass multiplier. \code{"node.mass"} multiplies
-#'   rows for vertex \eqn{i} by \eqn{\sqrt{\mu_i}} from the Phase 1 density
-#'   metadata. \code{"none"} leaves rows unweighted.
+#'   rows for vertex \eqn{i} by \eqn{\sqrt{\mu_i}} from the density metadata.
+#'   \code{"none"} leaves rows unweighted.
 #' @param row.normalize Optional final row normalization.
 #' @param min.operator.rank.tol Relative singular-value tolerance for local
 #'   derivative regression rank.
@@ -33,8 +33,8 @@
 #' @param diagnostics Logical. If \code{TRUE}, include assembly diagnostics.
 #'
 #' @details
-#' Phase 2 keeps a full logical vertex/component layout internally. For order
-#' \eqn{r}, the logical field has one block of
+#' The operator keeps a full logical vertex/component layout internally. For
+#' order \eqn{r}, the logical field has one block of
 #' \eqn{q_r=\binom{m+r-1}{r}} components at each vertex. The returned
 #' \code{A} is compact: it includes rows only for accepted final-order
 #' vertex/component blocks, and \code{row.table$full.row} records the original
@@ -729,6 +729,7 @@ pttf.operator <- function(
     )
 }
 
+#' @rdname geosmooth-print-methods
 #' @method print pttf_operator
 #' @export
 print.pttf_operator <- function(x, ...) {

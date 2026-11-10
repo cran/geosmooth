@@ -489,7 +489,7 @@ synthetic.dataset.checksum <- function(x) {
 #' x <- materialize.synthetic(spec, n = 20L, seed = 1L)
 #' y <- materialize.synthetic(spec, n = 20L, seed = 1L)
 #' compare.synthetic.dataset(x, y)
-#' @export
+#' @export compare.synthetic.dataset
 compare.synthetic.dataset <- function(x, y, tolerance = c(1e-12, 1e-10)) {
   validate.synthetic.dataset(x)
   validate.synthetic.dataset(y)
@@ -570,6 +570,9 @@ compare.synthetic.dataset <- function(x, y, tolerance = c(1e-12, 1e-10)) {
 #' @param x A `synthetic_dataset`.
 #' @param ... Ignored.
 #' @return `x`, invisibly.
+#' @examples
+#' x <- materialize.synthetic(synthetic.registry.spec("G1"), n = 20L, seed = 1L)
+#' print(x)
 #' @method print synthetic_dataset
 #' @export
 print.synthetic_dataset <- function(x, ...) {
@@ -590,6 +593,10 @@ print.synthetic_dataset <- function(x, ...) {
 #' @param optional Ignored.
 #' @param ... Ignored.
 #' @return A one-row data frame.
+#' @examples
+#' x <- materialize.synthetic(synthetic.registry.spec("G1"), n = 20L, seed = 1L)
+#' as.data.frame(x)
+#' @method as.data.frame synthetic_dataset
 #' @export
 as.data.frame.synthetic_dataset <- function(
     x, row.names = NULL, optional = FALSE, ...) {
@@ -608,53 +615,82 @@ as.data.frame.synthetic_dataset <- function(
 
 #' Plot a canonical synthetic dataset
 #'
-#' One-dimensional datasets show response and truth against the first latent
-#' coordinate. Higher-dimensional datasets show the first two predictor
-#' coordinates, colored by response or region.
+#' The default `view = "auto"` preserves the dimension-dependent display:
+#' one latent coordinate shows response and truth against that coordinate;
+#' otherwise the first two predictor coordinates show a geometry projection.
+#' Select `"geometry"` explicitly to see a curve's embedding, or `"response"`
+#' to see responses against the first latent coordinate (observation index when
+#' latent coordinates are absent). A two-coordinate projection can hide
+#' separation in higher ambient dimensions. Plotting does not draw random values.
 #'
 #' @param x A `synthetic_dataset`.
-#' @param color Color mapping: response, truth, or region.
-#' @param ... Additional arguments passed to [graphics::plot()].
+#' @param color Color mapping for points: response, truth, or region. Region
+#'   mapping requires stored region labels. Numeric keys display the actual range.
+#' @param ... Additional arguments passed to [graphics::plot()], including
+#'   overrides for axis labels, point shape, or color.
+#' @param col Optional explicit point color, overriding the color mapping.
+#' @param view `"auto"`, `"geometry"`, or `"response"`. Geometry requires at
+#'   least two predictor coordinates. Named-only, after `...`, for compatibility.
+#' @param legend Logical; show point-color and response/truth keys. A user-supplied
+#'   `col` suppresses the automatic color key.
 #' @return `x`, invisibly.
+#' @examples
+#' x <- materialize.synthetic(synthetic.registry.spec("G1"), n = 20L, seed = 1L)
+#' plot(x)
+#' plot(x, view = "geometry", color = "truth")
 #' @method plot synthetic_dataset
 #' @export
 plot.synthetic_dataset <- function(
-    x, color = c("response", "truth", "region"), ...) {
+    x, color = c("response", "truth", "region"), ...,
+    view = c("auto", "geometry", "response"), legend = TRUE, col = NULL) {
   validate.synthetic.dataset(x)
   color <- match.arg(color)
-  if (!is.null(x$latent) && ncol(x$latent) == 1L) {
-    graphics::plot(
-      x$latent[, 1L], x$response,
-      xlab = "latent coordinate", ylab = "response", ...)
-    ord <- order(x$latent[, 1L], method = "radix")
-    graphics::lines(
-      x$latent[ord, 1L], x$truth[ord], col = "#D55E00", lwd = 2)
-    return(invisible(x))
-  }
-  if (ncol(x$predictors) < 2L) {
-    graphics::plot(
-      seq_len(x$n), x$response,
-      xlab = "observation", ylab = "response", ...)
-    return(invisible(x))
-  }
-  group <- if (color == "region" && !is.null(x$region)) {
-    as.integer(factor(x$region, levels = x$declared.regions))
-  } else if (color == "truth") {
-    x$truth
-  } else {
-    x$response
-  }
-  palette <- grDevices::hcl.colors(64L, "Viridis")
-  if (color == "region" && !is.null(x$region)) {
-    index <- pmax(1L, as.integer(group))
+  view <- match.arg(view)
+  if (!is.logical(legend) || length(legend) != 1L || is.na(legend))
+    stop("legend must be TRUE or FALSE.", call. = FALSE)
+  if (view == "auto") view <- if ((!is.null(x$latent) && ncol(x$latent) == 1L) ||
+                                     ncol(x$predictors) < 2L) "response" else "geometry"
+  if (view == "geometry" && ncol(x$predictors) < 2L)
+    stop("The geometry view requires at least two predictor coordinates.", call. = FALSE)
+  if (color == "region" && is.null(x$region))
+    stop("Region coloring requires stored region labels.", call. = FALSE)
+  group <- switch(color, region = x$region, truth = x$truth, response = x$response)
+  if (color == "region") {
+    labels <- unique(as.character(group))
+    palette <- grDevices::hcl.colors(length(labels), "Dark 3")
+    index <- match(as.character(group), labels)
+    key.colors <- palette
   } else {
     span <- range(group, finite = TRUE)
+    palette <- grDevices::hcl.colors(64L, "Viridis")
     index <- if (diff(span) == 0) rep.int(32L, length(group)) else
       1L + floor(63 * (group - span[1L]) / diff(span))
+    key.index <- if (diff(span) == 0) 32L else c(1L, 32L, 64L)
+    key.colors <- palette[key.index]
+    labels <- format(if (diff(span) == 0) span[1L] else
+        span[1L] + (key.index - 1) * diff(span) / 63, digits = 3)
   }
-  graphics::plot(
-    x$predictors[, 1L], x$predictors[, 2L],
-    col = palette[index], pch = 19,
-    xlab = "predictor 1", ylab = "predictor 2", ...)
+  if (view == "response") {
+    horizontal <- if (!is.null(x$latent)) x$latent[, 1L] else seq_len(x$n)
+    args <- list(x = horizontal, y = x$response,
+      xlab = if (!is.null(x$latent)) "latent coordinate 1" else "observation",
+      ylab = "response", ylim = range(c(x$response, x$truth), finite = TRUE))
+  } else {
+    args <- list(x = x$predictors[, 1L], y = x$predictors[, 2L],
+      xlab = "predictor 1", ylab = "predictor 2")
+  }
+  args$col <- palette[index]; args$pch <- 19
+  dots <- list(...)
+  if (!is.null(col)) dots$col <- col
+  args[names(dots)] <- dots
+  do.call(graphics::plot, args)
+  if (view == "response") {
+    ord <- order(horizontal, method = "radix")
+    graphics::lines(horizontal[ord], x$truth[ord], col = "#D55E00", lty = 2, lwd = 2)
+    if (legend) graphics::legend("topleft", c("Observed response", "Known truth"),
+      pch = c(19, NA), lty = c(NA, 2), col = c("grey30", "#D55E00"), bty = "n", cex = .8)
+  }
+  if (legend && is.null(dots$col)) graphics::legend("bottomright", labels,
+      col = key.colors, pch = 19, title = color, bty = "o", bg = "white", box.col = NA, cex = .8)
   invisible(x)
 }

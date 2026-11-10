@@ -26,3 +26,8 @@ A numeric vector of predictions.
 \description{
 Predict from an LPS Fit
 }
+\examples{
+X <- matrix(seq(0, 1, length.out = 12), ncol = 1)
+fit <- fit.lps(X, sin(2 * pi * X[, 1]), support.grid = 6L)
+predict(fit)
+}

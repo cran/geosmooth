@@ -223,32 +223,19 @@ test_that("sparse spectral path handles inverse-square metric conductances", {
   expect_metric_fit_finite(fit.dense)
 })
 
-test_that("metric low-pass finite guards hold under aggressive conductance scaling", {
+test_that("unresolved extreme conductance contrast is refused instead of merely finite", {
   lengths <- exp(seq(log(1e-7), log(1e1), length.out = 99))
   graph <- make_path_graph_lengths(lengths)
   y <- sin(seq_len(100) / 4) + 0.25 * cos(seq_len(100) / 9)
-  fit <- fit.metric.graph.lowpass(
+  # Cubing inverse lengths spans 24 orders of magnitude. Finite output alone
+  # was an insufficient acceptance rule for these unresolved positive modes.
+  expect_error(fit.metric.graph.lowpass(
     graph$adj.list, graph$weight.list, y,
-    conductance.rule = "inverse.length.power",
-    conductance.alpha = 3,
-    conductance.epsilon = 1e-12,
-    n.eigenpairs = 25L,
-    eigen.solver = "sparse",
-    dense.fallback = "never",
+    conductance.rule = "inverse.length.power", conductance.alpha = 3,
+    conductance.epsilon = 1e-12, n.eigenpairs = 25L,
+    eigen.solver = "sparse", dense.fallback = "never",
     eta.grid = c(1e-10, 1e-8, 1e-6, 1e-4, 1e-2)
-  )
-  expect_metric_fit_finite(fit)
-
-  fixed.refit <- refit.metric.graph.lowpass(fit, rev(y))
-  expect_metric_refit_finite(fixed.refit)
-
-  Y <- cbind(reversed = rev(y), shifted = y + seq_along(y) / 100)
-  gcv.refit <- refit.metric.graph.lowpass(
-    fit, Y,
-    per.column.gcv = TRUE,
-    eta.grid = c(1e-10, 1e-8, 1e-6, 1e-4, 1e-2)
-  )
-  expect_metric_refit_finite(gcv.refit)
+  ), "Unresolved positive spectrum")
 })
 
 test_that("symmetric normalized smoothing preserves sqrt-degree null vector", {
@@ -290,7 +277,7 @@ test_that("metric low-pass preserves constant responses and refit fixed eta", {
   expect_equal(fit$fitted.values, y, tolerance = 1e-10)
 
   y2 <- seq_len(5)
-  refit <- refit.metric.graph.lowpass(fit, y2)
+  refit <- refit(fit, y2)
   V <- fit$spectral$eigenvectors
   f <- fit$spectral$filtered.eigenvalues
   y2.hat <- as.vector(V %*% (f * as.vector(crossprod(V, y2))))
@@ -330,12 +317,12 @@ test_that("per-column GCV refit matches independent fits", {
     eigen.solver = "dense",
     eta.grid = eta.grid
   )
-  refit <- refit.metric.graph.lowpass(
+  refit <- refit(
     fit, Y,
     per.column.gcv = TRUE,
     eta.grid = eta.grid
   )
-  fixed.refit <- refit.metric.graph.lowpass(fit, Y)
+  fixed.refit <- refit(fit, Y)
 
   fit1 <- fit.metric.graph.lowpass(
     graph$adj.list, graph$weight.list, Y[, 1],

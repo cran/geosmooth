@@ -11,7 +11,7 @@ test_that("GE0 vendored support assets are present", {
     expect_true(file.exists(file.path(root, "inst", "licenses", "MPL-2.0.txt")))
     expect_true(file.exists(file.path(root, "inst", "include", "Eigen", "Core")))
     expect_true(file.exists(file.path(root, "inst", "include", "geosmooth",
-                                      "eigen_config.hpp")))
+                                      "local_pca_charts.h")))
 })
 
 test_that("GE0 native scaffold is registered", {

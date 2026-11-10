@@ -38,8 +38,8 @@ Default is 1e-6.}
 \item{record.frequency}{Integer scalar, how often to record states (every N
 iterations). Default is 1 (record every iteration).}
 
-\item{stability.window}{Integer scalar, number of consecutive iterations to
-check for topological stability. Default is 3.}
+\item{stability.window}{Integer scalar, number of consecutive recorded
+differences to check for extrema stability. Default is 3.}
 
 \item{stability.threshold}{Numeric scalar in \eqn{[0,1]}, maximum allowed
 difference in topology to consider stable. Default is 0.05.}
@@ -50,8 +50,15 @@ A list of class \code{"harmonic_smoother"} containing:
 \item{i_harmonic_predictions}{Matrix of function values at each recorded
 iteration (columns are iterations)}
 \item{i_basins}{List of matrices representing extrema at each iteration}
-\item{stable_iteration}{Integer indicating the iteration at which topology
-stabilized}
+\item{stable_iteration}{First iteration with a detected extrema-stability
+window, or \code{NA_integer_} if none was detected}
+\item{stability_detected}{Whether an extrema-stability window was detected}
+\item{num_iterations, recorded_iterations}{Number of relaxation updates
+and their actual indices for the recorded columns, starting at zero}
+\item{max_change, max_residual}{Per-update maximum change and harmonic
+residual. Both must fall below \code{tolerance} for convergence}
+\item{status}{\code{converged}, \code{iteration_limit}, or
+\code{no_interior}}
 \item{topology_differences}{Numeric vector of differences between consecutive
 recorded iterations}
 \item{basin_cx_differences}{Alias of \code{topology_differences}}
@@ -60,27 +67,27 @@ recorded iterations}
 requested region and its boundary/interior split}
 }
 \description{
-Applies harmonic smoothing to function values defined on vertices of a graph
-while tracking how the topological structure (local extrema and their basins)
-evolves during the smoothing process. This helps identify the optimal level
-of smoothing that reduces noise while preserving significant features.
+Relaxes graph values while recording changes in local extrema. Boundary
+vertices have neighbors outside the region and retain their original values.
 }
 \details{
-This function extends standard harmonic smoothing by monitoring the evolution
-of local extrema during the iterative process. It identifies a "sweet spot"
-where the topological structure stabilizes, indicating that noise has been
-removed without over-flattening important features.
+Uses the same inverse-length neighbor averages and boundary definition as
+\code{\link{perform.harmonic.smoothing}}. Unlike the basic function, it also
+relaxes regions with no boundary. Such a problem is not uniquely anchored;
+synchronous updates can oscillate on bipartite graphs, including paths.
 
-The algorithm:
-\enumerate{
-\item Iteratively performs harmonic smoothing on interior vertices
-\item Periodically identifies local extrema and their basins
-\item Monitors the stability of the topological structure
-\item Identifies when the topological structure stabilizes
-}
-
-The function returns comprehensive information about the smoothing process,
-including all intermediate states and the detected stability point.
+The recorded diagnostic compares sets of (vertex, minimum/maximum) pairs.
+Its value is one minus twice the number of shared pairs divided by the sum
+of the two set sizes (zero for two empty sets). A detection means that the
+last \code{stability.window} recorded differences are at most
+\code{stability.threshold}. It does not establish numerical convergence,
+optimal smoothing, noise removal, or stability of full attraction basins.
+In particular, recording every two iterations can conceal an alternating
+oscillation. Always inspect \code{converged} and \code{max_residual} separately.
+Stability detection does not stop relaxation or select the returned fit.
+The initial and final states are always recorded, including a final partial
+recording interval. Disconnected components without fixed boundary values
+have the same lack of anchoring as a region without a boundary.
 }
 \examples{
 adj.list <- list(2L, c(1L, 3L), c(2L, 4L), 3L)

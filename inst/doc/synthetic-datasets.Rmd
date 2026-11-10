@@ -11,9 +11,12 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
+For the complete task and function catalog, see
+[Finding your way around geosmooth](function-guide.html).
+
 `geosmooth` represents a synthetic dataset as four serializable components:
-geometry, sampling, truth, and response. `synthetic.spec()` combines those
-components without drawing data. `materialize.synthetic()` performs all random
+geometry, sampling, truth, and response. [`synthetic.spec()`](https://pgajer.github.io/geosmooth/reference/synthetic.spec.html) combines those
+components without drawing data. [`materialize.synthetic()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html) performs all random
 work under an explicit seed and RNG policy and returns a validated
 `synthetic_dataset`.
 
@@ -21,15 +24,27 @@ work under an explicit seed and RNG policy and returns a validated
 library(geosmooth)
 
 circle.spec <- synthetic.spec(
-  geometry = synthetic.circle(radius = 1, ambient.dim = 2),
-  sampling = synthetic.sampling.grid.interval(
+  geometry = dgraphs::synthetic.circle(radius = 1, ambient.dim = 2),
+  sampling = dgraphs::synthetic.sampling.grid.interval(
     0, 2 * pi, endpoints = "exclude.lower"),
   truth = synthetic.truth.polynomial(c(b0 = 0)),
   response = synthetic.response.gaussian(sd = 0.05)
 )
 circle.data <- materialize.synthetic(circle.spec, n = 80, seed = 2026)
 circle.data
-plot(circle.data)
+```
+
+The circle has one latent coordinate (angle) and two observed coordinates
+(the embedding). The constant truth is intentional: this recipe isolates
+response noise around zero, rather than testing recovery of a varying signal.
+
+```{r circle-views, fig.width=8, fig.height=4, out.width="100%", fig.cap="Left: the circle in its two observed coordinates. Right: responses versus latent angle, with the constant zero truth shown by a dashed line. These views describe the same 80 observations.", fig.alt="A circle of 80 points beside noisy responses scattered around a dashed zero line over angles from zero to two pi."}
+old.par <- par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+plot(circle.data, view = "geometry", col = "#0072B2", asp = 1,
+     main = "Observed geometry")
+plot(circle.data, view = "response", col = "grey40", xlab = "Angle (radians)",
+     main = "Response and truth")
+par(old.par)
 ```
 
 Quadforms use separate intrinsic and ambient dimensions. A flat geometry has no
@@ -37,27 +52,64 @@ quadratic forms; a paraboloid or saddle supplies one or more symmetric forms.
 
 ```{r quadform}
 surface.spec <- synthetic.spec(
-  geometry = synthetic.quadform(
+  geometry = dgraphs::synthetic.quadform(
     intrinsic.dim = 2,
     ambient.dim = 5,
     forms = list(diag(c(1, -1))),
     frame = "random.orthonormal"
   ),
-  sampling = synthetic.sampling.uniform.box(-1, 1),
+  sampling = dgraphs::synthetic.sampling.uniform.box(-1, 1),
   truth = synthetic.truth.polynomial(c(b0 = 0, b1 = 1, b22 = -0.5)),
   response = synthetic.response.gaussian(sd = 0.1)
 )
 surface.data <- materialize.synthetic(surface.spec, n = 100, seed = 17)
-as.data.frame(surface.data)
+dim(surface.data$latent)
+dim(surface.data$predictors)
+head(as.data.frame(surface.data))
 ```
 
+The surface has two latent coordinates and five observed coordinates. The
+random orthonormal frame embeds the surface in five dimensions. Viewing two
+coordinates is a projection: points that appear close may be separated in
+coordinates omitted from the display.
+
+```{r surface-view, fig.width=6, fig.height=4.5, out.width="80%", fig.cap="Two-coordinate projection of a surface embedded in five dimensions. Point colors indicate the known, nonconstant conditional mean; the key uses its actual numerical range.", fig.alt="A projected surface point cloud colored by its known conditional mean, with a numeric color key."}
+plot(surface.data, view = "geometry", color = "truth", main = "Projected surface")
+```
+
+This second recipe has a varying polynomial truth. A smoother receives the
+observed predictors and noisy response, not the latent coordinates or truth:
+
+```{r surface-fit}
+surface.fit <- fit.lps(surface.data$predictors, surface.data$response,
+  foldid = rep(1:5, length.out = surface.data$n),
+  support.grid = c(20L, 30L), degree.grid = 1L,
+  kernel.grid = "gaussian", coordinate.method = "local.pca", chart.dim = 2L)
+surface.fit$selected
+head(data.frame(response = surface.data$response, fitted = fitted(surface.fit),
+                truth = surface.data$truth))
+```
+
+The fitted values are on the observed rows. Truth is available for this
+synthetic demonstration only; selecting settings and reporting their CV score
+does not supply an independent test of prediction accuracy. The
+[first-fit guide](function-guide.html#a-first-regression-fit) explains that distinction.
+
 Maintained benchmark recipes are discoverable through
-`synthetic.registry.ids()`. G1--G7 remain compatibility identifiers; the
-S01--S16 and V1--V3 identifiers preserve the shared SSRHE regression suite.
+[`synthetic.registry.ids()`](https://pgajer.github.io/geosmooth/reference/synthetic.registry.ids.html). G1--G7 remain compatibility identifiers; the
+S01--S16 shape identifiers and V1--V3 sampling/noise variants preserve the shared
+SSRHE regression suite. For example, S01.V1 means two separated narrow equal
+signal peaks with uniform sampling and Gaussian response noise. G1 is an ambient
+polynomial example; G2 is a polynomial on a flat embedded geometry.
 Ordinary datasets bind their full specification hash into `dataset.id`.
 
 ```{r registry}
-head(synthetic.registry.ids())
+ids <- c("G1", "G2", "S01.V1")
+do.call(rbind, lapply(ids, function(id) {
+  spec <- synthetic.registry.spec(id)
+  data.frame(id, geometry = spec$geometry.spec$family,
+             truth = spec$truth.spec$parameters$estimand)
+}))
 registered <- synthetic.registry.spec("S01.V1")
 registered.data <- materialize.synthetic(
   registered, n = 160,

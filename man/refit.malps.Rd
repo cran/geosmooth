@@ -4,7 +4,7 @@
 \alias{refit.malps}
 \title{Refit A MALPS Smoother With A New Response}
 \usage{
-refit.malps(
+\method{refit}{malps}(
   object,
   y = NULL,
   weights = NULL,
@@ -55,5 +55,8 @@ response because they are response-dependent.
 X <- matrix(seq(0, 1, length.out = 20), ncol = 1)
 fit <- fit.malps(X, X[, 1]^2, degree = 1L,
                  support.type = "knn", support.size = 8L)
-refit.malps(fit, y = X[, 1]^3)
+refit(fit, y = X[, 1]^3)
+}
+\seealso{
+\code{\link{refit}} for supported fitted objects and migration.
 }

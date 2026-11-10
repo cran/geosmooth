@@ -5,7 +5,6 @@ PKG_CPPFLAGS += -I../inst/include -DR_NO_REMAP
 PKG_CPPFLAGS += -DEIGEN_DONT_VECTORIZE -DEIGEN_DONT_PARALLELIZE
 PKG_CPPFLAGS += -D_Alignof=__alignof__
 PKG_CPPFLAGS += -DDLL_EXPORTS
-PKG_CPPFLAGS += -include ../inst/include/geosmooth/eigen_config.hpp
 
 CXX_STD = CXX17
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

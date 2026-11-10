@@ -13,13 +13,15 @@ apply.metric.graph.lowpass.path(
   block.size = NULL,
   truncation.tol = 1e-04,
   unresolved.action = c("warn", "error", "allow"),
-  exact.zero = TRUE
+  exact.zero = TRUE,
+  numerical.policy = NULL
 )
 }
 \arguments{
 \item{basis}{A \code{"metric.graph.lowpass.basis"} object.}
 
-\item{y}{Numeric response vector or matrix with one row per graph vertex.}
+\item{y}{Numeric response vector or matrix with one row per graph vertex.
+Missing responses may be \code{NA} for complete-basis heat filtering.}
 
 \item{eta.grid}{Numeric filter-parameter grid.}
 
@@ -36,6 +38,10 @@ truncated-basis candidates as spectrally resolved.}
 \item{exact.zero}{Logical. For heat filtering, return the input exactly at
 \code{eta = 0}. This avoids treating a truncated spectral projection as
 the identity.}
+
+\item{numerical.policy}{NULL inherits the basis policy; otherwise
+\code{"conservative"} or \code{"verified.fallback"}. See
+\code{metric.graph.lowpass.basis} for the bounded fallback contract.}
 }
 \value{
 A list of class \code{"metric.graph.lowpass.path"}. For one response,

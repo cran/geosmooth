@@ -127,13 +127,17 @@ test_that("OD1 heat-kernel low-pass tau-zero limit normalizes raw drift", {
     graph <- make.state.density.path.graph(c(1, 1, 1, 1))
     weights <- c(1, 0, 2, 0, 1)
 
-    lowpass <- fit.metric.graph.lowpass(
+    # Zero time is an explicitly evaluated identity, not a GCV candidate.
+    basis <- metric.graph.lowpass.basis(
         adj.list = graph$adj.list,
         weight.list = graph$weight.list,
-        y = weights,
         conductance.rule = "inverse.length.power",
         n.eigenpairs = 5L,
-        eigen.solver = "dense",
+        eigen.solver = "dense"
+    )
+    lowpass <- apply.metric.graph.lowpass.path(
+        basis = basis,
+        y = weights,
         filter.type = "heat_kernel",
         eta.grid = 0
     )
@@ -144,7 +148,8 @@ test_that("OD1 heat-kernel low-pass tau-zero limit normalizes raw drift", {
         keep.source.fit = FALSE
     )
 
-    expect_equal(lowpass$fitted.values, weights, tolerance = 1e-10)
+    expect_equal(lowpass$fitted.values[, 1L], weights, tolerance = 0)
+    expect_true(lowpass$resolution$exact.identity[[1L]])
     expect_identical(density$status, "ok")
     expect_equal(density$rho, weights / sum(weights), tolerance = 1e-10)
     expect_equal(density$accounting$raw.mass, sum(weights), tolerance = 1e-10)

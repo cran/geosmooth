@@ -30,7 +30,9 @@ test_that("normalized component foreign keys resolve exactly once", {
     expect_true(all(components$kind == kind.by.field[[field]]), info = field)
     expect_true(all(components$version >= 1L), info = field)
     expect_true(all(nzchar(components$parameters)), info = field)
-    for (id in recipes[[field]]) {
+    # Check every foreign key, and reconstruct each shared component once.
+    expect_true(all(recipes[[field]] %in% components$component.id), info = field)
+    for (id in unique(recipes[[field]])) {
       expect_identical(sum(components$component.id == id), 1L, info = id)
       component <- geosmooth:::.synthetic.registry.component(
         id, kind.by.field[[field]])
@@ -63,7 +65,7 @@ test_that("every registry recipe is reconstructed from normalized rows", {
   }
 })
 
-test_that("instance, checksum, and fixture foreign keys are complete", {
+test_that("frozen instances replay their checksums and registry keys are complete", {
   recipes <- .read.synthetic.registry.table("recipes.csv")
   instances <- .read.synthetic.registry.table("instances.csv")
   checksums <- .read.synthetic.registry.table("checksums.csv")
@@ -71,6 +73,19 @@ test_that("instance, checksum, and fixture foreign keys are complete", {
     "environment_fingerprints.csv")
   schema <- .read.synthetic.registry.table(
     "environment_fingerprint_schema.csv")
+  expect_setequal(
+    c("instance.id", "recipe.id", "n", "seed", "rng.policy",
+      "checksum.id", "fixture.path", "status", "version",
+      "content.sha256"),
+    names(instances))
+  expect_setequal(
+    instances$recipe.id,
+    synthetic.registry.ids()[grepl("^G", synthetic.registry.ids())])
+  # All instances use the same runtime; capture it once per RNG policy for
+  # these assertions. Each materialization still performs its own verification.
+  policies <- unique(instances$rng.policy)
+  current.by.policy <- setNames(lapply(
+    policies, geosmooth:::.synthetic.environment.fingerprint), policies)
   required.scope <- c(
     "r.version", "platform", "architecture", "compiler",
     "os.name", "os.release", "os.version", "os.machine", "endianness",
@@ -129,7 +144,8 @@ test_that("instance, checksum, and fixture foreign keys are complete", {
     expect_identical(
       attr(object, "frozen.instance.id", exact = TRUE),
       instance$instance.id)
-    if (geosmooth:::.synthetic.checksum.scope.matches(checksum)) {
+    if (geosmooth:::.synthetic.checksum.scope.matches(
+        checksum, current = current.by.policy[[instance$rng.policy]])) {
       expect_identical(
         synthetic.dataset.checksum(object),
         instance$content.sha256,

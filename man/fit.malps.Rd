@@ -142,7 +142,7 @@ change local supports or local coefficient estimation.}
 \item{duplicate.action}{How duplicate coordinate rows should be handled.
 \code{"keep"} allows duplicates, records duplicate diagnostics, and
 preserves observed-anchor self-inclusion.  \code{"error"} rejects duplicate
-rows.  Jittering duplicates is deliberately not implemented in Phase 1.}
+rows.  Jittering duplicates is deliberately not implemented.}
 
 \item{coordinate.method}{Coordinate system used for each local polynomial
 design.  \code{"coordinates"} uses supplied coordinates centered at the
@@ -257,6 +257,27 @@ Graph construction is supplied by \pkg{dgraphs} or by explicit
 graph-geodesic payload validation are package-local; shortest-path distances
 are computed through \pkg{dgraphs}.
 }
+\section{Choosing controls}{
+
+\strong{First fit:} supply \code{X}, \code{y}, \code{degree}, and \code{support.type} with a suitable
+\code{support.size} or \code{radius}. Coordinate-distance fits support new predictions.
+
+\strong{Selection:} support and degree grids, \code{foldid}, and \code{cv.folds} govern
+held-out selection. Robust refits recompute residual weights; selection is
+not automatically repeated by \code{\link{refit}}.
+
+\strong{Geometry:} \code{support.metric}, graph inputs, anchors, and chart controls
+determine the local models. Graph-geodesic fits require aligned vertices
+and do not currently predict at new targets.
+
+\strong{Numerics:} \code{local.solver}, conditioning controls, and robust weighting
+have distinct meanings. Keep their defaults until diagnostics identify a need.
+
+\strong{Diagnostics:} inspect \code{selected}, model weights, and stored local fits.
+\code{\link{smoother.matrix}} allocates a dense matrix and applies only to fixed
+weighting; its \code{max.n} guard makes that cost explicit.
+}
+
 \examples{
 X <- matrix(seq(0, 1, length.out = 20), ncol = 1)
 fit <- fit.malps(X, sin(2 * pi * X[, 1]), degree = 1L,

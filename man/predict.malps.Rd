@@ -36,3 +36,8 @@ Numeric vector of fitted values.
 \description{
 Predict From A MALPS Fit
 }
+\examples{
+X <- matrix(seq(0, 1, length.out = 12), ncol = 1)
+fit <- fit.malps(X, sin(2 * pi * X[, 1]), support.size = 6L)
+predict(fit)
+}

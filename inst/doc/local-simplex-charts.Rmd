@@ -1,0 +1,190 @@
+---
+title: "Local simplex charts for binary responses"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Local simplex charts for binary responses}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment="#>")
+library(geosmooth)
+```
+
+A neighborhood can cross the seam between two faces of the nonnegative
+max-normalized simplex. A PCA chart constructed directly in the ambient
+coordinates then sees a right-angle fold. Rotating the neighboring face into
+the reference plane can remove this geometric bend. It does not establish that
+the response varies smoothly, that a low-dimensional projection retains the
+response signal, or that local cases and controls are sufficiently numerous.
+
+The optional chart implementation in `fit.local.likelihood()` compares
+weighted PCA and weighted partial least squares (PLS1). PLS uses the response to
+choose directions, so its directions must be learned inside each training fold.
+Both methods return conditional binary probabilities on supplied evaluation
+points. These are not population disease risks when the training sample was
+selected by outcome without a sampling correction.
+
+## Geometry before regression
+
+Rows are max-normalized to the nonnegative surface where at least one coordinate
+is one. `chart.geometry="linf.simplex"` uses the shortest Euclidean-length path
+within that surface, computed by `dgraphs::linf.simplex.distances()`. This is
+neither direct Euclidean distance nor Chebyshev distance. Intermediate faces
+are allowed in the path calculation. Every training point is considered during
+neighbor selection; ties are ordered by training row number.
+
+The same intrinsic neighborhoods and kernel weights are used before and after
+unfolding. Thus changes in the fitted chart can be attributed to its coordinates,
+not to a change in which observations were selected. No three-dimensional
+visualization coordinates enter the calculation.
+
+```{r seam}
+X <- rbind(c(1, .8, .2), c(.8, 1, .2), c(1, .9, .2))
+query <- c(1, .95, .2)
+chart <- unfold.simplex.chart(X, query)
+chart[c("certified", "status", "distance.error")]
+chart$coordinates
+```
+
+For query face i and adjacent face j, unfolding sets the reference coordinate
+to one and the adjacent coordinate to `2-u[i]`, leaving other coordinates
+unchanged. Tied maxima and neighborhoods spanning more than two faces are
+explicitly uncertified. A two-face chart must also stay away from other faces,
+and its pairwise unfolded distances must agree with intrinsic distances to
+`1e-8` absolute error. Certification is conservative: a rejected chart might
+still admit another construction. It is not appropriate to silently flatten it.
+
+A one-dimensional seam provides a direct PCA check. Its ambient image bends
+through a right angle, while the certified unfolded points lie on a line. The
+table reports the proportion of centered variance retained by one principal
+component; it is a geometry check, not a response-model performance measure.
+
+```{r pca-geometry}
+t.seam <- c(seq(-.2, -.01, length.out=20), seq(.01, .2, length.out=20))
+seam <- cbind(ifelse(t.seam < 0, 1, 1-t.seam),
+              ifelse(t.seam < 0, 1+t.seam, 1), .2)
+flat <- unfold.simplex.chart(seam, c(1, .95, .2))
+variance.one <- function(x) {
+  s <- svd(scale(x, center=TRUE, scale=FALSE), nu=0, nv=0)$d^2
+  s[1]/sum(s)
+}
+data.frame(chart=c("Ambient PCA", "Unfolded PCA"),
+           first.PC.variance=c(variance.one(seam), variance.one(flat$coordinates)))
+```
+
+## Fitting and checking a chart
+
+The following small synthetic example creates two adjacent faces and an outcome
+that varies smoothly across the seam. Its purpose is to illustrate the API; one
+realization does not compare the methods' general performance.
+
+```{r fit}
+set.seed(2710)
+n <- 100L
+t <- runif(n, -.2, .2)
+U <- cbind(ifelse(t < 0, 1, 1-t), ifelse(t < 0, 1+t, 1), runif(n, .1, .3))
+y <- rbinom(n, 1, plogis(-1 + 8*t))
+fit <- fit.local.likelihood(U, y, X.eval=U[81:100, ],
+  likelihood.family="bernoulli", chart.geometry="linf.simplex",
+  coordinate.method="local.pca", unfold.faces=TRUE,
+  support.size=25, chart.dim=2, lambda.ridge=1)
+fit$diagnostics$status.counts
+head(fit$diagnostics$per.eval)
+```
+
+The example above is a fit evaluated on a subset of its training points, not a
+prediction assessment. For a held-out assessment, exclude those rows from `X`
+and `y`; the next example does so. PLS uses the same API with
+`coordinate.method="local.pls"`.
+
+```{r heldout}
+pls <- fit.local.likelihood(U[1:80, ], y[1:80], X.eval=U[81:100, ],
+  likelihood.family="bernoulli", chart.geometry="linf.simplex",
+  coordinate.method="local.pls", unfold.faces=TRUE,
+  support.size=25, chart.dim=2, lambda.ridge=1)
+range(pls$fitted.values)
+```
+
+Coordinates are centered at the local weighted training mean. PCA uses weighted
+variance; PLS1 uses weighted covariance with the training response and deflation.
+Scores are scaled to unit weighted standard deviation. Kernel times quadrature
+weights are normalized to the number of neighbors. The local logistic objective
+penalizes slopes by `lambda.ridge * sum(slopes^2)/2`, and adds
+`2*intercept.mass*log(1+exp(intercept))-intercept.mass*intercept` at the weighted
+chart center. The default half-success and half-failure keep homogeneous
+neighborhoods finite. This penalty is a modeling choice, not a confidence-interval
+or calibration guarantee. The query is projected using the training center,
+directions and scales; its probability is evaluated there, not at the intercept.
+
+Convergence requires the maximum absolute gradient to be less than `tol`.
+At machine-precision objective differences, a step must reduce the gradient;
+a small step alone is not accepted as convergence. The diagnostics retain solver
+failures, effective weighted support, realized dimension, PCA variance fraction,
+chart certificates and fallback counts. `fallback="degree0"` uses the smoothed
+local proportion for an unsupported or failed chart; `fallback="na"` returns NA.
+Compare fallback rates as well as predictive scores.
+
+## Validation without leakage
+
+`foldid` can keep all observations from a subject or matched set together. The
+caller must construct these group-respecting folds. Grid CV rebuilds neighbors,
+charts, PCA/PLS directions and score scaling from each training fold. Candidate
+selection minimizes mean held-out Brier loss; the table also reports log loss
+and fallback counts. All rows must have finite predictions for a candidate to
+be eligible. Candidate neighborhoods larger than a training fold are excluded.
+A fresh outer test split is still needed to evaluate the selected procedure.
+In-sample PLS scores and the best tuning score are not such an evaluation.
+
+```{r cv}
+fold <- rep(1:4, length.out=80)
+selected <- fit.local.likelihood(U[1:80, ], y[1:80], X.eval=U[81:100, ],
+  likelihood.family="bernoulli", chart.geometry="linf.simplex",
+  coordinate.method="local.pls", unfold.faces=TRUE, support.size=20,
+  chart.dim.grid=c(1,2), lambda.ridge.grid=c(.1,1), foldid=fold)
+selected$cv.table
+```
+
+## What the package checks establish
+
+The independent Python reference supplies 810 prediction values: five synthetic
+scenarios (constant probability, seam signal, high-variance signal, low-variance
+signal and nonlinear signal), six held-out queries each, three methods, three
+chart dimensions and three ridge penalties. Each uses 320 training observations
+and 60 neighbors. R predictions agree within `2e-7`, with no local fallback in
+these fixtures. These deterministic comparisons test the implementation across
+methods and settings; six queries per scenario are not a statistical performance
+study. Geometry tests additionally cover intermediate-face shortcuts, ties,
+corners, and one-dimensional supports. Fold tests compare CV predictions to
+independent training-fold fits and verify that changing held-out responses does
+not change their predictions when tuning parameters are fixed.
+
+The earlier research simulation used 150 independent datasets, with separate
+training, tuning and test samples. That study tested the Python prototype, not
+this R release. Package parity connects these implementations on specified
+examples without claiming a repeat of the entire simulation. Source fixtures and
+the generator are recorded in `dev/simplex-charts` in the source repository.
+
+## Scope and computational limits
+
+The default `chart.geometry="legacy"` preserves the existing smoother. The new
+path is opt-in, supports Bernoulli degree-zero or degree-one fits, fixed numeric
+chart dimensions and grid CV. It does not yet support density likelihoods,
+quadratic charts or automatic geometric dimension rules. `chart.geometry=
+"euclidean"` provides the weighted PCA/PLS path on ordinary coordinates without
+unfolding. Neither PCA nor PLS is uniformly preferable: low-variance directions
+may matter for the response, while supervised directions can overfit noisy small
+supports. Local balance and held-out calibration need separate evaluation.
+
+Neighbor search computes one query-to-training distance vector at a time.
+Unfolding certification stores a support-by-support matrix. Work therefore grows
+with all query/training pairs and with the square of local support size; CV
+repeats these calculations. No approximate neighbor pruning is used. This
+implementation favors explicit geometry and reproducibility over speed at very
+large sample sizes.
+
+See the [function guide](function-guide.html) for the remaining smoothers.
+
+The companion [PCA and PLS comparison](pca-pls-chart-comparison.html)
+executes five synthetic examples with held-out prediction scores and figures.
