@@ -1,9 +1,10 @@
 #' Fit Prediction-Synchronized Local Polynomial Smoothing
 #'
-#' Experimental R reference implementation of prediction-synchronized local
-#' polynomial smoothing (PS-LPS).  For fixed local polynomial parameters, PS-LPS
-#' fits one local polynomial chart per anchor and adds a quadratic penalty that
-#' synchronizes chart predictions on overlap points.
+#' Fits prediction-synchronized local polynomial smoothing (PS-LPS).  For
+#' given local polynomial settings, PS-LPS fits one local polynomial for each
+#' anchor point and adds a quadratic penalty that makes the predictions of
+#' different local polynomials agree at the points where their neighborhoods
+#' overlap.  This is an experimental implementation written in R.
 #'
 #' @param X Numeric covariate matrix.
 #' @param y Numeric response vector.

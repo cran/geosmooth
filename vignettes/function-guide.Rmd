@@ -28,14 +28,18 @@ read.recipe(system.file("doc-tools/first-fit.R", package = "geosmooth"))
 read.recipe(system.file("doc-tools/graph-workflow.R", package = "geosmooth"))
 ```
 
-`geosmooth` estimates a response or probability mass on coordinate data and
-graphs. Start with the task you want to perform, then choose a method. You do
-not need to learn the operator constructors or synthetic-data helpers to fit
-your first model.
+`geosmooth` estimates a smooth response, or a probability mass, from data
+given as a matrix of coordinates or as a weighted graph. This guide is
+organized by task. The table below names the function to start with for each
+task, the next section walks through a first fit, and the catalog that
+follows lists every exported function with a link to its help page.
+
+Many of the exported functions build operators or generate synthetic data.
+You do not need any of them to fit your first model.
 
 ## Choose a starting point
 
-| Your task | Start here | What to know before choosing |
+| Your task | Start with | What to know before choosing |
 |---|---|---|
 | Regress a response on coordinates | [`fit.lps()`](https://pgajer.github.io/geosmooth/reference/fit.lps.html) | Local polynomial smoothing; selects neighborhood size, degree, and kernel by cross-validation. |
 | Average predictions from overlapping local models | [`fit.malps()`](https://pgajer.github.io/geosmooth/reference/fit.malps.html) | Model-averaged local polynomial smoothing; supports coordinate and graph-geodesic neighborhoods. |
@@ -43,6 +47,7 @@ your first model.
 | Fit a locally adaptive trend with a sparse difference penalty | [`fit.lpl.tf()`](https://pgajer.github.io/geosmooth/reference/fit.lpl.tf.html) | Local polynomial lifting trend filtering; requires optional package `genlasso`. |
 | Fit a one-dimensional continuous response | `fit.gaussian.trend.filtering()` | Order-2 Gaussian trend filtering with squared-error loss, explicit penalties and convergence diagnostics. |
 | Fit a one-dimensional binary or binomial response | `fit.logistic.trend.filtering()` | Order-2 logistic trend filtering with a native C++ solver, explicit penalties, optional covariates/offsets, and convergence diagnostics. |
+| Fit adaptive curves along fixed or learned projections | `fit.projection.trend.filtering()` | Gaussian or binomial additive projection models; mean-loss penalties and separate joint-fit and search diagnostics. |
 | Add synchronization to a lifting trend filter | [`fit.slpl.tf()`](https://pgajer.github.io/geosmooth/reference/fit.slpl.tf.html) | Synchronized local polynomial lifting trend filtering; adds a second, quadratic penalty. |
 | Smooth a response already attached to graph vertices | [`fit.metric.graph.lowpass()`](https://pgajer.github.io/geosmooth/reference/fit.metric.graph.lowpass.html) or [`fit.graph.trend.filtering()`](https://pgajer.github.io/geosmooth/reference/fit.graph.trend.filtering.html) | Choose spectral low-pass smoothing or a graph-difference penalty. Edge-weight meanings differ; see below. |
 | Penalize local second derivatives on a point cloud | [`fit.ssrhe.hessian.regression()`](https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.regression.html) | Hessian-energy regression, following semi-supervised regression using Hessian energy (SSRHE); use `lambda.selection = "cv"` or `"gcv"` to select penalties. |
@@ -52,62 +57,19 @@ your first model.
 | Estimate where one subject visits that support | [`fit.subject.od()`](https://pgajer.github.io/geosmooth/reference/fit.subject.od.html) | Takes visit indices, including repeats; handles occupation-density fitting and optional visit-level validation. |
 | Build reproducible synthetic examples | [`synthetic.spec()`](https://pgajer.github.io/geosmooth/reference/synthetic.spec.html) then [`materialize.synthetic()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html) | Combine geometry, sampling, truth, and response noise. |
 
-These choices describe different estimators, not a ranking of predictive
-performance. Parallel-transport trend filtering and transported graph Hessians
-have their own [experimental section](#experimental-transport-methods).
+The rows of this table are different estimators, listed in no particular
+order of predictive performance. Two experimental methods,
+parallel-transport trend filtering and transported graph Hessians, are
+described in their own [section](#experimental-transport-methods).
 
 ## A first regression fit
 
-For binary outcomes, `fit.neighbor.probability()` offers `method = "knn"`,
-`"case_raw"` and `"case_corrected"` through one C++ backend. Supply fixed `k`
-or participant-safe `foldid` for Brier tuning. Here `k` counts people for kNN
-and cases for the two stopping rules. IDs determine distance ties; group IDs
-exclude all visits of a held-out person. Missing answers never become controls.
-For repeated records the closest answering visit represents each training
-participant. `predict(fit)` excludes each query participant; new queries need
-`query.group` when they belong to an existing participant. Probability paths
-and neighborhood diagnostics use the same ordering. Unreachable or insufficient
-neighborhoods return `NA`, without an automatic baseline substitution.
-
-For Euclidean coordinates, `search = "auto"` uses exact ANN (`eps = 0`).
-`search = "brute"` selects the exhaustive reference implementation. Set
-`search = "ann", eps = 0.1` to request approximate Euclidean neighborhoods;
-the ANN distance tolerance does not bound probability error. Approximate searches
-retain the closest answering visit for each retrieved participant but can miss
-other participants or tied records. Complete tied-shell diagnostics require
-exact search. Chebyshev, intrinsic surface and precomputed distances always
-use exhaustive candidate search; explicit ANN or positive `eps` requests for
-those inputs are rejected.
-
-For surface geodesics on the nonnegative max-normalized simplex, use
-`metric = "linf.simplex", normalization = "max"`. This streams exact distances
-from dgraphs' shared C++ solver, allowing intermediate faces. It prepares sparse
-training profiles once per prediction call or CV split and keeps one query's
-neighborhood in memory. No all-pairs distance matrix or sample graph is needed.
-With `normalization = "none"`, rows must already be max-normalized within
-`sqrt(.Machine$double.eps)`; admitted rows are divided by their maxima.
-`normalization = "sum"` is rejected for this metric.
-Max normalization with `metric = "euclidean"` still measures ambient chords,
-which can produce different neighbors. Cached trees or sparse profiles are
-reused within prediction and CV splits, then rebuilt on the next prediction
-call. Fits remain serializable.
-
-```{r neighbor-probability, eval=FALSE}
-fit <- fit.neighbor.probability(X, y, method = "case_corrected", k = 3,
-                                id = record_id, group = participant_id,
-                                normalization = "max", metric = "linf.simplex")
-predict(fit, newdata = query_X, query.group = query_participant_id,
-        type = "diagnostics")
-```
-
-This estimator has a nonlinear, response-dependent neighborhood when stopping
-at cases. Shared linear-smoother operations such as `smoother.matrix()` are not
-provided. Use external grouped outer folds to assess a tuned model.
-
-Use `X` with one observation per row and a response `y` of matching length.
-A local chart is a coordinate system fitted near an observation, often using
-principal component analysis (PCA). Start in the supplied coordinates before
-adding local charts or changing numerical controls.
+`fit.lps()` takes a matrix `X` with one observation per row and a response
+`y` with one value per row. By default it works in the coordinates you
+supply. It can also fit each local polynomial in a *local chart*, a
+coordinate system computed near the point of interest, usually by principal
+component analysis (PCA). For a first fit, keep the supplied coordinates and
+the default numerical settings.
 
 ```{r first-fit-model}
 ```
@@ -117,10 +79,10 @@ adding local charts or changing numerical controls.
 
 Here CV selected `r fit$selected$support.size`-point neighborhoods, degree
 `r fit$selected$degree`, and the Gaussian kernel, with a tuning RMSE of
-`r format(fit$selected$cv.rmse.observed, digits = 3)` response units. A larger support averages more
-nearby responses; the polynomial degree determines the local shape. The selected
-CV score was used for tuning, so it is not an independent measure of performance.
-This small illustration shows how to read a fit; it does not rank estimators.
+`r format(fit$selected$cv.rmse.observed, digits = 3)` response units. A larger neighborhood
+averages over more observations, and the degree determines the shape that
+is fitted within a neighborhood. Because this RMSE was used to choose the
+settings, it is not an independent estimate of prediction error.
 
 ```{r first-predictions}
 head(fitted(fit))
@@ -128,10 +90,12 @@ new.X <- matrix(seq(0.1, 0.9, length.out = 5), ncol = 1)
 predict(fit, newdata = new.X)
 ```
 
-Cross-validation (CV) holds out responses to choose tuning parameters. A
-support is the neighborhood used for a local fit; a grid lists candidate
-values. The local support size and polynomial degree jointly determine whether
-a local fit has enough observations. For grouped observations, use
+Some terms used throughout the package: cross-validation (CV) chooses
+tuning parameters by predicting responses that were held out of the fit. A
+*support* is the neighborhood used for one local fit, and a *grid* is a list
+of candidate values. The support size and the polynomial degree together
+determine whether a local fit has enough observations. For grouped
+observations, use
 [`lps.grouped.foldid()`](https://pgajer.github.io/geosmooth/reference/lps.grouped.foldid.html) to keep each group in one fold. Use [`lps.nested.cv()`](https://pgajer.github.io/geosmooth/reference/lps.nested.cv.html) when
 you need an outer assessment of the whole tuning procedure.
 
@@ -147,30 +111,32 @@ you need an outer assessment of the whole tuning procedure.
 | Tracked harmonic result (`harmonic.smoother()`) | `fitted(fit)` | Values on the original graph vertices. |
 | Basic harmonic result (`perform.harmonic.smoothing()`) | `fit$harmonic_predictions` | An unclassed list; retains the basic function's original contract. |
 
-Use `summary(fit)` for selected settings and stored diagnostics. The summary
-explicitly says when convergence information is unavailable. `fitted(fit)`
-preserves the vector or matrix stored by each regression fit. `residuals(fit)`
-preserves missing-label masks and requires an aligned response: a fit evaluated
-at other coordinates has no training residuals. These are response-scale
-residuals, including for binomial fits; they are not Pearson or deviance residuals.
-See `help("model-values", package = "geosmooth")` and
-`help("model-summary", package = "geosmooth")` for the contracts. Probability
-mass remains `fit$rho`; it is a different quantity.
+`summary(fit)` shows the selected settings and the diagnostics stored in the
+fit, and says so when no convergence information is available.
+`fitted(fit)` returns the fitted values as a vector or a matrix, as stored
+by the fit. `residuals(fit)` returns the response minus the fitted values,
+with `NA` where the response is missing. Residuals exist only at the
+training points, so a fit that was evaluated at other coordinates has none.
+They are on the scale of the response, also for binomial fits; they are not
+Pearson or deviance residuals. Probability mass is a different quantity and
+is read from `fit$rho`. See `help("model-values", package = "geosmooth")` and
+`help("model-summary", package = "geosmooth")` for details.
 
-A *refit* changes the response while reusing geometry or an operator. It does
-not automatically rerun the original model-selection procedure. Each refit
-method documents whether penalties remain fixed or can be selected again.
-An *operator* describes the differences or derivatives being penalized; it is
-not itself a fitted response. A *spectral basis* stores graph eigenvectors so
-many responses can be smoothed without recomputing them.
+Three further terms: a *refit* fits a new response while reusing the
+neighborhoods or the operator of an existing fit. It does not repeat the
+model selection of the original fit; the help page of each refit method says
+whether the penalties stay fixed or can be selected again. An *operator* is
+the matrix of differences or derivatives that a method penalizes; it is not
+a fitted response. A *spectral basis* is a stored set of graph eigenvectors,
+which allows many responses to be smoothed without recomputing them.
 
 ### Refit and extract smoother matrices
 
-Use `refit(fit, y = new.y, ...)` for all six reusable model families.
-R chooses the method from the fitted object's class. The controls in the
-last column belong to that method; they are not shared by every model.
+`refit(fit, y = new.y, ...)` works for the six kinds of model in the table
+below. R chooses the method from the class of the fitted object. The
+arguments named in the last column belong to that method only.
 
-| Fitted model | Accepted response | Geometry reused and tuning behavior |
+| Fitted model | Accepted response | What is reused and what can be changed |
 |---|---|---|
 | MALPS | Vector; omitted or `NULL` reuses the stored response | Supports and averaging weights stay fixed. Optional `weights` affect local coefficient estimation; robust residual weights are recomputed. |
 | Lifting trend filter | Vector required | Reuses the residual operator and stored penalty, or accepts a fixed `lambda`. |
@@ -179,16 +145,20 @@ last column belong to that method; they are not shared by every model.
 | Quadratic Hessian-energy regression | Vector or matrix; omitted or `NULL` reuses the stored response | Reuses the operator and fixed penalties; accepts `lambda1`, `lambda2`, `weights`, and `ridge`. CV/GCV fits dispatch here and retain their selected penalties by default. |
 | Hessian L1 regression | One response; omitted or `NULL` reuses the stored response | Reuses the derivative operator; accepts `lambda.grid`, fixed or CV `lambda.selection`, and solver controls. |
 
-For repeated metric graph low-pass or quadratic Hessian refits, keep using
-the original fitted object. Their returned refit summaries cannot themselves
-be refitted. The other four families return reusable fitted objects.
+A refit of a metric graph low-pass fit or of a quadratic Hessian fit
+returns a summary that cannot itself be refitted, so for further responses
+keep calling `refit()` on the original fit. The other four kinds return
+fitted objects that can be refitted again.
 
-Use `smoother.matrix(fit, ...)` for LPS and MALPS. LPS accepts `check.tol`
-and returns a map from training responses to evaluation predictions under
-its fixed-configuration restrictions. MALPS accepts `max.n` and
-`allow.robust` and returns a training-point matrix conditional on stored
-supports and weights. For robust MALPS, `allow.robust = TRUE` freezes the final
-robust weights; it does not capture their response-dependent changes.
+`smoother.matrix(fit, ...)` returns the matrix that maps responses to
+predictions, for LPS and MALPS fits. For LPS, the fit must have a single
+candidate configuration; the matrix maps the training responses to the
+predictions at the evaluation points, and `check.tol` sets the tolerance of
+an internal check. For MALPS, the matrix maps training responses to
+predictions at the training points, given the stored supports and weights;
+`max.n` limits the size of the matrix. For a robust MALPS fit,
+`allow.robust = TRUE` returns the matrix for the final robust weights held
+fixed. It does not reflect how those weights depend on the response.
 
 ```{r shared-generics}
 malps.fit <- fit.malps(
@@ -200,20 +170,86 @@ S <- smoother.matrix(malps.fit)
 max(abs(as.vector(S %*% new.y) - predict(malps.refit)))
 ```
 
-The former six `refit.*()` entry points and two `*.smoother.matrix()` entry
-points are no longer exported. Replace `fitted.model =` with `object =` and
-`y.new =` with `y =` in old refit calls. Other method-specific arguments and
-return classes are unchanged. `help("refit", package = "geosmooth")` and
-`help("smoother.matrix", package = "geosmooth")` link to each method's full
-argument list; former help names remain available.
+If you are updating code written for version 0.1.0: the six `refit.*()`
+functions and the two `*.smoother.matrix()` functions are no longer
+exported. Call `refit()` and `smoother.matrix()` instead, and in refit calls
+replace `fitted.model =` with `object =` and `y.new =` with `y =`. The other
+arguments and the classes of the results are unchanged.
+`help("refit", package = "geosmooth")` and
+`help("smoother.matrix", package = "geosmooth")` link to the arguments of
+each method, and the old help names still work.
+
+## Nearest-neighbor probabilities for a binary outcome
+
+`fit.neighbor.probability()` estimates the probability of a binary outcome
+at a point from the outcomes of its nearest neighbors. It offers three
+estimators, selected by `method`. `"knn"` is the ordinary proportion among
+the `k` nearest people. `"case_raw"` and `"case_corrected"` instead extend
+the neighborhood until it contains `k` cases; the second corrects the
+proportion for this stopping rule. So `k` counts people for `"knn"` and
+cases for the other two. Give `k` directly, or give fold labels in `foldid`
+to select `k` by the Brier score.
+
+The function is designed for data in which a participant can have several
+records:
+
+* `group` identifies the participant of each record. A participant is
+  represented by the closest of their records that has an outcome, and all
+  records of a participant are left out together when predicting for that
+  participant.
+* `id` identifies the records and is used to break ties in distance, so that
+  results do not depend on row order.
+* A record with a missing outcome is never counted as a control.
+* `predict(fit)` leaves each participant out of their own prediction. For
+  new points that belong to a participant in the training data, pass
+  `query.group`.
+* If too few neighbors can be reached, the prediction is `NA`; no overall
+  rate is substituted.
+
+Three settings control how neighbors are found. With Euclidean coordinates,
+`search = "auto"` uses an exact tree search (ANN with `eps = 0`), and
+`search = "brute"` uses an exhaustive search that serves as a reference.
+`search = "ann"` with, for example, `eps = 0.1` allows approximate
+neighbors. The tolerance `eps` bounds the error in distance, not the error
+in the estimated probability, and an approximate search can miss
+participants or tied records, so the diagnostics for ties are complete only
+with an exact search. Chebyshev, intrinsic simplex, and precomputed
+distances always use the exhaustive search; asking for ANN or a positive
+`eps` with them is an error.
+
+For compositional data normalized so that the largest coordinate is one,
+`metric = "linf.simplex"` with `normalization = "max"` measures distance
+along the surface of the simplex, using the solver in `dgraphs`. Paths may
+cross intermediate faces. Distances are computed for one query point at a
+time, so neither a matrix of all pairwise distances nor a graph of the
+samples is needed. With `normalization = "none"`, the rows must already be
+max-normalized to within `sqrt(.Machine$double.eps)`, and
+`normalization = "sum"` is not allowed for this metric. Note that max
+normalization combined with `metric = "euclidean"` measures straight-line
+distance instead, which can give different neighbors. The search structures
+are reused within one prediction call or cross-validation split and rebuilt
+on the next call, so a fitted object can be saved and reloaded.
+
+```{r neighbor-probability, eval=FALSE}
+fit <- fit.neighbor.probability(X, y, method = "case_corrected", k = 3,
+                                id = record_id, group = participant_id,
+                                normalization = "max", metric = "linf.simplex")
+predict(fit, newdata = query_X, query.group = query_participant_id,
+        type = "diagnostics")
+```
+
+When the neighborhood stops at a number of cases, it depends on the
+outcomes, so the estimator is not a linear smoother and `smoother.matrix()`
+is not available for it. To assess a model whose `k` was tuned, use a
+separate set of outer folds, grouped by participant.
 
 ## Function catalog
 
-Each row in the geosmooth catalog gives one exported name and its purpose. In an R session,
-open the corresponding help with, for example,
-`help("fit.lps", package = "geosmooth")`. The final two sections explicitly
-list related functions owned by `dgraphs`; they are not geosmooth exports, and
-their detailed help lives in dgraphs.
+The tables in this section list every function exported by `geosmooth`,
+each with a one-line description. To open the help page of a function in R,
+use, for example, `help("fit.lps", package = "geosmooth")`. The last two
+tables list related functions that belong to the `dgraphs` package. They are
+not exported by `geosmooth`, and their help pages are in `dgraphs`.
 
 ### Shared model operations
 
@@ -252,17 +288,19 @@ their detailed help lives in dgraphs.
 | [`malps.gcv()`](https://pgajer.github.io/geosmooth/reference/malps.gcv.html) | Calculate generalized cross-validation and optional leave-one-out diagnostics for a stored model-averaged fit. |
 | [`bootstrap.malps()`](https://pgajer.github.io/geosmooth/reference/bootstrap.malps.html) | Measure refit variability by bootstrap case weights while holding the selected geometry fixed. |
 
-Generalized cross-validation (GCV) uses a smoother's effective degrees of
-freedom to estimate prediction error without explicitly fitting every
-leave-one-out model. It is not interchangeable with every form of CV.
+Generalized cross-validation (GCV) estimates prediction error from the
+effective degrees of freedom of a smoother, without fitting a separate model
+for each left-out observation. It is a different criterion from
+cross-validation with folds, and the two need not select the same settings.
 
-The two uncertainty workflows have different assumptions. LPS uncertainty
-requires a Gaussian fit, the R backend, the documented orthogonal polynomial
-basis, a single candidate configuration, and a fixed chart dimension. Its
-pointwise band also requires evaluation at the training points. MALPS matrix
-and bootstrap diagnostics condition on the selected supports and weights;
-they do not repeat model selection. Neither workflow provides simultaneous
-coverage or automatic uncertainty for a full data-selected pipeline.
+The uncertainty functions for LPS and for MALPS rest on different
+assumptions. `lps.pointwise.band()` requires a Gaussian fit made with the R
+backend and the orthogonal polynomial basis, with a single candidate
+configuration and a fixed chart dimension, and evaluated at the training
+points. `malps.gcv()` and `bootstrap.malps()` treat the selected supports
+and weights as fixed and do not repeat the model selection. Neither gives
+simultaneous coverage, and neither accounts for the uncertainty of choosing
+the settings from the data.
 
 ### Lifting trend filters
 
@@ -273,10 +311,12 @@ coverage or automatic uncertainty for a full data-selected pipeline.
 | [`slpl.tf.operator()`](https://pgajer.github.io/geosmooth/reference/slpl.tf.operator.html) | Build the residual operator together with an overlap synchronization operator. |
 | [`fit.slpl.tf()`](https://pgajer.github.io/geosmooth/reference/fit.slpl.tf.html) | Fit the residual penalty plus quadratic synchronization. |
 
-Both fitters accept a prebuilt operator or can construct one. For a single fit,
-start with the fitter. Build operators explicitly when comparing responses,
-studying neighborhoods, or reusing expensive geometry. Both fitters currently
-require `genlasso`; their supported prediction domain is the training set.
+Both fitting functions accept an operator that was built beforehand, or
+build one themselves. For a single fit, call the fitting function directly.
+Build the operator yourself when you want to fit several responses, examine
+the neighborhoods, or avoid recomputing an expensive operator. Both fitting
+functions require the optional package `genlasso`, and both predict only at
+the training points.
 
 ### Graph spectral smoothing and graph trend filtering
 
@@ -291,49 +331,63 @@ require `genlasso`; their supported prediction domain is the training set.
 | [`graph.trend.filtering.operator()`](https://pgajer.github.io/geosmooth/reference/graph.trend.filtering.operator.html) | Construct graph differences or experimental path divided differences. |
 | [`fit.graph.trend.filtering()`](https://pgajer.github.io/geosmooth/reference/fit.graph.trend.filtering.html) | Fit an absolute-value graph-difference penalty; requires `genlasso`. |
 
-Graph construction and shortest paths are supplied by `dgraphs`. A graph's
-adjacency list contains 1-based vertex indices; a parallel weight list gives
-the corresponding edge values. **Check their meaning for the chosen method:**
-metric low-pass smoothing defaults to lengths and converts them to
-conductances; use `weight.type = "conductance"` for supplied connection
-strengths. Recursive graph trend filtering uses conductance-like weights,
-whereas its path divided-difference option uses lengths. Conductance measures
-connection strength; it is not the same quantity as distance.
+`geosmooth` does not construct graphs or compute shortest paths; the
+`dgraphs` package does. A graph is passed as an adjacency list, in which
+element `i` holds the indices (starting from 1) of the neighbors of vertex
+`i`, and a weight list of the same shape that holds a value for each edge.
 
-Heat time (`eta`) controls the amount of spectral smoothing. A truncated basis
-can fail to resolve small positive heat times; use the returned spectral
-diagnostics when constructing or extending a path yourself.
+**The meaning of the edge values depends on the method.** A *length* is a
+distance between two vertices. A *conductance* is the strength of their
+connection, and larger values mean a stronger connection. Metric low-pass
+smoothing expects lengths by default and converts them to conductances; pass
+`weight.type = "conductance"` if your values are already conductances. Graph
+trend filtering with the default recursive operator treats the values as
+conductances, whereas its path divided-difference operator treats them as
+lengths.
 
-Full-spectrum heat smoothing also supports missing responses, provided each
-connected component has an observed response. The
-[observed-data heat guide](verified-heat-fallback.html) explains this objective
-and the opt-in `numerical.policy = "verified.fallback"` cross-checks. Automatic
-tuning under that policy refuses structurally flat paths and score differences
-that cannot be resolved numerically. Its resolution bands are numerical
-diagnostics, not confidence intervals.
+The heat time `eta` controls the amount of smoothing in graph low-pass
+filtering. A basis that contains only part of the spectrum may be unable to
+represent the filter for small positive heat times. If you build or extend a
+grid of heat times yourself, consult the spectral diagnostics returned with
+the basis.
+
+With a complete spectrum, heat smoothing also accepts missing responses, as
+long as every connected component of the graph has at least one observed
+response. The [observed-data heat guide](verified-heat-fallback.html)
+describes the criterion that is minimized in this case and the optional
+numerical cross-checks requested with
+`numerical.policy = "verified.fallback"`. Under that policy, a heat time is
+not selected automatically when the GCV scores cannot distinguish the
+candidates, either because the scores are constant by construction or
+because their differences are smaller than the numerical accuracy. The
+resolution bands reported there describe numerical accuracy; they are not
+confidence intervals.
 
 #### From a constructed graph to a fitted response
 
-This example uses the tested development dependency described in the README;
-the compatible dgraphs release must be on CRAN before geosmooth 0.2.0 is submitted.
-The 20 locations form an undirected chain because the construction radius joins
-only adjacent sites. Vertex *i*, coordinate row *i*, and response entry *i* refer
-to the same observation. Retain your identifiers in a separate table and join
-by those identifiers before fitting; a smoother cannot detect a shuffled response.
+This example constructs a graph with `dgraphs` and smooths a response on it.
+The 20 locations lie on a line, and the radius used to construct the graph
+joins only adjacent locations, so the graph is a chain. Vertex *i*, row *i*
+of the coordinates, and entry *i* of the response must refer to the same
+observation. The smoother cannot detect a response that is in the wrong
+order, so keep your identifiers in a table and match the response to the
+vertices by identifier before fitting.
 
 ```{r graph-workflow}
 ```
 
-With `conductance.alpha = 1`, a length of 2 becomes a conductance of
-`1 / (2 + 1e-8)`, approximately 0.5. Longer edges therefore connect responses
-less strongly. This choice changes the smoothing operator; it is not just a
-change of labels. The example retains all eigenvectors, so no spectral
-truncation is involved. For large graphs, use the spectral diagnostics described
-in `help("metric.graph.lowpass.basis")` when retaining fewer eigenvectors.
-The second response reuses those eigenvectors and the selected heat time.
-The printed GCV score is a tuning criterion, not held-out predictive error.
+With `conductance.alpha = 1`, an edge of length 2 receives the conductance
+`1 / (2 + 1e-8)`, about 0.5, so longer edges connect their endpoints less
+strongly. The conversion from lengths to conductances affects the result of
+the smoothing. The example computes all eigenvectors of the graph Laplacian,
+so nothing is lost by truncating the spectrum. For a large graph you would
+keep only some of them; `help("metric.graph.lowpass.basis")` describes the
+diagnostics to consult in that case. The second response is smoothed with
+the same eigenvectors and the heat time already selected. The GCV score that
+is printed was used for tuning and is not an estimate of held-out prediction
+error.
 
-| Input context | Meaning | Consequence |
+| Where the values are used | What they mean | Consequence |
 |---|---|---|
 | Coordinate neighborhoods | Distances in the supplied coordinate units | Rescaling coordinates changes supports. |
 | Graph-geodesic neighborhoods | Sums of edge lengths along paths | Unreachable vertices have infinite distance; support rules must handle connectivity. |
@@ -343,10 +397,11 @@ The printed GCV score is a tuning criterion, not held-out predictive error.
 | Path divided differences | Edge lengths | The operator uses metric spacing, not conductance. |
 
 For example, `metric.graph.lowpass.operator(list(2L, integer()), list(1, numeric()))`
-is rejected because the edge has no reciprocal entry. Resolve the meaning of
-directed or zero-length input before constructing an undirected graph. A zero
-conductance denotes no connection; a zero length is invalid for the length
-transformation.
+is rejected, because the edge from vertex 1 to vertex 2 is not also listed
+from vertex 2 to vertex 1. If your input has directed edges or edges of
+length zero, decide what they should mean before you construct an undirected
+graph. A conductance of zero means that there is no connection. A length of
+zero is not allowed, because it cannot be converted to a conductance.
 
 ### One-dimensional Gaussian and logistic trend filtering
 
@@ -354,9 +409,12 @@ transformation.
 |---|---|
 | `fit.logistic.trend.filtering()` | Fit a univariate piecewise-quadratic logit curve using the native C++ backend. |
 | `fit.gaussian.trend.filtering()` | Fit a univariate piecewise-quadratic mean curve with squared-error loss using the same order-2 geometry and native C++ solvers. |
+| `fit.projection.trend.filtering()` | Fit centered order-2 curves on fixed directions or learn directions by projection pursuit; supports Gaussian and binomial losses. |
+| `cv.projection.trend.filtering()` | Select component counts and mean-loss penalties using supplied, optionally grouped folds; repeat all direction learning within each training split. |
 
-For continuous outcomes, fit an explicit penalty path and assess both association
-and held-out prediction:
+For a continuous outcome, fit the model over a list of penalties that you
+supply, and then assess both the association with the predictor and the
+held-out prediction:
 
 ```{r gaussian-trend-filtering-assessment}
 x.continuous <- seq(0, 1, length.out = 40)
@@ -371,40 +429,55 @@ gaussian.assessment$tests
 gaussian.assessment$prediction$scores
 ```
 
-The global statistic is residual sum-of-squares reduction from the sample mean.
-Its permutations repeat tuning and require exchangeable outcomes under the null;
-equal means with arbitrary predictor-dependent variances are insufficient.
-Nested CV separately compares the smoother with outer-training means, using MSE
-and MAE on the same held-out rows. Curve summaries are in response units.
-The example demonstrates the workflow; it is not a calibration or power study.
-`lambda=Inf` gives a quadratic curve, while the assessment baseline is constant.
+The test statistic is the reduction in the residual sum of squares relative
+to the sample mean. The tuning is repeated for every permutation. The test
+assumes that the outcomes are exchangeable under the null hypothesis; equal
+means with variances that depend on the predictor are not enough. The
+nested cross-validation is a separate assessment. It compares the smoother
+with the mean of the outer training data, using MSE and MAE on the same
+held-out rows. The curve summaries are in the units of the response. Note
+that `lambda = Inf` gives a quadratic curve, whereas the baseline of the
+assessment is a constant. The example shows how the functions are used; with
+nine permutations it says nothing about the calibration or the power of the
+test.
 
 The [logistic trend-filtering vignette](logistic-trend-filtering.html) walks
 through synthetic probabilities, trial weights and held-out Pima predictions.
 
-The univariate logistic trend filter accepts binary observations or binomial
-proportions with trial weights. Supply a `lambda` path explicitly; its units
-refer to predictor locations normalized to the training range. Exact ties share
-the curve while retaining distinct covariates and offsets. Optional cross-validation
-requires `foldid`, which can keep repeated observations from the same subject
-together. Inspect `fit$diagnostics`: iteration limits, detected separation, and
-numerical failures are not successful fits. `predict()` reuses the training
-transformations and holds the curve constant beyond either boundary. Ridge
-stabilization is explicit and defaults to zero. `backend="auto"` selects the
-banded C++ backend above 256 distinct locations or when the dense workspace
-estimate exceeds its guard. The banded solver and predictor avoid full dense
-knot matrices; every stopping check scans all knot coefficients, without
-thinning. `backend="dense"` retains the small-problem reference solver. Both
-backends check an estimated workspace bound before allocation.
+`fit.logistic.trend.filtering()` accepts binary observations, or
+proportions together with the numbers of trials as weights. You must supply
+the penalties in `lambda`. They refer to the predictor after it has been
+rescaled to the range of the training data, not to its original units.
+Observations with exactly equal predictor values share one value of the
+curve but keep their own covariates and offsets. To select a penalty by
+cross-validation, supply `foldid`; give repeated observations of one subject
+the same fold label.
 
-Gaussian, logistic, local-polynomial lifting and graph trend-filtering CV use
-`cv.penalty.scale="training_mass"` by default: fold penalties scale with the
-training/full data-loss mass. This holds their coefficient relative to mean
-loss constant. Set `"none"` explicitly for the earlier same-numerical-penalty
-convention. One-dimensional fits also scale explicit ridge penalties and record
-the actual fold settings. The assessment functions propagate this convention
-through outer and inner training sets; older saved fits without the setting
-retain the legacy convention. Fixed-penalty objectives are unchanged.
+Always inspect `fit$diagnostics`. A fit that reached the iteration limit,
+detected separation, or failed numerically is not a successful fit.
+`predict()` applies the transformations learned from the training data and
+holds the curve constant outside the training range. No ridge penalty is
+added unless you request one.
+
+Two solvers are available. `backend = "dense"` is the reference solver for
+small problems. The banded solver does not form dense matrices over all
+knots, yet its stopping checks still examine every knot coefficient.
+`backend = "auto"` chooses the banded solver when there are more than 256
+distinct predictor values or when the dense solver would need too much
+memory. Both solvers check an estimate of their memory use before
+allocating.
+
+Cross-validation for Gaussian, logistic, local polynomial lifting, and graph
+trend filtering uses `cv.penalty.scale = "training_mass"` by default. A fold
+is fitted to less data than the full fit, so its penalty is multiplied by
+the ratio of the training weight to the full weight. This keeps the penalty
+in the same proportion to the mean loss. Set `cv.penalty.scale = "none"` to
+use the same numerical penalty in every fold, as earlier versions did. The
+one-dimensional fits scale explicit ridge penalties in the same way and
+record the settings used in each fold. The assessment functions apply the
+same rule to their outer and inner training sets. Fits saved by earlier
+versions keep the earlier convention, and fits with a fixed penalty are not
+affected.
 
 ### Hessian-energy regression
 
@@ -415,21 +488,26 @@ retain the legacy convention. Fixed-penalty objectives are unchanged.
 | [`fit.ssrhe.hessian.l1.regression()`](https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.l1.regression.html) | Fit an absolute-value derivative penalty with fixed or CV-selected regularization. |
 | [`ssrhe.support.grid()`](https://pgajer.github.io/geosmooth/reference/ssrhe.support.grid.html) | Build candidate adaptive-radius support profiles for tuning. |
 
-The Hessian describes local second derivatives. A quadratic penalty spreads
-curvature reduction across the fitted field; an absolute-value penalty can
-set derivative components to zero. These are different estimators.
+The Hessian of a function is its matrix of second derivatives. These
+methods estimate it locally from the points near each observation and
+penalize its size. A quadratic penalty reduces curvature everywhere by a
+moderate amount, whereas an absolute-value penalty can set some second
+derivatives exactly to zero. The two penalties therefore give different
+estimates.
 
-Label CV supports semi-supervised use: some vertices may lack an observed
-response. GCV currently requires one fully observed response vector and
-strictly positive observation weights. Exact GCV traces and randomized trace
-estimates have different computational costs and reproducibility properties.
-For the absolute-value fitter, `solver = "admm"` selects the implemented
-alternating direction method of multipliers; the `genlasso` solver requires
-that optional package.
+Cross-validation works when some points have no observed response
+(semi-supervised regression). GCV requires a single response vector with no
+missing values and strictly positive observation weights. The trace needed
+for GCV can be computed exactly or estimated with random probes; the exact
+computation costs more, and the estimate depends on a random seed. For the
+absolute-value penalty, `solver = "admm"` uses the built-in alternating
+direction method of multipliers, and the `genlasso` solver requires that
+optional package.
 
-To select quadratic Hessian penalties, use the same fitter with an explicit
-selection mode. Mode-specific settings belong in `cv.control` or `gcv.control`.
-Scalar penalties and candidate grids cannot be combined.
+To select the penalties of the quadratic method, call the same fitting
+function with `lambda.selection = "cv"` or `"gcv"`, and put the settings of
+the selection in `cv.control` or `gcv.control`. A single penalty value and a
+grid of candidates cannot be given together.
 
 ```{r hessian-selection}
 hessian.fit <- fit.ssrhe.hessian.regression(
@@ -440,9 +518,10 @@ hessian.fit <- fit.ssrhe.hessian.regression(
 hessian.fit$lambda
 ```
 
-The former `.cv()` and `.gcv()` fitter names have been retired. Their old help
-names still lead to the unified fitter's migration instructions. Existing
-fixed calls with `lambda1` and optional `lambda2` continue to work.
+The separate `.cv()` and `.gcv()` fitting functions of version 0.1.0 have
+been removed. Their old help names now open the help page of
+`fit.ssrhe.hessian.regression()`, which explains how to update a call. Calls
+with fixed `lambda1` and optional `lambda2` work as before.
 
 ### Harmonic interpolation
 
@@ -452,19 +531,28 @@ fixed calls with `lambda1` and optional `lambda2` continue to work.
 | [`harmonic.smoother()`](https://pgajer.github.io/geosmooth/reference/harmonic.smoother.html) | Run relaxation while recording extrema, prediction history, and topology stability. |
 | [`get.region.boundary()`](https://pgajer.github.io/geosmooth/reference/get.region.boundary.html) | Find region vertices with a neighbor outside the region. |
 
-Use `print()`, `summary()`, and `plot()` on the tracked `harmonic_smoother`
-object. The two smoothing functions currently differ in boundary-free behavior
-so they should not be treated as aliases. In the
-current native implementation, boundary vertices are defined by a neighbor
-outside the region; a degree-one vertex inside a whole-graph region is not
-automatically fixed. The basic function returns unchanged input with
-`status = "no_boundary"` when no boundary exists; the tracked function still
-runs relaxation. Both require small value changes and a small harmonic residual
-for numerical convergence. Extrema stability is a separate diagnostic:
-`stability_detected` records whether a window was found, and `stable_iteration`
-is `NA` otherwise. On an alternating path, recording every second iteration
-can appear stable while the values continue to oscillate. Check `converged`
-and `max_residual`; a stability detection does not establish optimal smoothing.
+Harmonic smoothing replaces the values inside a region of the graph by
+values that are, at each vertex, the weighted average of the neighbors'
+values, while the values on the boundary of the region stay fixed. A
+boundary vertex is a vertex of the region that has a neighbor outside it. A
+vertex of degree one is therefore not a boundary vertex when the region is
+the whole graph.
+
+The two functions behave differently when the region has no boundary, so
+they are not interchangeable. `perform.harmonic.smoothing()` returns its
+input unchanged with `status = "no_boundary"`, whereas `harmonic.smoother()`
+still runs the iteration. Both report numerical convergence only when the
+change between iterations and the harmonic residual are both small.
+
+`harmonic.smoother()` returns a `harmonic_smoother` object with `print()`,
+`summary()`, and `plot()` methods. It also reports whether the local extrema
+of the values stopped changing: `stability_detected` says whether a stable
+stretch of iterations was found, and `stable_iteration` identifies it, or is
+`NA` if none was found. This is a separate diagnostic from convergence. For
+example, on a path whose values alternate, recording every second iteration
+can look stable while the values are still oscillating. Check `converged`
+and `max_residual`, and do not take stable extrema as a sign that the amount
+of smoothing is right.
 
 ### Probability mass and subject occupation
 
@@ -483,17 +571,20 @@ occupation$rho
 sum(occupation$rho)
 ```
 
-Here the third support point receives twice as many visits as the first or
-sixth. `rho` is a probability **mass** vector over support points, summing to
-one; it is not automatically a continuous density per unit volume.
-[`normalize.density()`](https://pgajer.github.io/geosmooth/reference/normalize.density.html) is an explicit conversion step, not another regression
-fit. Inspect its clipping and normalization accounting when the source field
-contains negative values.
+In this example the third support point is visited twice and the first and
+sixth once each. `rho` is a vector of probability **masses**, one for each
+support point, that sums to one. It is not a density per unit volume.
+[`normalize.density()`](https://pgajer.github.io/geosmooth/reference/normalize.density.html) converts a fitted field to such a vector; it does not
+fit anything. If the field has negative values, they are set to zero before
+normalizing, and the result reports how much was changed.
 
-[`fit.subject.od()`](https://pgajer.github.io/geosmooth/reference/fit.subject.od.html) offers more methods than [`fit.density()`](https://pgajer.github.io/geosmooth/reference/fit.density.html): it can fit ordinary
-smoothers and normalize their output. Visit-level CV holds out visits and uses
-`visit.foldid`; ordinary regression CV holds out support rows and uses
-`foldid` (or the method-specific spelling). Keep these validation units distinct.
+[`fit.subject.od()`](https://pgajer.github.io/geosmooth/reference/fit.subject.od.html) offers more methods than [`fit.density()`](https://pgajer.github.io/geosmooth/reference/fit.density.html), because it can
+also fit one of the regression smoothers and normalize the result. Two kinds
+of cross-validation occur here and should not be confused. Visit-level
+cross-validation holds out visits and takes its folds from `visit.foldid`.
+The cross-validation of a regression smoother holds out rows of the support
+and takes its folds from `foldid`, or from the argument of that name in the
+chosen method.
 
 ### Experimental transport methods
 
@@ -505,11 +596,13 @@ smoothers and normalize their output. Visit-level CV holds out visits and uses
 | [`fit.pttf.trend.filtering()`](https://pgajer.github.io/geosmooth/reference/fit.pttf.trend.filtering.html) | Fit a parallel-transport trend filter with an absolute-value or quadratic penalty. |
 | [`transported.graph.hessian.operator()`](https://pgajer.github.io/geosmooth/reference/transported.graph.hessian.operator.html) | Build a separate experimental graph Hessian diagnostic with several direction-matching rules. |
 
-Parallel transport aligns local tangent directions before comparing
-derivatives. These experimental interfaces expose geometry, operator, and
-solver diagnostics deliberately. The transported graph Hessian constructor is
-a separate diagnostic workflow; it does not fit a response and is not an
-interchangeable spelling of [`pttf.operator()`](https://pgajer.github.io/geosmooth/reference/pttf.operator.html).
+Derivatives estimated at neighboring points are expressed in different
+local coordinate frames. Parallel transport aligns the frames so that the
+derivatives can be compared. The functions in this table are experimental,
+and they return detailed diagnostics about the frames, the operator, and the
+solver. `transported.graph.hessian.operator()` serves a different purpose
+from [`pttf.operator()`](https://pgajer.github.io/geosmooth/reference/pttf.operator.html): it builds a diagnostic operator and does not lead to
+a fitted response.
 
 ### Synthetic datasets: specifications, responses, and reproducibility
 
@@ -536,17 +629,20 @@ interchangeable spelling of [`pttf.operator()`](https://pgajer.github.io/geosmoo
 | [`synthetic.response.laplace.outlier()`](https://pgajer.github.io/geosmooth/reference/synthetic.response.laplace.outlier.html) | Specify Laplace noise and an outlier component. |
 | [`synthetic.response.bernoulli()`](https://pgajer.github.io/geosmooth/reference/synthetic.response.bernoulli.html) | Specify binary response draws and optional positive-count requirements. |
 
-The constructors create specifications; [`materialize.synthetic()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html) performs
-random draws. Use `print()`, `plot()`, and `as.data.frame()` on a resulting
-`synthetic_dataset`. For complete examples, read
-`vignette("synthetic-datasets", package = "geosmooth")`. Use the named-stream
-random-number policy for new work; historical seed and algorithm controls
-preserve frozen examples and should not be changed casually.
+The functions whose names begin with `synthetic.` only describe a data set;
+no random numbers are drawn until you call [`materialize.synthetic()`](https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html). The
+result is a `synthetic_dataset` object with `print()`, `plot()`, and
+`as.data.frame()` methods. `vignette("synthetic-datasets", package =
+"geosmooth")` gives complete examples. For new work, use the random-number
+policy `"named.stream.v1"`. The other seed and algorithm settings exist so
+that data sets generated by earlier versions can be reproduced exactly;
+leave them at their defaults unless that is your aim.
 
 ### Geometry constructors and helpers supplied by dgraphs
 
-These names are available from `dgraphs`, and are no longer exported by
-`geosmooth`. Replace former `geosmooth::` calls with `dgraphs::`. See, for example,
+The following functions were exported by `geosmooth` 0.1.0 and are now
+provided by `dgraphs`. In existing code, replace `geosmooth::` with
+`dgraphs::`. Their help pages are in `dgraphs`; see, for example,
 `help("synthetic.circle", package = "dgraphs")`.
 
 | Function | Purpose |
@@ -582,17 +678,18 @@ These names are available from `dgraphs`, and are no longer exported by
 | `dgraphs::synthetic.sampling.clustered()` | Describe clustered observations around random centers. |
 | `dgraphs::synthetic.sampling.dirichlet.zeros()` | Describe Dirichlet sampling with structural zeros. |
 
-Similar geometric domains do not imply identical random-number sequences:
-these descriptors also preserve ordering and algorithm choices.
+Two sampling descriptions of similar regions do not necessarily draw the
+same random numbers, because each description also fixes the order of the
+draws and the algorithm.
 
 ## Finding detailed help
 
-Function links in this guide open the rendered online reference. When working
-without an internet connection, the same help is installed with the package:
-use `help("fit.lps", package = "geosmooth")`, replacing `fit.lps` with the
-function name. Start at `help("geosmooth-package", package = "geosmooth")`
-for clickable task links in installed help, or use
-`browseVignettes("geosmooth")` for the installed HTML guides.
+The function links in this guide open the online reference. The same help
+pages are installed with the package and need no internet connection: use
+`help("fit.lps", package = "geosmooth")`, with the name of the function you
+want. `help("geosmooth-package", package = "geosmooth")` lists the main
+functions by task, and `browseVignettes("geosmooth")` lists the installed
+guides.
 
 The [synthetic datasets guide](synthetic-datasets.html) develops reproducible
 geometry, sampling, truth, and response specifications in more detail.
@@ -607,32 +704,37 @@ vignette("function-guide", package = "geosmooth")
 vignette("synthetic-datasets", package = "geosmooth")
 ```
 
-The package's help pages give exact arguments, defaults, return values, and
-examples. Use this guide to find the appropriate family, then read the chosen
-function's help before configuring its advanced controls.
+The help pages give the exact arguments, defaults, return values, and
+examples. Use this guide to find the right function, and read its help page
+before changing its more specialized settings.
 
-## Advanced controls without a new fitter
+## Tuning and numerical settings
 
-Each main fitter's installed help groups controls for a first fit, selection,
-geometry, numerical solving, and returned diagnostics. Begin with a small
-statistical grid; numerical tolerances do not replace statistical tuning.
+The help page of each main fitting function groups its arguments into those
+needed for a first fit and those that control model selection, the
+neighborhoods, the numerical solver, and the diagnostics that are returned.
+Start by tuning over a small grid of the statistical settings. Tightening
+numerical tolerances is not a substitute for that.
 
-| Family | Fold and selection vocabulary | Meaning and main cost |
+| Method | Arguments for folds and selection | What is selected, and the main cost |
 |---|---|---|
 | LPS / MALPS | `foldid`, `cv.folds`, support/degree/kernel grids | Held-out response selection; candidate combinations multiply fitting work. |
 | Quadratic Hessian | `lambda.selection`, `cv.control`, `gcv.control` | Label CV or GCV; exact trace calculation is more expensive than sampled traces. |
 | Hessian L1 | `fold.id`, `nfolds`, `lambda.grid`, `admm.*` | CV excludes unconverged solves; each candidate and fold needs a solve. |
 | Graph low-pass | `eta.grid`, `n.eigenpairs` | GCV over heat times; a full spectral basis uses quadratic storage. |
 
-`smoother.matrix()` returns a dense evaluation-by-training matrix. Retained
-candidate fits and solver histories also consume memory. Request them for an
-actual diagnostic purpose. These differences are deliberate method contracts;
-matching argument names would not make the criteria equivalent.
+The argument names differ among the methods because the selection criteria
+differ; giving them the same names would not make the criteria equivalent.
 
-The catalog covers all explicitly exported functions in geosmooth 0.2.0.
-Geometry and sampling functions are owned by dgraphs. Registered methods are
-accessed through familiar generics; use the installed package index for the
-complete method list rather than treating methods as additional fitters.
+`smoother.matrix()` returns a dense matrix with one row per evaluation point
+and one column per training point. Stored candidate fits and solver
+histories also take memory, so request them only when you intend to examine
+them.
+
+The catalog above covers every function exported by `geosmooth` 0.2.0. The
+geometry and sampling functions belong to `dgraphs`. Methods for generics
+such as `print()`, `predict()`, and `summary()` are not listed individually;
+the package index, `help(package = "geosmooth")`, lists them all.
 
 For intrinsic simplex charts, weighted PCA/PLS and their limits, see the
 [local simplex charts guide](local-simplex-charts.html).

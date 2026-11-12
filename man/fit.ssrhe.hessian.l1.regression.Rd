@@ -218,8 +218,10 @@ path metadata, lambda-grid fitted values, and CV diagnostics when
 requested.
 }
 \description{
-Fits an \eqn{\ell_1}-adaptive SSRHE Hessian comparator using the row
-operator \eqn{A} from \code{\link{ssrhe.hessian.operator}}:
+Fits a regression function on a point cloud by least squares with an
+\eqn{\ell_1} (absolute-value) penalty on the estimated second derivatives
+\eqn{Af}, where \eqn{A} is the operator returned by
+\code{\link{ssrhe.hessian.operator}}:
 \deqn{
   \widehat f_\lambda =
   \arg\min_f

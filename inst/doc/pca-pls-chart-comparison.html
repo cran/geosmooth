@@ -362,28 +362,31 @@ dimensions and fallbacks</a></li>
 </ul>
 </div>
 
-<p>PCA describes directions with large variation in the predictors. PLS
-also uses the training response, so it can retain a direction with
-little geometric variation but a strong relationship with the response.
-This advantage is conditional: a noisy binary response can give unstable
-supervised directions, and neither method guarantees that a small chart
-captures a nonlinear response.</p>
-<p>This vignette compares the methods using known binary-response
-probabilities. It separates two questions: does unfolding remove a
-geometric bend, and does a response-informed chart improve prediction?
-All computations below use the public
-<code>fit.local.likelihood()</code> and
-<code>unfold.simplex.chart()</code> interfaces. The <a href="local-simplex-charts.html">local simplex charts guide</a> gives
-the mathematical and implementation details.</p>
+<p><code>fit.local.likelihood()</code> can fit a local model in a small
+number of local coordinates, called a chart, computed either by
+principal component analysis (PCA) or by partial least squares (PLS).
+PCA finds the directions in which the predictors vary most. PLS also
+uses the response of the training data, so it can keep a direction in
+which the predictors vary little but the response changes strongly. That
+advantage is not guaranteed. With a noisy binary response the directions
+found by PLS can be unstable, and with either method a chart of low
+dimension may fail to capture a nonlinear response.</p>
+<p>This vignette compares the two methods on simulated binary data for
+which the true probabilities are known. It asks two separate questions.
+Does unfolding the simplex remove a bend in the geometry? And does a
+chart that uses the response improve prediction? All computations use
+the exported functions <code>fit.local.likelihood()</code> and
+<code>unfold.simplex.chart()</code>. The <a href="local-simplex-charts.html">local simplex charts guide</a> explains
+the mathematics and the implementation.</p>
 <div id="first-inspect-the-geometry" class="section level2">
 <h2>First inspect the geometry</h2>
-<p>We place points on two adjacent faces of the nonnegative
-max-normalized simplex. A latent coordinate <code>t</code> runs from
--0.2 to 0.2. It maps to <code>(1, 1+t)</code> on one face and
-<code>(1-t, 1)</code> on the other. Additional coordinates vary below
-one. The simplex is the surface with at least one coordinate equal to
-one; distances are shortest Euclidean-length paths constrained to that
-surface.</p>
+<p>The data lie on the max-normalized simplex: the surface of points
+with nonnegative coordinates of which the largest equals one. Distance
+on this surface is the length of the shortest path that stays on it. We
+place points on two adjacent faces. A latent coordinate <code>t</code>
+runs from -0.2 to 0.2 and is mapped to <code>(1, 1+t)</code> on one face
+and to <code>(1-t, 1)</code> on the other, and the remaining coordinates
+stay below one.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>t.line <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">seq</span>(<span class="sc">-</span>.<span class="dv">2</span>, <span class="sc">-</span>.<span class="dv">005</span>, <span class="at">length.out=</span><span class="dv">30</span>), <span class="fu">seq</span>(.<span class="dv">005</span>, .<span class="dv">2</span>, <span class="at">length.out=</span><span class="dv">30</span>))</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>seam <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">ifelse</span>(t.line <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span><span class="sc">-</span>t.line),</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>              <span class="fu">ifelse</span>(t.line <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="dv">1</span><span class="sc">+</span>t.line, <span class="dv">1</span>), .<span class="dv">2</span>)</span>
@@ -430,12 +433,13 @@ the same physical scale.
 </tr>
 </tbody>
 </table>
-<p>Retaining more variance is a geometric result, not evidence of better
-outcome prediction. The examples below test prediction separately. Both
-folded and unfolded charts use the same intrinsic neighbors and weights.
-Unfolding can be rejected near corners, tied maxima or more than two
-faces; such cases are counted rather than silently forced into a
-chart.</p>
+<p>That the unfolded chart retains more variance is a statement about
+the geometry. It is not evidence that the outcome is predicted better;
+the examples below examine prediction separately. The charts with and
+without unfolding use the same neighbors and the same weights. Unfolding
+is refused near a corner, when two coordinates are tied for the maximum,
+or when a neighborhood extends over more than two faces. Such cases are
+counted and reported; they are not forced into a chart.</p>
 </div>
 <div id="define-examples-before-comparing-methods" class="section level2">
 <h2>Define examples before comparing methods</h2>
@@ -490,14 +494,15 @@ signal?</td>
 </tr>
 </tbody>
 </table>
-<p>The narrow coordinate varies from 0.10 to 0.14. Its contribution to
-the log odds is deliberately as large as that of the broad coordinate in
-the high-variance example. This is a stress test for variance-based
-dimension reduction, not a claim about the frequency of such signals in
-real datasets. Predictor features are not standardized before
-constructing directions: doing so would change the geometry and would
-remove part of the contrast we intend to study. Component scores are
-scaled inside the local logistic fit.</p>
+<p>The narrow coordinate varies only from 0.10 to 0.14, yet in the
+low-variance example its effect on the log odds is made as large as the
+effect of the broad coordinate in the high-variance example. This is a
+deliberately hard case for dimension reduction based on variance. It is
+not a claim that such signals are common in real data. The predictors
+are not standardized before the directions are computed, because
+standardizing would change the geometry and remove part of the contrast
+under study. The component scores are scaled within the local logistic
+fit.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>scenarios <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Seam&quot;</span>, <span class="st">&quot;High variance&quot;</span>, <span class="st">&quot;Low variance&quot;</span>, <span class="st">&quot;Constant&quot;</span>, <span class="st">&quot;Nonlinear&quot;</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>make.example <span class="ot">&lt;-</span> <span class="cf">function</span>(seed, scenario, <span class="at">n=</span><span class="dv">360</span><span class="dt">L</span>) {</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>    <span class="fu">set.seed</span>(seed)</span>
@@ -523,17 +528,21 @@ training</strong>, <strong>60 tuning</strong> and <strong>120
 test</strong> observations. The observations are independent in this
 simulation. For repeated specimens or matched sets, splitting must
 respect those groups instead.</p>
-<p>We compare ambient PCA, unfolded PCA and unfolded PLS. All use 60
-training neighbors, Gaussian weights, a fixed slope ridge penalty of 1,
-and half-success/ half-failure intercept pseudo-counts. Support size and
-ridge penalty are held fixed to make the chart comparison interpretable;
-they are not claimed optimal.</p>
-<p>We report both a fixed one-dimensional chart and a chart dimension
-chosen from 1, 2 and 3 by the lowest tuning Brier loss. Ties choose the
-first (smaller) dimension. Tuning predictions use training observations
-only. Final test predictions use the same training fits; the tuning
-observations are not added to the training set. Test outcomes and true
-probabilities never select the model.</p>
+<p>We compare three charts: PCA in the original coordinates without
+unfolding (ambient PCA), PCA after unfolding, and PLS after unfolding.
+All three use 60 training neighbors, Gaussian weights, a ridge penalty
+of 1 on the slopes, and pseudo-counts of half a success and half a
+failure for the intercept. The neighborhood size and the ridge penalty
+are held fixed so that differences can be attributed to the charts; no
+claim is made that these values are optimal.</p>
+<p>For each chart we report two results: one with a chart of dimension
+one, and one with the dimension chosen among 1, 2 and 3 as the one with
+the lowest Brier loss on the tuning observations (the smaller dimension
+wins a tie). The predictions for the tuning observations are made from
+the training observations only. The predictions for the test
+observations come from the same fits; the tuning observations are not
+added to the training set. Neither the test outcomes nor the true
+probabilities play any part in choosing a model.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>methods <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Ambient PCA&quot;</span>, <span class="st">&quot;Unfolded PCA&quot;</span>, <span class="st">&quot;Unfolded PLS&quot;</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>fit.chart <span class="ot">&lt;-</span> <span class="cf">function</span>(X, y, query, method, dimension, <span class="at">degree=</span><span class="dv">1</span><span class="dt">L</span>) {</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>    <span class="fu">fit.local.likelihood</span>(X, y, <span class="at">X.eval=</span>query, <span class="at">likelihood.family=</span><span class="st">&quot;bernoulli&quot;</span>,</span>
@@ -555,15 +564,17 @@ settings.</p>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                 <span class="st">&quot;Unfolded PLS&quot;</span>, <span class="at">dimension=</span><span class="dv">1</span><span class="dt">L</span>)</span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="fu">head</span>(fit<span class="sc">$</span>fitted.values)</span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>fit<span class="sc">$</span>diagnostics<span class="sc">$</span>status.counts</span></code></pre></div>
-<p>The following loop defines the comparison. A local constant uses the
-same neighbors and weights but no chart directions. A global constant
-uses the smoothed overall training proportion. Both are useful controls,
-particularly when the true probability is constant.</p>
-<p>The displayed results retain all 25 repetitions. Routine rendering
-reads their stored results; the reproduction instructions below rerun
-this loop with the same seeds, sample sizes and fitting settings.
-Geometry demonstrations and conditional probability slices are computed
-during every render.</p>
+<p>The loop below carries out the comparison. It includes two baselines.
+The local constant uses the same neighbors and weights as the charts but
+no directions, and the global constant is the smoothed proportion of
+successes in the whole training set. Both are useful for reference,
+especially in the example whose true probability is constant.</p>
+<p>The results shown are from all 25 repetitions (five examples, five
+repetitions each). To keep the vignette quick to build, they are read
+from a file stored with the package instead of being recomputed. The
+last section explains how to rerun the loop with the same seeds, sample
+sizes and settings. The geometry demonstration and the probability
+slices are computed each time the vignette is built.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>rows <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>illustrations <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>append.result <span class="ot">&lt;-</span> <span class="cf">function</span>(scenario, repetition, method, mode, dimension,</span>
@@ -614,18 +625,22 @@ during every render.</p>
 </div>
 <div id="measure-estimation-and-prediction-separately" class="section level2">
 <h2>Measure estimation and prediction separately</h2>
-<p><strong>Probability mean squared error (MSE)</strong> compares the
-predicted probability with the known true probability. It directly
-measures estimation accuracy here. <strong>Brier loss</strong> compares
-the prediction with the binary response; it includes irreducible
-Bernoulli variation. Lower values are better for both. Test log loss is
-also retained in <code>results</code> for inspection. Neither a low MSE
-nor a converged optimizer alone establishes uncertainty calibration.</p>
-<p>The table shows the mean across five repetitions. The figures show
-every repetition as well as the mean, so an apparently favorable average
-cannot hide a reversal. Five repetitions make a compact teaching
-example, not a powered simulation study or a universal ranking of
-methods.</p>
+<p>Two measures are reported, and lower is better for both. The
+<strong>probability mean squared error (MSE)</strong> compares the
+predicted probability with the true probability, which is known here,
+and so measures the accuracy of estimation directly. The <strong>Brier
+loss</strong> compares the predicted probability with the observed
+binary response, and therefore also contains the variation of the
+response itself, which no method can remove. The log loss on the test
+observations is stored in <code>results</code> as well. A low MSE, or an
+optimizer that converged, does not show that the predicted probabilities
+are well calibrated.</p>
+<p>The table gives means over the five repetitions. The figures show
+each repetition as well as the mean, so that a favorable average cannot
+conceal repetitions in which the order of the methods is reversed. Five
+repetitions are enough for an illustration. They do not make a
+simulation study with adequate power, and they do not rank the methods
+in general.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>summary.table <span class="ot">&lt;-</span> <span class="fu">aggregate</span>(<span class="fu">cbind</span>(probability.mse,brier) <span class="sc">~</span> scenario<span class="sc">+</span>method<span class="sc">+</span>mode,</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>                           results, mean)</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>summary.table <span class="ot">&lt;-</span> summary.table[<span class="fu">order</span>(<span class="fu">match</span>(summary.table<span class="sc">$</span>scenario, scenarios),</span>
@@ -963,12 +978,14 @@ identical in the two columns.
 </div>
 <div id="inspect-the-first-repetition-without-choosing-favorable-seeds" class="section level2">
 <h2>Inspect the first repetition, without choosing favorable seeds</h2>
-<p>The following plot compares predicted and true probabilities on the
-independent test observations from the <strong>first predeclared
-repetition</strong> of each example. Each point is one test observation.
-The diagonal is exact probability recovery, not a fitted regression
-line. Constant-probability observations share the same horizontal
-coordinate; vertical spread there shows adaptation to noise.</p>
+<p>The next plot shows predicted against true probabilities for the test
+observations of the <strong>first repetition</strong> of each example.
+The first repetition was designated in advance and was not chosen for
+its results. Each point is one test observation. On the diagonal, the
+prediction equals the true probability; the diagonal is not a fitted
+line. In the constant example all observations have the same true
+probability, so their vertical spread shows how much each method follows
+the noise.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>old.par <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">5</span>,<span class="dv">2</span>), <span class="at">mar=</span><span class="fu">c</span>(<span class="dv">3</span>,<span class="fl">3.3</span>,<span class="dv">2</span>,<span class="dv">1</span>), <span class="at">cex=</span>.<span class="dv">8</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="cf">for</span> (scenario <span class="cf">in</span> scenarios) <span class="cf">for</span> (method <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;Unfolded PCA&quot;</span>,<span class="st">&quot;Unfolded PLS&quot;</span>)) {</span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>    item <span class="ot">&lt;-</span> illustrations[[scenario]]</span>
@@ -991,13 +1008,13 @@ panels share the same axes.
 </div>
 <div id="view-the-estimated-probability-functions" class="section level2">
 <h2>View the estimated probability functions</h2>
-<p>These slices use the first repetition’s training observations. The
-signal coordinate varies over its generating range while nuisance
-coordinates are held at the centers of their ranges. They show the
-fitted conditional function at defined locations, not averages of the
-scatterplots above. The black curve is the known truth. All methods use
-one-dimensional charts; they are not retuned on the displayed
-slices.</p>
+<p>The curves below are fitted to the training observations of the first
+repetition. In each panel the coordinate that carries the signal varies
+over its range while the other coordinates are fixed at the centers of
+their ranges. The curves are the fitted probabilities at those points;
+they are not averages of the points in the scatterplots above. The black
+curve is the true probability. All methods use charts of dimension one,
+and nothing was tuned again for these plots.</p>
 <div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>slices <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>old.par <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">2</span>), <span class="at">mar=</span><span class="fu">c</span>(<span class="dv">4</span>,<span class="dv">4</span>,<span class="dv">2</span>,<span class="dv">1</span>), <span class="at">cex=</span>.<span class="dv">85</span>)</span>
 <span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="cf">for</span> (scenario <span class="cf">in</span> scenarios) {</span>
@@ -1498,71 +1515,76 @@ charts. All probability axes run from zero to one.
 </tr>
 </tbody>
 </table>
-<p>A fallback is a failed chart certificate or failed optimizer replaced
-by the smoothed local proportion. Such predictions remain in the
-performance scores. They are not discarded to improve apparent
-performance. The table counts only reported rank-one or selected fits;
-its two modes reuse some fits and must not be added together as
-independent failures. <code>results</code> also retains each selected
-dimension and each test log loss.</p>
+<p>A fallback occurs when a chart cannot be certified or the optimizer
+fails; the prediction is then the smoothed local proportion. These
+predictions are kept in the scores above and are not removed to make a
+method look better. The table counts fallbacks only among the fits that
+are reported, namely those with dimension one and those with the
+selected dimension. Some fits are counted under both headings, so the
+two counts should not be added. <code>results</code> also contains the
+selected dimension and the test log loss of each fit.</p>
 </div>
 <div id="reading-the-comparison" class="section level2">
 <h2>Reading the comparison</h2>
-<p>The low-variance example shows why response-informed directions are
-not enough by themselves. With one dimension, unfolded PCA and PLS have
-mean probability MSEs of 0.0472 and 0.0473, respectively. After
-selecting dimension on the tuning observations, these become 0.0442 and
-0.0162. Weighted PLS uses covariance and is still affected by predictor
-scale, binary noise and the number of retained directions. Its
-narrow-signal advantage here appears after dimension selection, not from
-its first direction alone.</p>
-<p>The constant example favors the global constant in known-probability
-MSE. In the high-variance example, dimension-tuned PCA has a smaller
-mean probability MSE than dimension-tuned PLS. Dimension tuning itself
-sometimes worsens test performance relative to the one-dimensional fit:
-60 tuning observations give a noisy selection criterion. These
-comparisons explain why the vignette shows baselines, fixed and selected
-dimensions, and every repetition.</p>
-<p>The seam example distinguishes correcting a geometric fold from
-learning a response direction. The high-variance example is favorable to
-PCA’s criterion; the low-variance example deliberately puts important
-response information in a direction PCA may discard. Increasing the
-chart dimension gives PCA a chance to recover that information, with
-additional estimation variability. PLS can help at low dimension, but
-its supervised directions must be learned exclusively from training
-data.</p>
-<p>The constant example is an essential control: there is no informative
-direction to recover. The nonlinear example asks whether local
-neighborhoods make a nonlinear function adequately linear; the local PLS
-covariance can be weak near symmetry points even when the response
-depends strongly on position. No method is assumed to win these
-comparisons. Differences among individual repetitions, not just
-averages, matter.</p>
-<p>For a scientific analysis, expand the simulation to realistic sample
-sizes, class balance, dependence, missingness and geometry. Tune support
-size and regularization inside training data, assess probability
-calibration on an outer hold-out sample, and examine performance near
-corners or low-support regions. For case-control sampling, recovering
-conditional probability in the selected sample does not identify
-population prevalence without sampling information.</p>
+<p>The low-variance example shows that using the response to choose
+directions is not sufficient in itself. With one dimension, unfolded PCA
+and PLS have mean probability MSEs of 0.0472 and 0.0473, respectively.
+After selecting dimension on the tuning observations, these become
+0.0442 and 0.0162. Weighted PLS is based on covariances, so it remains
+sensitive to the scale of the predictors, to the noise in a binary
+response, and to the number of directions kept. In this example its
+advantage for the narrow signal appears only after the dimension has
+been selected; its first direction alone does not provide it.</p>
+<p>In the constant example the global constant has the lowest
+probability MSE. In the high-variance example PCA with a tuned dimension
+has a lower mean probability MSE than PLS with a tuned dimension. Tuning
+the dimension sometimes makes the test results worse than the fit of
+dimension one, because 60 tuning observations give a noisy criterion for
+the choice. This is why the vignette shows the baselines, both the fixed
+and the selected dimension, and every repetition.</p>
+<p>Each example was designed to isolate one issue. The seam example
+separates the correction of a fold in the geometry from the learning of
+a direction related to the response. The high-variance example suits the
+criterion of PCA. The low-variance example puts the information about
+the response in a direction that PCA is likely to discard; a chart of
+higher dimension lets PCA recover it, at the price of more variable
+estimates. PLS can help at low dimension, provided its directions are
+computed from the training data alone.</p>
+<p>The constant example is a necessary control, since it contains no
+direction to be found. The nonlinear example tests whether a nonlinear
+function is close enough to linear within a neighborhood. Where the
+signal is symmetric about a point, the local covariance on which PLS
+relies can be weak even though the response depends strongly on
+position. None of the methods is expected to be best throughout, and the
+variation among repetitions matters as much as the averages.</p>
+<p>Before relying on such a comparison in a scientific analysis, extend
+the simulation to realistic sample sizes, class balance, dependence
+among observations, missing data and geometry. Tune the neighborhood
+size and the penalties within the training data, assess the calibration
+of the probabilities on a separate hold-out sample, and examine the
+results near corners of the simplex and where the data are sparse. Under
+case-control sampling, the probabilities estimated in the selected
+sample do not give the prevalence in the population unless the sampling
+fractions are known.</p>
 </div>
 <div id="reproduce-and-adapt" class="section level2">
 <h2>Reproduce and adapt</h2>
-<p>The stored comparison was generated with the code shown above,
-retaining all 25 seeds, 200 result rows and first-repetition
-predictions. It contains no cohort data or Python reference predictions.
-Its provenance records the package versions and the SHA-256 checksum of
-this vignette; rendering checks that the stored results correspond to
-this source.</p>
+<p>The stored results were produced by the code shown above. They
+contain all 25 seeds, all 200 rows of results, and the predictions of
+the first repetition of each example, and nothing else: no real data and
+no reference predictions from other software. They also record the
+package versions and the SHA-256 checksum of this vignette. When the
+vignette is built, it checks that the stored results were produced from
+the present version of its source.</p>
 <p>To recompute every comparison while rendering, use:</p>
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">options</span>(<span class="at">geosmooth.recompute.vignettes=</span><span class="cn">TRUE</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>rmarkdown<span class="sc">::</span><span class="fu">render</span>(<span class="st">&quot;vignettes/pca-pls-chart-comparison.Rmd&quot;</span>)</span></code></pre></div>
-<p>From the package source directory,
-<code>Rscript vignettes/precompute-pca-pls.R</code> regenerates the
-stored results after a change. The workload is serial and can use
-single-threaded BLAS/OpenMP. The stored versions are reported below;
-<code>?fit.local.likelihood</code> and
-<code>?unfold.simplex.chart</code> describe the fitting controls and
+<p>After changing this vignette, regenerate the stored results by
+running <code>Rscript vignettes/precompute-pca-pls.R</code> from the
+package source directory. The computation runs serially and needs only
+single-threaded BLAS and OpenMP. The package versions used for the
+stored results are listed below. <code>?fit.local.likelihood</code> and
+<code>?unfold.simplex.chart</code> describe the fitting options and the
 diagnostics.</p>
 <pre><code>#&gt; geosmooth   dgraphs      Rcpp    digest 
 #&gt;   &quot;0.2.0&quot;   &quot;0.4.1&quot;   &quot;1.1.2&quot;  &quot;0.6.39&quot;</code></pre>

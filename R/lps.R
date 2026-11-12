@@ -1,20 +1,21 @@
 #' Fit a Local Polynomial Smoother
 #'
-#' Fits a local polynomial smoother (LPS) and selects its support size,
-#' polynomial degree, and kernel by cross-validation.  By default, the smoother
-#' works in the observed ambient coordinates: each prediction point uses its
-#' nearest training points in Euclidean distance, centers the support at the
-#' prediction point, fits a weighted local polynomial, and uses the fitted
-#' intercept as the prediction.
+#' Fits a local polynomial smoother (LPS) and selects the size of its
+#' neighborhoods (the support size), the degree of the polynomial, and the
+#' kernel by cross-validation.  By default the smoother works in the supplied
+#' coordinates.  To predict at a point, it takes the nearest training points
+#' in Euclidean distance, centers their coordinates at the point, fits a
+#' kernel-weighted polynomial to their responses, and uses the intercept of
+#' that polynomial as the prediction.
 #'
-#' The optional \code{coordinate.method = "local.pca"} mode keeps the same
-#' support and kernel weighting rule, but builds the local polynomial in a local
-#' PCA chart centered at each prediction point.  With \code{chart.dim = "auto"},
-#' the chart dimension is estimated as one global scalar from observed
-#' \code{X} only, using the same shared local-PCA dimension helper used by
-#' LPL-TF and S-LPL-TF.  The experimental
-#' \code{chart.dim = "local.auto"} mode estimates an input-only local chart
-#' dimension separately for each prediction anchor.
+#' With \code{coordinate.method = "local.pca"}, the neighborhoods and the
+#' kernel weights are the same, but the polynomial is fitted in a local
+#' coordinate chart computed by PCA and centered at the prediction point.
+#' With \code{chart.dim = "auto"}, a single chart dimension for all points is
+#' estimated from \code{X} alone, by the same procedure that LPL-TF and
+#' S-LPL-TF use.  The experimental \code{chart.dim = "local.auto"} estimates
+#' a chart dimension separately for each prediction point, again from
+#' \code{X} alone.
 #'
 #' @param X Numeric design/coordinate matrix with one observation per row.
 #' @param y Numeric response vector with length \code{nrow(X)}.
@@ -765,18 +766,18 @@ print.lps <- function(x, ...) {
 
 #' Report LPS Backend and Chart-Dimension Diagnostics
 #'
-#' Builds a compact one-row diagnostic table for a fitted local polynomial
-#' smoother.  The table records the requested backend, the backend actually
-#' used, the requested chart-dimension rule, the resolved chart dimension,
-#' selected tuning parameters, and whether the fit follows the current
-#' deployable local-PCA auto-dimension contract.
+#' Returns a one-row table that describes how a local polynomial smoother was
+#' fitted.  The table gives the backend that was requested and the backend
+#' that was used, the rule requested for the chart dimension and the dimension
+#' that resulted, the selected tuning parameters, and whether the fit used
+#' the recommended settings for local PCA charts described below.
 #'
-#' The current backend policy is conservative: \code{backend = "auto"} uses the
-#' C++ backend for ambient-coordinate LPS, but uses the R reference backend for
-#' \code{coordinate.method = "local.pca"}.  The native local-PCA backend
-#' \code{"cpp.local.pca"} remains an explicit opt-in backend.  This helper
-#' makes that policy visible in reports and downstream experiment manifests
-#' without changing the default.
+#' The choice of backend is conservative.  \code{backend = "auto"} uses the
+#' C++ backend when the smoother works in the supplied coordinates and the R
+#' reference backend when \code{coordinate.method = "local.pca"}.  The C++
+#' backend for local PCA, \code{"cpp.local.pca"}, is used only when requested
+#' explicitly.  This function reports which backend was used, so that it can
+#' be recorded with the results of an analysis.
 #'
 #' For real-data local-PCA runs, the deployable chart-dimension contract is
 #' the ordinary \code{local.chart.method = "pca"} path with

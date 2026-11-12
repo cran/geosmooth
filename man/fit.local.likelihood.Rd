@@ -178,10 +178,10 @@ A list with class \code{"local_likelihood"} containing
 \code{fitted.values}, selected controls, and local solver diagnostics.
 }
 \description{
-Fits a local likelihood model at each evaluation point and reads off one raw
-fitted value at that evaluation anchor.  Density and Bernoulli workflows
-should convert the returned fitted field with \code{\link{normalize.density}}
-when the target is a subject-occupation density.
+Fits a local likelihood model around each evaluation point and returns
+the fitted value at that point.  When the aim is the occupation density of
+a subject, convert the returned values with
+\code{\link{normalize.density}}.
 }
 \details{
 The \code{likelihood.family = "density"} branch uses a local exponential

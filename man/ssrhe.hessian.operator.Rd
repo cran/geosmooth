@@ -165,12 +165,13 @@ table for native operator construction;
 }
 }
 \description{
-Constructs the discrete local Hessian operator used by the semi-supervised
-regularization framework of Kim, Steinke, and Hein (2009). The constructor
-is intended as a package-facing, auditable R/C++ port of the reference
-behavior: it returns the sparse row operator \eqn{A}, the quadratic energy
-matrix \eqn{B=A^\top A}, and optionally the supplemental stabilizer
-\eqn{B_S}.
+Constructs the discrete local Hessian operator of the semi-supervised
+regression method of Kim, Steinke, and Hein (2009). For each point, the
+second derivatives of a function are estimated from its values at nearby
+points, in local coordinates computed by PCA. The function returns the
+sparse operator \eqn{A} whose rows compute these second derivatives, the
+Hessian-energy matrix \eqn{B=A^\top A}, and optionally the additional
+stabilizing matrix \eqn{B_S}.
 }
 \details{
 For each point \eqn{x_i}, the operator constructs a local PCA chart from a

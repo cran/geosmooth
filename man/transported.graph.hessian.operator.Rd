@@ -278,43 +278,55 @@ supplied-coordinate local quadratic regressions used by
 quadratic-regression disk size for \code{transport.order = 3L}.}
 }
 \value{
-A list of class \code{"transported.graph.hessian.operator"} with the
-canonical graph, directed-edge table, first-difference matrix, transported
-Hessian matrix, row metadata, dropped candidate rows, and diagnostics. For
-graph-derived regression-gradient transport with supplied
-\code{coordinates}, the embedding diagnostics also include synthetic
-chart-quality checks against those ambient coordinates.
+A list of class \code{"transported.graph.hessian.operator"}. It
+contains the validated graph, the table of directed edges, the
+first-difference matrix, the transported Hessian matrix, information
+about each of its rows, the candidate rows that were dropped, and
+diagnostics. When \code{transport.rule = "regression.gradient"} uses a
+local embedding of the graph and \code{coordinates} are also supplied,
+the diagnostics include a comparison of the local embeddings with those
+coordinates.
 }
 \description{
-Builds an experimental transported-Hessian graph operator without fitting a
-response. This diagnostic layer constructs directed edge differences,
-matches directions across a base dart, assembles a second- or
-third-difference diagnostic operator, and returns diagnostics that make the
-transport rule auditable.
+Builds an experimental operator that computes second differences (or
+third differences) of a function on the vertices of a graph. The operator
+takes first differences along directed edges, matches each direction at
+one end of an edge with a direction at the other end, and subtracts the
+matched first differences. No response is fitted. The function is meant
+for studying the operator, and it returns diagnostics that show how the
+directions were matched.
 }
 \details{
-For a dart \eqn{u\to v}, the first difference is
+A directed edge is called a dart. For a dart \eqn{u\to v} with length
+\eqn{\ell_{uv}}, the first difference of a function \eqn{f} is
 \deqn{
   \delta_{u\to v}f = \frac{f(v)-f(u)}{\ell_{uv}}.
 }
-For a base dart \eqn{u\to u'} and a matched outgoing direction
-\eqn{u\to v \leftrightarrow u'\to v'}, the transported Hessian row is
+Take a base dart \eqn{u\to u'}, and suppose the direction \eqn{u\to v}
+at \eqn{u} has been matched with the direction \eqn{u'\to v'} at
+\eqn{u'}. The corresponding row of the transported Hessian operator
+computes
 \deqn{
-  \delta_{u'\to v'}f - \delta_{u\to v}.
+  \delta_{u'\to v'}f - \delta_{u\to v}f.
 }
 
-The reference rule, \code{transport.rule = "exact.coordinate"}, matches
-directions with identical coordinate labels. Labels may be supplied directly
-through \code{direction.labels}, or inferred from axis-aligned
-\code{coordinates}. The first general metric rule,
-\code{transport.rule = "local.embedding.soft"}, uses supplied coordinates to
-softly match directions by angle and edge length. The edge-angle rules,
-\code{"edge.angle.hard"} and \code{"edge.angle.soft"}, match directions by
-comparing their angle relative to the transported base edge.
-\code{transport.rule = "regression.gradient"} estimates local
-least-squares gradients and compares gradient components across graph darts.
-Those gradients can be computed either from supplied coordinates or from a
-graph-derived local embedding built in a shared disk around each base dart.
+The rules for matching directions are selected by \code{transport.rule}:
+\itemize{
+\item \code{"exact.coordinate"}, the reference rule, matches directions
+that have the same label. The labels can be supplied in
+\code{direction.labels} or inferred from \code{coordinates} when all
+edges are parallel to coordinate axes.
+\item \code{"local.embedding.soft"} uses coordinates to match directions
+by angle and edge length, with weights spread over several candidate
+directions.
+\item \code{"edge.angle.hard"} and \code{"edge.angle.soft"} match
+directions by their angles relative to the base edge.
+\item \code{"regression.gradient"} estimates a gradient at each end of
+the base dart by local least squares and compares the components of
+the two gradients. The gradients are computed in the supplied
+coordinates, or in a local embedding of the part of the graph around
+the base dart.
+}
 }
 \examples{
 adj <- list(2L, c(1L, 3L), c(2L, 4L), 3L)

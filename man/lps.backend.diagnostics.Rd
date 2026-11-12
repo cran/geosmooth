@@ -14,19 +14,19 @@ A one-row \code{data.frame} with backend, chart-dimension, selection,
 candidate-count, and policy fields.
 }
 \description{
-Builds a compact one-row diagnostic table for a fitted local polynomial
-smoother.  The table records the requested backend, the backend actually
-used, the requested chart-dimension rule, the resolved chart dimension,
-selected tuning parameters, and whether the fit follows the current
-deployable local-PCA auto-dimension contract.
+Returns a one-row table that describes how a local polynomial smoother was
+fitted.  The table gives the backend that was requested and the backend
+that was used, the rule requested for the chart dimension and the dimension
+that resulted, the selected tuning parameters, and whether the fit used
+the recommended settings for local PCA charts described below.
 }
 \details{
-The current backend policy is conservative: \code{backend = "auto"} uses the
-C++ backend for ambient-coordinate LPS, but uses the R reference backend for
-\code{coordinate.method = "local.pca"}.  The native local-PCA backend
-\code{"cpp.local.pca"} remains an explicit opt-in backend.  This helper
-makes that policy visible in reports and downstream experiment manifests
-without changing the default.
+The choice of backend is conservative.  \code{backend = "auto"} uses the
+C++ backend when the smoother works in the supplied coordinates and the R
+reference backend when \code{coordinate.method = "local.pca"}.  The C++
+backend for local PCA, \code{"cpp.local.pca"}, is used only when requested
+explicitly.  This function reports which backend was used, so that it can
+be recorded with the results of an analysis.
 
 For real-data local-PCA runs, the deployable chart-dimension contract is
 the ordinary \code{local.chart.method = "pca"} path with

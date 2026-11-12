@@ -10,13 +10,6 @@ read.recipe <- getExportedValue("knitr", "read_chunk")
 read.recipe(system.file("doc-tools/first-fit.R", package = "geosmooth"))
 read.recipe(system.file("doc-tools/graph-workflow.R", package = "geosmooth"))
 
-## ----neighbor-probability, eval=FALSE-----------------------------------------
-# fit <- fit.neighbor.probability(X, y, method = "case_corrected", k = 3,
-#                                 id = record_id, group = participant_id,
-#                                 normalization = "max", metric = "linf.simplex")
-# predict(fit, newdata = query_X, query.group = query_participant_id,
-#         type = "diagnostics")
-
 ## ----first-fit-model----------------------------------------------------------
 library(geosmooth)
 set.seed(1)
@@ -52,6 +45,13 @@ new.y <- cos(2 * pi * X[, 1])
 malps.refit <- refit(malps.fit, y = new.y)
 S <- smoother.matrix(malps.fit)
 max(abs(as.vector(S %*% new.y) - predict(malps.refit)))
+
+## ----neighbor-probability, eval=FALSE-----------------------------------------
+# fit <- fit.neighbor.probability(X, y, method = "case_corrected", k = 3,
+#                                 id = record_id, group = participant_id,
+#                                 normalization = "max", metric = "linf.simplex")
+# predict(fit, newdata = query_X, query.group = query_participant_id,
+#         type = "diagnostics")
 
 ## ----graph-workflow-----------------------------------------------------------
 # Each row, vertex, and response refers to the same location.

@@ -50,9 +50,11 @@ A list of class \code{"density_fit"} with fields
 \code{warnings}.
 }
 \description{
-Dispatches to a dedicated density estimator. Subject-occupation density
-estimation is one application: construct a sparse mass vector over a fixed
-support set and call this generic density layer.
+Estimates probability mass over a fixed set of support points from
+nonnegative counts or masses given at those points, using the estimator
+selected by \code{method}. One application is the occupation density of a
+subject, for which the input is the number of visits to each support
+point; see \code{\link{fit.subject.od}}.
 }
 \examples{
 X <- matrix(seq(0, 1, length.out = 6), ncol = 1)

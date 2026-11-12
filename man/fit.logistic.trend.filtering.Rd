@@ -71,9 +71,11 @@ An object of class \code{logistic.trend.filtering.fit}, with \code{fits},
 fitted/prediction methods return NA for them unless explicitly permitted.
 }
 \description{
-Fits a piecewise-quadratic logit curve with an L1 penalty on its third
-divided differences. An R interface calls native C++ dense or banded
-solvers. No Python or external optimizer is required.
+Fits the probability of a binary outcome as a function of one continuous
+predictor. The logit of the probability is a piecewise-quadratic curve,
+estimated by maximum likelihood with an L1 penalty on its third divided
+differences. The computation is done by a dense or a banded solver written
+in C++; no external optimizer is needed.
 }
 \details{
 Predictor locations are normalized to \verb{[0,1]} using the training

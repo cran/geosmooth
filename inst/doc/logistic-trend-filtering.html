@@ -1590,12 +1590,12 @@ simulated bootstrap or permutation differences.</p>
 </tbody>
 </table>
 <p>The Holm column adjusts across the three statistics within each
-assessment. It does not adjust across the two examples or a wider family
-of outcomes and phylotypes. The scalar <code>p.value</code> remains the
-individual likelihood p-value for backward compatibility. Prespecify the
-tests; choosing the smallest individual p-value after inspecting the
-table would ignore multiple testing. These examples do not establish
-that one statistic has greater power than another.</p>
+assessment. It does not adjust across the two examples or across a wider
+family of outcomes and predictors. The scalar <code>p.value</code>
+remains the individual likelihood p-value for backward compatibility.
+Prespecify the tests; choosing the smallest individual p-value after
+inspecting the table would ignore multiple testing. These examples do
+not establish that one statistic has greater power than another.</p>
 <div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a>old_par <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">mar=</span><span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>, .<span class="dv">5</span>))</span>
 <span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a><span class="cf">for</span> (name <span class="cf">in</span> <span class="fu">names</span>(assessment_examples)) {</span>
 <span id="cb34-3"><a href="#cb34-3" tabindex="-1"></a>    a <span class="ot">&lt;-</span> assessment_examples[[name]]</span>

@@ -76,18 +76,22 @@ contains the visit-level cross-validation table, fold assignments, and
 held-out predicted masses.
 }
 \description{
-Convenience wrapper that converts subject visit indices into a density
-input. Density-native methods dispatch to \code{\link{fit.density}}.
-LPS/PS-LPS methods fit ordinary smoother objects first and then call
-\code{\link{normalize.density}}; they are subject-occupation workflows, not
-standalone density-native methods.
+Estimates the occupation density of one subject: the distribution of the
+subject's visits over a fixed set of support points. The visits are given
+as indices of support points, with repeats, and are converted to counts.
+Methods that estimate a density directly are passed on to
+\code{\link{fit.density}}. The methods based on LPS and PS-LPS first fit
+the corresponding regression smoother to the counts and then convert the
+fitted values to probability mass with \code{\link{normalize.density}}.
 }
 \details{
-The \code{"lps_logistic_binary"} method name is historical.  In the current
-OD workflow it calls \code{fit.lps(..., outcome.family = "bernoulli")}, which
-fits a clipped probability field with the LPS least-squares core and then
-converts that field to a density with \code{\link{normalize.density}}.  It is
-not the \code{outcome.family = "binomial"} local-logistic IRLS path.
+The method name \code{"lps_logistic_binary"} is kept from earlier versions
+and is somewhat misleading. It calls
+\code{fit.lps(..., outcome.family = "bernoulli")}, which fits
+probabilities by local least squares and clips them to the unit interval,
+and then converts the result with \code{\link{normalize.density}}. It does
+not use the local logistic regression of
+\code{outcome.family = "binomial"}.
 
 When \code{od.cv = "visit"}, graph random-walk candidates may pass
 OD-level grids inside \code{graph.control}: \code{walk.step.grid},

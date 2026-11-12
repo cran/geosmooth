@@ -342,21 +342,26 @@ responses</h1>
 
 
 
-<p>A neighborhood can cross the seam between two faces of the
-nonnegative max-normalized simplex. A PCA chart constructed directly in
-the ambient coordinates then sees a right-angle fold. Rotating the
-neighboring face into the reference plane can remove this geometric
-bend. It does not establish that the response varies smoothly, that a
-low-dimensional projection retains the response signal, or that local
-cases and controls are sufficiently numerous.</p>
-<p>The optional chart implementation in
-<code>fit.local.likelihood()</code> compares weighted PCA and weighted
-partial least squares (PLS1). PLS uses the response to choose
-directions, so its directions must be learned inside each training fold.
-Both methods return conditional binary probabilities on supplied
-evaluation points. These are not population disease risks when the
-training sample was selected by outcome without a sampling
-correction.</p>
+<p>Compositional data that are normalized so that the largest coordinate
+equals one lie on a surface made of flat faces that meet at right
+angles. The neighborhood of a point near an edge of this surface can
+extend over two faces. Local coordinates computed by PCA directly from
+the observed coordinates then describe a surface with a right-angle
+fold. Rotating the neighboring face into the plane of the point’s own
+face removes the fold. This vignette shows how
+<code>fit.local.likelihood()</code> does that for a binary response.</p>
+<p>Unfolding corrects the geometry only. It does not ensure that the
+response varies smoothly, that a projection to a few dimensions keeps
+the information about the response, or that a neighborhood contains
+enough cases and controls.</p>
+<p><code>fit.local.likelihood()</code> can compute the local coordinates
+by weighted PCA or by weighted partial least squares (PLS1). PLS uses
+the response to choose its directions, so in cross-validation the
+directions must be computed from the training folds only. Both methods
+return estimated probabilities of the binary outcome at the evaluation
+points you supply. If the training sample was selected according to the
+outcome and no correction is made, these are not estimates of risk in
+the population.</p>
 <div id="geometry-before-regression" class="section level2">
 <h2>Geometry before regression</h2>
 <p>Rows are max-normalized to the nonnegative surface where at least one
@@ -394,9 +399,9 @@ leaving other coordinates unchanged. Tied maxima and neighborhoods
 spanning more than two faces are explicitly uncertified. A two-face
 chart must also stay away from other faces, and its pairwise unfolded
 distances must agree with intrinsic distances to <code>1e-8</code>
-absolute error. Certification is conservative: a rejected chart might
-still admit another construction. It is not appropriate to silently
-flatten it.</p>
+absolute error. The certification is conservative: a neighborhood that
+it rejects might still be unfolded in some other way, but the function
+does not attempt this.</p>
 <p>A one-dimensional seam provides a direct PCA check. Its ambient image
 bends through a right angle, while the certified unfolded points lie on
 a line. The table reports the proportion of centered variance retained
@@ -536,16 +541,17 @@ entire simulation. Source fixtures and the generator are recorded in
 </div>
 <div id="scope-and-computational-limits" class="section level2">
 <h2>Scope and computational limits</h2>
-<p>The default <code>chart.geometry=&quot;legacy&quot;</code> preserves the
-existing smoother. The new path is opt-in, supports Bernoulli
-degree-zero or degree-one fits, fixed numeric chart dimensions and grid
-CV. It does not yet support density likelihoods, quadratic charts or
-automatic geometric dimension rules.
-<code>chart.geometry= &quot;euclidean&quot;</code> provides the weighted PCA/PLS
-path on ordinary coordinates without unfolding. Neither PCA nor PLS is
-uniformly preferable: low-variance directions may matter for the
-response, while supervised directions can overfit noisy small supports.
-Local balance and held-out calibration need separate evaluation.</p>
+<p>The default, <code>chart.geometry=&quot;legacy&quot;</code>, is the smoother of
+earlier versions. The simplex charts must be requested explicitly. They
+support Bernoulli fits of degree zero or one, a fixed chart dimension,
+and cross-validation over a grid. They do not yet support density
+likelihoods, quadratic local models, or automatic choice of the chart
+dimension. <code>chart.geometry= &quot;euclidean&quot;</code> provides the
+weighted PCA/PLS path on ordinary coordinates without unfolding. Neither
+PCA nor PLS is uniformly preferable: low-variance directions may matter
+for the response, while supervised directions can overfit noisy small
+supports. Local balance and held-out calibration need separate
+evaluation.</p>
 <p>Neighbor search computes one query-to-training distance vector at a
 time. Unfolding certification stores a support-by-support matrix. Work
 therefore grows with all query/training pairs and with the square of

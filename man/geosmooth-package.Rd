@@ -4,49 +4,58 @@
 \name{geosmooth-package}
 \alias{geosmooth}
 \alias{geosmooth-package}
-\title{geosmooth package}
+\title{geosmooth: Geometric Methods for Nonparametric Regression and Density Estimation}
 \description{
-Geometric smoothing and conditional expectation methods for coordinate data,
-point clouds, and weighted graphs. The package provides local polynomial,
-model-averaged, trend-filtering, graph low-pass, occupation-density, and
-Hessian-energy methods.
+\code{geosmooth} estimates a smooth response, or a probability mass, from data
+given as a matrix of coordinates (one row per observation) or as a weighted
+graph. It provides local polynomial smoothing, model-averaged local
+polynomial smoothing, several forms of trend filtering, graph low-pass
+filtering, Hessian-energy regression, and estimators of probability mass
+and occupation density.
 }
 \section{Start here}{
 
-Use \code{browseVignettes("geosmooth")} to open the installed HTML guides,
-including \code{vignette("function-guide", package = "geosmooth")}.
-The \href{https://pgajer.github.io/geosmooth/articles/function-guide.html}{online guide}
-links to the full reference. The task links below work in installed help
-without an internet connection.
+\code{vignette("function-guide", package = "geosmooth")} is organized by
+task. It lists every exported function, says which fitted models can
+predict at new points, and gives examples.
+\code{browseVignettes("geosmooth")} lists all installed guides. The
+\href{https://pgajer.github.io/geosmooth/articles/function-guide.html}{online version of the guide}
+links to the full reference.
 }
 
 \section{Finding a function}{
 
-Read \code{vignette("function-guide", package = "geosmooth")} for a
-task-based guide to all exported functions, prediction limits, and examples.
+The main functions, by task:
 \describe{
-\item{Local regression}{Start with \code{\link{fit.lps}} or
-\code{\link{fit.malps}}.}
-\item{Lifting trend filters}{Use \code{\link{fit.lpl.tf}} or
-\code{\link{fit.slpl.tf}} for residual penalties with optional
-prediction synchronization.}
-\item{Univariate trend filters}{Use \code{\link{fit.gaussian.trend.filtering}}
-for continuous responses or \code{\link{fit.logistic.trend.filtering}}
-for binary responses. Assess association and prediction with
-\code{\link{assess.gaussian.trend.filtering}} or
-\code{\link{assess.logistic.trend.filtering}}, respectively.}
-\item{Graph smoothing}{Use \code{\link{fit.metric.graph.lowpass}} for
-spectral smoothing or \code{\link{fit.graph.trend.filtering}} for
-graph-difference penalties.}
-\item{Hessian penalties}{Use \code{\link{fit.ssrhe.hessian.regression}}
-for quadratic energy or \code{\link{fit.ssrhe.hessian.l1.regression}}
-for an absolute-value penalty.}
-\item{Probability mass}{Use \code{\link{fit.density}} for support weights,
-\code{\link{fit.subject.od}} for repeated visits, and
-\code{\link{normalize.density}} to convert an existing fitted field.}
-\item{Synthetic examples}{Combine components with
-\code{\link{synthetic.spec}} and draw data with
-\code{\link{materialize.synthetic}}.}
+\item{Local regression}{\code{\link{fit.lps}} fits a local polynomial
+smoother and selects its settings by cross-validation.
+\code{\link{fit.malps}} averages the predictions of overlapping local
+polynomial fits.}
+\item{Lifting trend filters}{\code{\link{fit.lpl.tf}} penalizes the
+absolute residuals of local polynomial predictions.
+\code{\link{fit.slpl.tf}} adds a penalty that makes overlapping local
+predictions agree.}
+\item{One-dimensional trend filters}{\code{\link{fit.gaussian.trend.filtering}}
+fits a continuous response and \code{\link{fit.logistic.trend.filtering}}
+a binary response. \code{\link{assess.gaussian.trend.filtering}} and
+\code{\link{assess.logistic.trend.filtering}} test whether the response
+varies with the predictor and assess held-out prediction.}
+\item{Graph smoothing}{\code{\link{fit.metric.graph.lowpass}} smooths a
+response on the vertices of a graph by filtering its spectrum, and
+\code{\link{fit.graph.trend.filtering}} penalizes differences along
+the edges.}
+\item{Hessian penalties}{\code{\link{fit.ssrhe.hessian.regression}}
+penalizes estimated second derivatives with a quadratic penalty, and
+\code{\link{fit.ssrhe.hessian.l1.regression}} with an absolute-value
+penalty.}
+\item{Probability mass}{\code{\link{fit.density}} estimates probability
+mass over a fixed set of support points, \code{\link{fit.subject.od}}
+does so from the repeated visits of one subject, and
+\code{\link{normalize.density}} converts an existing fitted field to
+probability mass.}
+\item{Synthetic examples}{\code{\link{synthetic.spec}} describes a
+synthetic data set, and \code{\link{materialize.synthetic}} draws the
+data.}
 }
 }
 

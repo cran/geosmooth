@@ -99,10 +99,10 @@ graph operator, eigenvalues, eigenvectors, solver metadata, and spectral
 completeness diagnostics.
 }
 \description{
-Builds a metric-conductance graph Laplacian and computes the low-frequency
-eigensystem used by graph low-pass filters. The resulting object is
-response-independent and can be reused for many responses and filter
-parameters.
+Builds the weighted graph Laplacian and computes its eigenvalues and
+eigenvectors of lowest frequency, which graph low-pass filters use. The
+result does not depend on any response, so it can be reused to smooth many
+responses with many filter parameters.
 }
 \details{
 Numerical verification anchors the known component nullspace (square-root

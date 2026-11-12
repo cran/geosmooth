@@ -351,6 +351,8 @@ fits</a></li>
 <li><a href="#refit-and-extract-smoother-matrices" id="toc-refit-and-extract-smoother-matrices">Refit and extract smoother
 matrices</a></li>
 </ul></li>
+<li><a href="#nearest-neighbor-probabilities-for-a-binary-outcome" id="toc-nearest-neighbor-probabilities-for-a-binary-outcome">Nearest-neighbor
+probabilities for a binary outcome</a></li>
 <li><a href="#function-catalog" id="toc-function-catalog">Function
 catalog</a>
 <ul>
@@ -378,8 +380,8 @@ constructors and helpers supplied by dgraphs</a></li>
 supplied by dgraphs</a></li>
 </ul></li>
 <li><a href="#finding-detailed-help" id="toc-finding-detailed-help">Finding detailed help</a></li>
-<li><a href="#advanced-controls-without-a-new-fitter" id="toc-advanced-controls-without-a-new-fitter">Advanced controls
-without a new fitter</a></li>
+<li><a href="#tuning-and-numerical-settings" id="toc-tuning-and-numerical-settings">Tuning and numerical
+settings</a></li>
 </ul>
 </div>
 
@@ -388,10 +390,14 @@ td, th { vertical-align: top; }
 td code { white-space: normal; overflow-wrap: anywhere; }
 </style>
 <style>body { max-width: 1120px; }</style>
-<p><code>geosmooth</code> estimates a response or probability mass on
-coordinate data and graphs. Start with the task you want to perform,
-then choose a method. You do not need to learn the operator constructors
-or synthetic-data helpers to fit your first model.</p>
+<p><code>geosmooth</code> estimates a smooth response, or a probability
+mass, from data given as a matrix of coordinates or as a weighted graph.
+This guide is organized by task. The table below names the function to
+start with for each task, the next section walks through a first fit,
+and the catalog that follows lists every exported function with a link
+to its help page.</p>
+<p>Many of the exported functions build operators or generate synthetic
+data. You do not need any of them to fit your first model.</p>
 <div id="choose-a-starting-point" class="section level2">
 <h2>Choose a starting point</h2>
 <table>
@@ -403,7 +409,7 @@ or synthetic-data helpers to fit your first model.</p>
 <thead>
 <tr class="header">
 <th>Your task</th>
-<th>Start here</th>
+<th>Start with</th>
 <th>What to know before choosing</th>
 </tr>
 </thead>
@@ -446,50 +452,56 @@ penalties, optional covariates/offsets, and convergence
 diagnostics.</td>
 </tr>
 <tr class="odd">
+<td>Fit adaptive curves along fixed or learned projections</td>
+<td><code>fit.projection.trend.filtering()</code></td>
+<td>Gaussian or binomial additive projection models; mean-loss penalties
+and separate joint-fit and search diagnostics.</td>
+</tr>
+<tr class="even">
 <td>Add synchronization to a lifting trend filter</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/fit.slpl.tf.html"><code>fit.slpl.tf()</code></a></td>
 <td>Synchronized local polynomial lifting trend filtering; adds a
 second, quadratic penalty.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Smooth a response already attached to graph vertices</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/fit.metric.graph.lowpass.html"><code>fit.metric.graph.lowpass()</code></a>
 or <a href="https://pgajer.github.io/geosmooth/reference/fit.graph.trend.filtering.html"><code>fit.graph.trend.filtering()</code></a></td>
 <td>Choose spectral low-pass smoothing or a graph-difference penalty.
 Edge-weight meanings differ; see below.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Penalize local second derivatives on a point cloud</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.regression.html"><code>fit.ssrhe.hessian.regression()</code></a></td>
 <td>Hessian-energy regression, following semi-supervised regression
 using Hessian energy (SSRHE); use <code>lambda.selection = &quot;cv&quot;</code>
 or <code>&quot;gcv&quot;</code> to select penalties.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Use an absolute-value Hessian penalty</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/fit.ssrhe.hessian.l1.regression.html"><code>fit.ssrhe.hessian.l1.regression()</code></a></td>
 <td>Different regularization from quadratic Hessian energy; has its own
 solver and tuning controls.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Interpolate graph values while fixing a region boundary</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/perform.harmonic.smoothing.html"><code>perform.harmonic.smoothing()</code></a></td>
 <td>Iterative harmonic relaxation; <a href="https://pgajer.github.io/geosmooth/reference/harmonic.smoother.html"><code>harmonic.smoother()</code></a>
 also records extrema and topology diagnostics.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Estimate probability mass over a fixed support</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/fit.density.html"><code>fit.density()</code></a></td>
 <td>Takes nonnegative counts or masses; returns mass over the rows of
 <code>X</code>.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Estimate where one subject visits that support</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/fit.subject.od.html"><code>fit.subject.od()</code></a></td>
 <td>Takes visit indices, including repeats; handles occupation-density
 fitting and optional visit-level validation.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Build reproducible synthetic examples</td>
 <td><a href="https://pgajer.github.io/geosmooth/reference/synthetic.spec.html"><code>synthetic.spec()</code></a>
 then <a href="https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html"><code>materialize.synthetic()</code></a></td>
@@ -497,78 +509,35 @@ then <a href="https://pgajer.github.io/geosmooth/reference/materialize.synthetic
 </tr>
 </tbody>
 </table>
-<p>These choices describe different estimators, not a ranking of
-predictive performance. Parallel-transport trend filtering and
-transported graph Hessians have their own <a href="#experimental-transport-methods">experimental section</a>.</p>
+<p>The rows of this table are different estimators, listed in no
+particular order of predictive performance. Two experimental methods,
+parallel-transport trend filtering and transported graph Hessians, are
+described in their own <a href="#experimental-transport-methods">section</a>.</p>
 </div>
 <div id="a-first-regression-fit" class="section level2">
 <h2>A first regression fit</h2>
-<p>For binary outcomes, <code>fit.neighbor.probability()</code> offers
-<code>method = &quot;knn&quot;</code>, <code>&quot;case_raw&quot;</code> and
-<code>&quot;case_corrected&quot;</code> through one C++ backend. Supply fixed
-<code>k</code> or participant-safe <code>foldid</code> for Brier tuning.
-Here <code>k</code> counts people for kNN and cases for the two stopping
-rules. IDs determine distance ties; group IDs exclude all visits of a
-held-out person. Missing answers never become controls. For repeated
-records the closest answering visit represents each training
-participant. <code>predict(fit)</code> excludes each query participant;
-new queries need <code>query.group</code> when they belong to an
-existing participant. Probability paths and neighborhood diagnostics use
-the same ordering. Unreachable or insufficient neighborhoods return
-<code>NA</code>, without an automatic baseline substitution.</p>
-<p>For Euclidean coordinates, <code>search = &quot;auto&quot;</code> uses exact
-ANN (<code>eps = 0</code>). <code>search = &quot;brute&quot;</code> selects the
-exhaustive reference implementation. Set
-<code>search = &quot;ann&quot;, eps = 0.1</code> to request approximate Euclidean
-neighborhoods; the ANN distance tolerance does not bound probability
-error. Approximate searches retain the closest answering visit for each
-retrieved participant but can miss other participants or tied records.
-Complete tied-shell diagnostics require exact search. Chebyshev,
-intrinsic surface and precomputed distances always use exhaustive
-candidate search; explicit ANN or positive <code>eps</code> requests for
-those inputs are rejected.</p>
-<p>For surface geodesics on the nonnegative max-normalized simplex, use
-<code>metric = &quot;linf.simplex&quot;, normalization = &quot;max&quot;</code>. This
-streams exact distances from dgraphs’ shared C++ solver, allowing
-intermediate faces. It prepares sparse training profiles once per
-prediction call or CV split and keeps one query’s neighborhood in
-memory. No all-pairs distance matrix or sample graph is needed. With
-<code>normalization = &quot;none&quot;</code>, rows must already be max-normalized
-within <code>sqrt(.Machine$double.eps)</code>; admitted rows are divided
-by their maxima. <code>normalization = &quot;sum&quot;</code> is rejected for this
-metric. Max normalization with <code>metric = &quot;euclidean&quot;</code> still
-measures ambient chords, which can produce different neighbors. Cached
-trees or sparse profiles are reused within prediction and CV splits,
-then rebuilt on the next prediction call. Fits remain serializable.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">fit.neighbor.probability</span>(X, y, <span class="at">method =</span> <span class="st">&quot;case_corrected&quot;</span>, <span class="at">k =</span> <span class="dv">3</span>,</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>                                <span class="at">id =</span> record_id, <span class="at">group =</span> participant_id,</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>                                <span class="at">normalization =</span> <span class="st">&quot;max&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;linf.simplex&quot;</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">newdata =</span> query_X, <span class="at">query.group =</span> query_participant_id,</span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">&quot;diagnostics&quot;</span>)</span></code></pre></div>
-<p>This estimator has a nonlinear, response-dependent neighborhood when
-stopping at cases. Shared linear-smoother operations such as
-<code>smoother.matrix()</code> are not provided. Use external grouped
-outer folds to assess a tuned model.</p>
-<p>Use <code>X</code> with one observation per row and a response
-<code>y</code> of matching length. A local chart is a coordinate system
-fitted near an observation, often using principal component analysis
-(PCA). Start in the supplied coordinates before adding local charts or
-changing numerical controls.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(geosmooth)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">60</span>), <span class="at">ncol =</span> <span class="dv">1</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>truth <span class="ot">&lt;-</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> X[, <span class="dv">1</span>])</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>y <span class="ot">&lt;-</span> truth <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(X), <span class="at">sd =</span> <span class="fl">0.08</span>)</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">fit.lps</span>(</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  X, y, <span class="at">foldid =</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="at">length.out =</span> <span class="fu">nrow</span>(X)),</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">support.grid =</span> <span class="fu">c</span>(<span class="dv">8</span><span class="dt">L</span>, <span class="dv">12</span><span class="dt">L</span>, <span class="dv">16</span><span class="dt">L</span>), <span class="at">degree.grid =</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>,</span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">kernel.grid =</span> <span class="st">&quot;gaussian&quot;</span></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>)</span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>fit<span class="sc">$</span>selected</span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt;   support.size degree   kernel bandwidth.multiplier candidate.id chart.dim</span></span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt; 4            8      1 gaussian                    1            4         1</span></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt;   cv.rmse.observed</span></span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; 4       0.07990112</span></span></code></pre></div>
+<p><code>fit.lps()</code> takes a matrix <code>X</code> with one
+observation per row and a response <code>y</code> with one value per
+row. By default it works in the coordinates you supply. It can also fit
+each local polynomial in a <em>local chart</em>, a coordinate system
+computed near the point of interest, usually by principal component
+analysis (PCA). For a first fit, keep the supplied coordinates and the
+default numerical settings.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(geosmooth)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">60</span>), <span class="at">ncol =</span> <span class="dv">1</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>truth <span class="ot">&lt;-</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> X[, <span class="dv">1</span>])</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>y <span class="ot">&lt;-</span> truth <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(X), <span class="at">sd =</span> <span class="fl">0.08</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">fit.lps</span>(</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  X, y, <span class="at">foldid =</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="at">length.out =</span> <span class="fu">nrow</span>(X)),</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>  <span class="at">support.grid =</span> <span class="fu">c</span>(<span class="dv">8</span><span class="dt">L</span>, <span class="dv">12</span><span class="dt">L</span>, <span class="dv">16</span><span class="dt">L</span>), <span class="at">degree.grid =</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="at">kernel.grid =</span> <span class="st">&quot;gaussian&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>)</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>fit<span class="sc">$</span>selected</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt;   support.size degree   kernel bandwidth.multiplier candidate.id chart.dim</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt; 4            8      1 gaussian                    1            4         1</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt;   cv.rmse.observed</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co">#&gt; 4       0.07990112</span></span></code></pre></div>
 <div class="figure">
 <img role="img" aria-label="Noisy observations along a sine curve, with a fitted solid curve close to the dashed synthetic truth." src="data:image/png;base64,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RJn17vMvvRcCQkAICAEhIASEgEcTkNBcHn36pPFCQAgIASEgBISAEPBuAqLMevf5l94LASEgBISAEBACQsCjCYgy69GnTxovBISAEBACQkAICAHvJiDKrHeff+m9EBACQkAICAEhIAQ8moAosx59+qTxQkAICAEhIASEgBDwbgKizHr3+ZfeCwEhIASEgBAQAkLAowmIMuvRp08aLwSEgBAQAkJACAgB7yYgyqx3n3/pvRAQAkJACAgBISAEPJqAKLMeffqk8UJACAgBISAEhIAQ8G4Cosx69/mX3gsBISAEhIAQEAJCwKMJiDLr0adPGi8EhIAQEAJCQAgIAe8mIMqsd59/6b0QEAJCQAgIASEgBDyagCizHn36pPFCQAgIASEgBISAEPBuAqLMevf5l94LASEgBISAEBACQsCjCYgy69GnTxovBISAEBACQkAICAHvJiDKrHeff+m9EBACQkAICAEhIAQ8moAosx59+qTxQkAICAEhIASEgBDwbgKizHr3+ZfeCwEhIASEgBAQAkLAowmIMuvRp08aLwSEgBAQAkJACAgB7yYgyqx3n3/pvRAQAkJACAgBISAEPJqAKLMeffqk8UJACAgBISAEhIAQ8G4Cosx69/mX3gsBISAEhIAQEAJCwKMJiDLr0adPGi8EhIAQEAJCQAgIAe8mIMqsd59/6b0QEAJCQAgIASEgBDyagCizHn36pPFCQAgIASEgBISAEPBuAv7e3f3E93706NEYN24cQkNDE1+J7CkEhIAQEAJCQAgIATcmcOHCBSxduhR58uRx21aKMpvIUzNlyhSMGjVKlNlE8pPdhIAQEAJCQAgIAfcn0KVLF/zxxx/o2LGj2zZWlNlEnhp/f39kyJABNWrUSGQNspsQEAJCQAgIASEgBNybQKVKldy7gap14jPr9qdIGigEhIAQEAJCQAgIASHgioAos67IyHohkAIEIiIicOzYMVy9ejUFjiaHEAJCQAgIASGQ+gh4vJuBzWbD+fPn4efnh8yZM6e+MyQ9SrUEfvnlF8yYMQO3bt2Cj48PateujVdeeQVBQUGpts/SMSEgBISAEBACSU3AIy2z//zzD9577z0ULFgQgYGByJ49O7JkyaInY1WoUAHvvPMOrl27ltSspD4hkGQEFi5ciB9++EErsqyUL2UrVqzA+PHjk+wYUpEQEAJCQAgIAW8g4HGW2aNHj6JWrVrakvXUU0+hcOHC2iJLyxbDRxw+fFhbu2bOnInFixejSJEi3nAepY8eRuC3335z2uJVq1bhxRdflCgZTunISiEgBISAEBACdxPwOGV2+PDh2iK7aNEipEmT5u4eqTWDBw9G06ZNMXnyZAwYMMBpGVkpBO4nAb54uZKwsLAkV2avX7+OJUuWgKMa2bJlw8MPP4xMmTK5aoKsFwJCQAgIASHgMQQ8zs1gy5YteOGFF1wqsiQfEBCADh06YMGCBR5zIqSh3kUgX758TjvMkG+5cuVyui2xK8+ePYu3334b3333HfgS+OOPP6J79+44dOhQYquU/YSAEBACQkAIuA0Bj1Nma9asidWrV8cJkFYod85WEWcHpECqJtCmTRvtKuPYycceewxp06Z1XH1P37/55hvQ2msV+pR/+eWX1lWyLASEgBAQAkLAIwl4nJvBc889Byq0Z86cQdu2bbVPLCd/+fr6ap/ZI0eOYOrUqZg/f762QnnkWZFGp3oCFStWRJ8+fbSVlKG5GImjWbNmaN68eZL2PTo6GhzNcCb0P6e7g0QBcUZH1gkBIeCKwIkTJ7Bnzx6UKlXqLqMRowsxQkvu3Lld7e4W6z2lnW4BywMa4XHKLJWAbdu2oXPnzmjfvj34sHaUhg0bgrPF69at67hJvgsBfc3w5ed+C7OqxDezCuPRuvIRj60fnBjJP1di3bZ27Vr8/PPPOHnypI4QQitx/fr1Xe0q64WAEPAyAqdOnUKnTp2wZs0alC5dGrt370bOnDn1/JSqVatqGmPHjsXBgwe1W5O74enZs6duf4kSJfDVV1/p9n///ffu1kxpTyIIeJwyyz4WLVpURyrg2x+tWrTG3r59W78J5s2bV4fpSgQL2SWVE9i+fTumTJmifUWZipgvPU8//TTop+qusnLlSm29pd9r+vTpteW2devWeiTCtDkqKgobNmwArSVZs2bVKZaN4ktltXLlyli3bp0pbv9kpA8zCYxRFEaNGmXfxolidEMIDw/XkyntG2RBCAgBtyLAZ9+vv/6KzZs362cfXZiSw8WOhqMWLVqAiiDvNbwf8d4zZswYParEe1XJkiXdio1jY8aNG6eNYFz/+uuva73BsYx890wC7vsUjwdPxpilYss/ESEQGwEOiX300Ud2S/6VK1fApAWXLl3Ca6+9Ftuu920brR+ff/65/fj0c502bRpopW3Xrp1ez3XsFy0hRjjBq1+/fvaJZLSk0KXg9OnTpggyZsyob+ZmBWPeOhMer1GjRjopibPtsk4ICIH7S4AKGmNUG6Fb0ciRI5PcqMN7AUdtli9fjnTp0unDMVnRW2+9hfXr1+OTTz7BpEmT9Hoamj744AP9El2tWjW9zLkAjKrCCEN///23tui+9NJLaNCggd6Hw/4ff/wxaHTgM537m4myvXr10kll2NcyZcroUaqBAwfq/fiPL+LFihXTL/t79+7FiBEjcODAAf1y37FjRzRp0gQsz5fz3r1762UawtifV199VSu1nDDOeyfbzgnkjz76qK6f7mBU4r/99lttOOP9kBNqOboXW3/sjZOFFCFw/8dak6mbTA968+bNBNfOC3zWrFlx/vHNlD8EEc8gwLjDzlxSOFHw3LlzbtGJsBU/49Cozjg4rD32D3oGZ0Z2wFPhf+GZ8NVoG74ST4avRY3b+8AYteba5sPDqsiyI3wojB49WvcpSllTInyC8MKbH6DKox2Qo2oLtGzTXt/88+fPr8tQOabl15lQWabCLyIEhID7EeBv06rIsoU3btxIlvkiVEA5X8UoslYajzzyCOimZISKLw0GPXr0AC225uWbiiGVzKFDh6Jx48ZayTx+/LhWIBk//vLly/pFnFkQq1evrutgnXPnztUKZL169cDESMOGDbM/f9nfvn37agWYPOjuULx4ca1c01LcqlUrfY/nJyMdMT49731UmjkiRXnzzTd1HdxWp04dUAFmHyi83/I766U1l23nvByKq/7ojfIvRQl4tGU2NlK8WPkDmz59emzF7trGHxqHouMS+g7RX0jEMwhw2NyVmNirZjuHzqgQhoSEIDg42KxO8Gd0xE1c27cB4Sf2IvzUQUScPAi/dBlRqNt4+Djx2T0x6QNEnD6MKPjisk963PINwSW/LLiklq/4pkck/HEbfjiAAhgycyNCMoRi2tqzuB1QQrXNB4WjzqgyaXDaLzM2HwvF1Fem4GIEs4tZm+6L73Zewg/7V+OZmoXxWNUCyJgujR4ypOLqKLz5k4OIEBAC7keALgbOxNV6Z2Xju45Kpyv3BbosMdSfMRgwmZF5oeYEUyqCnLTNqCq0aHLSNq2fDz30kPbPnz17tlZcJ0yYoBVOKpR0jeKIES2nFM6ToUWUwuc6rajM9kkXi7Jly2r3B963GV+e/v4UtvfTTz/VI1NVqlTRI0wPPPBAjEmvVLqZeZFJlhh/m8K2UmGmywalS5cuePnll/UyFWvO26G46o/eKP9SlECqVWa7du2qhx0SSpMXs7mgY9uXD/gcOXLEVkS2uREBJgpwZX3kNiO8oXFCAC37vOnSWsCbWHzCZdmUEnx15ypc2boMV7cvx7U962CLjPmw8fEPRP6XhymlNhQ7jl/E8l1nsO7AOZy6eANnQz9CmG84Lt9yPWHLtHPPwsN3Fn2LQem+Wg5qpdaUUJ/hSsW1RSOTzw1kC4xCjgxpEJw1J1YcuopVe87qv7cnr0ezSnmRr3IT7F0+U1UVQ/PVL4R05zFCywlj1fJljtc//Y6N360pI59CQAikDAHeu6jI7dixw35AzgGgMpjUUq5cOWzdutVptRypZDt4z6RYJ45SeaQ1l8ouExq98sor2reWbgG02DI1/b59+7RiaI2xzREjZvQ0Ys3mySyJdFegMkvlld8pnDPAexRdAXbt2qXvUTROREZGmmru+qQBi/e42rVr27fR9YET2YwUKFDALOqENmwbxVV/7IVlIcUIpFpl1upPk2I05UBuS4A+Tzt37ryrfYwmYKwNtATQJ8sIrQwcwqOfFWfBxiVHJ7yNs3P/21+FEUBwkUoILlQOgbmK4FhQIWyMyouRE7dg5e4zuHj9lpMqfeCr9suSPg2C/CJxLew0Am0R6u+WUjSjlf3VhkIFC6ooCBXg5+uDv1TM5dNKseR6bs8cfRm5os+jeMBl1MnpizRH1sEn4vqd4yivmLQFy6HgmLWYs+EYflpzCMt2ncbsv4/p7cEZWiBbxDHkvH0UWXBZK6rPP/+8vY18YHE4j5YMI/PmzUP//v1RULVJRAgIgZQnQGvlxIkTdQg+WkGZVMi4ECVla6js0ReVVktHQw4NAHRBMMIyRmjRpW8pox7wxZeWVLoGzJkzR99X6b/P9XQN4NC/kYsXL4ITdY1wlMgIQxhSKeb9mXHnjUsA66ZrAxVcGiJohODomi3m8JSpRn/SSkw/WSrbnNxGoSJM67IRo6Sb7+bTVX/cdR6GaXdq/Ey1ymxqPFnSp8QT4BATbzB0IaHVlbP8H3zwQT10ZWrlzdWZcHKDsxu4Y9n0Javjxv5NSFeiGgLK1MWx0HJYfSZCW0BXrjqN81f5Nv+fpSFflnSoUyqn+suBgtnTI2tIkP7LnD7QHk7r999/1zdqugDwZk6LA60Z5sZ+6qGceqIErRFGIpWV4bE+n2lLiU0p5HRzuH5wM24c3Ir0pWogJG0A2tYuov9oEZ7+12H8uPqwthQf9SsA/uXPGozyWYvgaNhNFM155yHy9ddfx1BkeTy2iyFuhgwZYg6vP/lg4IQzPsCsD4UYheSLEBAC90yACh8nYSW30NrKl1sO4U+aNEkrfryX0kLK3zvXGaGCyfknjDVLAwFDavKF98knn9RKK+8XrIv3FFpNGWObSjkn5T7xxBOgAsx9qJxSKXUUWp+5PyeQ0RfWKL0cMWJEI074orB+KqrG7YIRGKgkW4WKP/1wGb2FrgW8l9In1mpdtpa3LtNVgkq4Y3+sZWQ5ZQiIMpsynOUobkCA7iOMPcwJX3QTcZzIENtEsDOblyP86Dpc+vt35Gn7ATLVaaNvirw53oj0wdajF7DtpoqBXGwIth6+gH1rriDatipGr3NnCkad0jlQp6RSYNVnwWxx+6I2bdpUK7Cc2MA2W4f8WTmH5T777DOdupmWUw6zUeE1w3X0zU2bv5T+Q/3nYrRH76/a1K1ZGbyQ5TAWftwXSzI3waKAKjh2Hvhk9nb9V6VwVjxVPR8279yP/xwO/qtq//79WqklC05Mo/XGmqiB1m8+qOLjqvFfrbIkBISAuxGgHyxHZ6jQ8gWfRgG6NNA9K3v27PbmMoIBXZBogeV9a8aMGbosIx7QJYCKLa21VFT5nWWYbpvWVt4raAnlaJgzRdYchPvxXkN/VyNMpERfWr5AcxIZrck0WjCaDdtJJbdevXpayTX7sA/0zWVCJkZPoFsCR/IcX9BNeeunq/5Yy8hyyhDwUeb3mE5yKXNcjz8Kf3xUIoxTuMd3SDqgLQzWYa4M0TdQOuoEykSeQBbbf5Oj9lV9DV8dDcE/t9TELL9MCPe5O/2sv58PSuYORfkCmfFgsexaeS2S478hM3fDzYlq+wc8jtsXz2hnhi3K/3ZZ9pZYGlUC1/91N6P/bdaos8gTdRzZok6rqWj/JSzhsB6H87744gssW7bsru7RysGZwCJCQAikDgJ8+TfZN531iKoF5yk4uiSwLF2VGNbL0aDAfagkc0TnXoTWV96PTLxta11UormNSqyjcAIZrbyORgPHco7fXfXHsZynfmc0B75Y8NNdxeMssxwupj9LfITDFZLdIz6kpAwJcAhsp5pIUeT2SVSOPIR80WHKF1XNbPXNjIUZm2JHzoex+komXDz8703w31+Pny0SedLb0KRGWVQomAnl82dG6bwZkSbAz2PApi9eBRWnHNWT1i6s/BkBi6bggX+G4XUEYG3GOkqxbYGVF9LjnH9O/edvu43it3chf+QR7c7AhwOH8kyoG8eOMzwPrS7GPcJxu3wXAkLAswhYJ846azmVRWeKLMsatwDH/bjPvSqyrDO2SamOCrS1DRzZSoy46k9i6pJ9EkfA45RZBoNmBiQTlNmVYzZx0JdFRAjElwCDcfcschO3t23AmsCKmB7QHJuCK+K0LfROFf+Go00TfRNZ1CSrLFHnEBp9EemU1dbnJvD+o62SPFB5fNueFOXokhBS+kH9l7f9x7iw/Cec+e0r1D24GHUvLcbVDAUwKOQF7LkRqi3SuwIr4Eba3BjeqY0+PCfKuZo1zPX8zYoymxRnSuoQAkJACAgBKwGPU2bpA0PrD53D6dvy7rvvWvsjy0Ig0QQ4xLUhQw18nu0RHLdlvlOPcsIJDQ5AbeXnWq9MTiz64QsVlfy/TFrWg3FIjcNuqUH8goKRrXFH/Xdtz3qc/f1/yBmaBb+37alnD8/ZdBLfqwGSI5HZ8OSXG/B913QolSej9tXlJAxH4USQ2CwijuXluxAQAkJACAiB+BLwOGWWHaPFlSk8GRKIsxlTiwIR35Mm5ZKewLxNx/HRzC1qRv+deIKFs4egfd2iWoGtVDCLmpBwx7XgnxWZVLKMu5VZDo+ZSVdJ37r7W2P6ktXAPyN3YjEDr526jHajV2DXP5dQt9/vGN2xup7MwUkRJng69+HoiTv7Wpl+yacQEAJCQAh4JgGPVGaJmqFIGIyZ1lkRIRBfArcunMKpnz9F2nwlkb3Zy1i84yQGztiCjYfCdBV5swSjV6vyaKdCV/n7+d5VLV1cBg0adFfcQmabY7xEb5LiuUKxrH9TdP5oMmYdA14avxod6xVF3/4D8fu8ufbQXAyd4+jyw+DrzPrDyR58CSDX0qVLexM+6asQEAJCQAgkEQGPVWY5EzI+ceCSiJNU4+EEosJv4PQvn2lFNjriBvbmboCpW/LrGLDsWvbQIPRoUQ6dHi6GQH/XE7fo3sKQMZxYyDS4DEfFUFgm7aGHY0pw84PT+GNgtvUotPMAxqR/DhOXHcD6Hb74qferLkOPrVmzRkcCMQejewajSDATUOXKlc1q+RQCQsCNCDAKAGPHOgpjvjKbF7N1cVIY74lJJYxVzWd9XJPNkup4Uo/nEvBYZdZzkUvLU5IA/WDDlkzF8Ukf4krYOfylJnYtyv8E1t5QKWxVSlcmKOjevAw6NywJKmbxEeYZ5x9n78uEJqDgG1+ga6kpKDf1f3g/8gnsOJ8dNd6dhtHNsuHpNq1iIOX5YDxJR6FbAteLMutIRr4LAfcgwIgkTG7g6NbH6AN8GWXsWbr/tWzZEkz2QsW3c+fOOHnyJD7++OMY6WHj2yMmZGBkAqaNFRECsRGI39M7thpkmxBwUwJXd6zCvgm9sPhYNJalaYl1WSsiAuqSvwGEBAWga9NSeKNJKWRI6ywVQNydEkX2DiMfP39ka/QiWtdvi0pzJ6LrrF1YidLoOO8Kfl3WH8PfboPcxUrpwkz+EBZ2x6XDkTAfeoyIwGDnIkJACLgfASqWrpLLzJ8/3x4Si0kSmICAsm3bNixfvtz9OiMtSlUERJlNVacz9XaGQ9EHDhzQmWJKlSoFDm25kvBbUZj8US/M2ReOtYEdEJ4hjb1ojWLZ0Lp6QbSpWUhZZf9bby+QRAs7VLxaZqI5evSo9qVlJi9aNZwF6k6iQ973anwDAlH0iVcx79FwDBk1CcO3p8Gv14tg6YBl6N86DC8/9pAOVs5z5yyEF5XYhAYrv++dlgYIgWQiEBkVjesR/2YsSYZjBKg5AfEdjYrP4ceOHat933mvpvLK6CWMvzpv3jztktWpUyd88803er4BU9z+9ttv+n7A9bw/Ujjaxaxe3J8uXXy5dSZ08WI2siJFiuj6aREuV66cTp3rrF66SNDK+/fff+s4tpw43qBBAzDyyqeffqqzhH377bcoVKiQTntu/PeZRGHatGm6rVTO+/Tpg4IFC+omcZmZwrjfkSNHtLuZyV5GSzUnwrJ+1vX+++/bJwjTzYrJZVg3J9O+8847MsLn7CQncJ1rjSCBFUlxIZBcBJhdau7cufZJVxzWon+lefPncak0fv7tdPxxGDhpy4bbKA9oXdWGKoUy48kHC+PxavmRJ3O65Gqmvd6dO3di4MCB9hn99PviDY85v5kyMbWLb2AQ3u/5Kp7YfxRdR/2KtVcz4e1Zh/Hjtqv4vEN1nWJy6dKld2HgjT22uNF37SArhEAqJrBo+0l0HLcq2XpYt3RO/NitXoLqp7K5YsWKGPtQ6aTSSiWyevXqYGKjEiVK6IQJnE9AF6JDhw6BSiulV69eWLhwoVYuqZRy/ddff43mzZvrid2bN2/WKXMXLVoE3vt5r3cUjvBQIWRWKs6dYbKD2Oql4nn8+HEMHTpUJ11iWlu2iel2x4wZo5VcukL8+eefOuXtpk2bdPYwupMxDS7nSUyfPl33bffu3dqHl/2dNWuWTr/LtlNBZpKIdu3a6ToYNpShRKnkMyHP6tWrsW7dOq248/lARnSfYKrdSZMmOXZRvieQgCizCQQmxVOWwJIlSzBnzpwYB6VyyJvS559/ricHrNy8Fy9/NhsnkAvK9KnLZooKQ73CaTG4Wzvky5r8Cqy1gT/99JNdkbWuZz84s99b4q2WKlYAi758EzPWHkGvHzbg74PnUavvfHSq/wDKP3Ad2zatt+PhQ4kPAREhIATuEGhSMS9OfvWMW+Gg8vfqq6/GaNPUqVNRqVIl+zrGlKbBgcaGsmXL4sSJE9oCW7NmTURERGDUqFFYsGCBfQI362Rq+IYNG2LChAngiy7vB1Q46XvrSrjf//73P32c2OqloknXJr4o09+3Q4cOeOihh5A9e3ZtUTXWYKO40hLLSCssT4suDRFcptJMBZvWZSrOlC5duthT2tPgQpcKjjrRcMFRJk6M+/LLL7XfMMvTCty2bVt069aNX8FRxsKFC+v1ic0+piuSf3QgFBEC7ktg2bJlThtHhXbpum2YsfMmpq48AJtPbvjYopDv9lEUjDyIYNsNhO/xQVq0VvunrDLrbMYvO8GbHC0RjmGqnHYwFa18skZBNK6QB4N+2Ypxf+7B10sOqOgRhfBex4aolutOfN6kSGGZipBJV4SAWxIIDQ2Ndzp5Zx3gcDwzAdJSaVyuGF6Titz+/fv1Olp3jdSrV88s3vWZJk0a++hcbPVyR1pAmU67ZMmSWsHki7Ox+LJPtCYboTWV1lcqo1RgraNFVLgZtcFIgQJ34pLzO+uhUs25FIx207t3b3Tv3h1169bVrgR0idi3b59W5GnlNcLj0EosyqwhkrhP38TtJnsJgZQhcO3atbsOFO4ThJ0B5dH6q+34fuVBvT1v5BHUCV+E0re3a0WWKzlznu4HKS2ZM/+bPczJgR1nAjspkipXhaQNwCdtq2DVwOag3/LZy+F456edeOuLhbhw7L+HQ6rsvHRKCAgBTcDcG5nFkz6j/OML/pYtW5AnTx7tM0vFzogrwwC3W+dNxFYvy3Li2q+//gr681KJ5ajeV199xU24cuWKbof+ov7RTYxKKu/VdAGwyq5du7RfrVlnVXTNOn7SskyFmJZaKsq0DjOmNtvRo0cPe9/Zf7o/VKv2X1Iaaz2yHH8CoszGn5WUvA8ErFbMCOUEuzugLFYENcTxgEKwRdvQKHwNOmffhbK3tiKt7e7JAvcjkQEnejkT3rC8VZk1PMrlz4Q/P2iMcS89iIy+4dh4OzcajN6KaaNHwCYJUAwm+RQCHk2ArlQXL17UfWDcWSqMtMAyXiwtr8OHD9f+qlz39NNP6wlSVPRq1KiB8ePHa6V279692uUgPiBiq5f707Wgf//+Wpl8/vnntXXWTEKl0YPuCvxcv369DjNGCywnpVF5pR8tZe3atfqPltbY5MKFC3r0bcOGDdoSzPBkVHrZV04Yo3+sMbJMnDhR9/nmzZuxVSnb4kFA3AziAUmKJB8Bhnn5+eefwRsXb3ocVmI2LSNPPfUUeFPYdi0j9gaUQZSPumTVTadexHp0vL0ANTu8hYNZKmLkyJFmF/sn/ZXoj5TSwvbz5j1z5kw9pMbj8yb92muvpXRT3PJ4HF58vk5RNC2bHR0GTsGyCxnw0t9psfGNtzCwb3cE5Ur5c+aWoKRRQsBDCXAyJxPJHDx4UMePpjJHtwAquFOmTNF+o3nz5tXRaZjJk1kVKXwWMF5t/vz5tcsBnwfxldjqZWSBF198EQVVJAL6wdJyyu8MB0i3AEZP4IQyKpxUbE00A05M4zMoJCREu4nRmvvggw/G2iRaifk84mRf3utoDabyTl/iN998U7tT0EhDn2Iq8IyvnTZt2ljrlI1xE/BRbyO2uItJCUcCvLjptP7yyy87bpLv8STAIRbOEqXiZ5VHH31Uv0lz3amLN/DSuOVYvue8LlIzYjM63piFCqWLoNBbXynFp4hezyEkOu7TH4tC3yiGSTHDT3plCv/j2zZDs/CGxT+Ruwnw9tN//ByM+Ouy2uiD2pFbMbZtGRRq/qIOy8MwNnwYcAiSLwQS2/duhrJGCLgjAU6sYiQDKrEUuoxZs4PRghkcHOw0rjQnbPGe6WoYP7b+xlYvnzXMKGYm4dKIwmgMvFfzecSRM+PLa47BPvAelBi/fu5HX1jHftC3ljw8ZaSuY8eO+gWAn+4qYpl11zPjBe365Zdf7lJk2W3GJeQQz8rDN9H9u3W4eP0WMqhMB92vTEJ9v73I9+onyN7s5Rg3HUYJoEWUPlZ80aDyc7+Fb9v3wzJ8v/udkOPzwTGgSytUq7gHL321Biv9K6D51JMYtvxZ/HkxDf65+J/PNC3d/fr1kxeDhACWskLgPhFwfPG0KrJsUmyGhntR8mKrlyHEXImrCVhURBOjyPI4jJjgTKjgGyXf2XZZl3ACvgnfRfYQAklDgLNXncktmz86KcWmw9iVWpGtfmsbJoa9j+aF/VFu7GbkaP5KDEXW1MG3fFpk3UGRNW2Sz/gRaP5gSawa+iSKZwSO+edGx5P1AZV+2CoM8cOwOCJCQAgIgaQgQMWXEQdEPJ+AKLOefw49tgfO3pLP+2bDqqD6WHbgGtKl8cfwxlkwLHoyyjzZGaWGL0WaHP+FQvHYjkvDnRIokiMDVg5/Bi3KZsIN37T4Jl0b7A8oCasfFP2nOewnIgSEgBC4VwKcOMawXSKeT0DcDDz/HHpsDzhJYOvWrbr9UfDDHjXBi1EKKDWKZcXXnWuhUPYQoO0ZvU7+pX4C6dIEYOzLD2Ffl0/0hL+DASVw2TcjKkRsQAAitSIrbv6p/zqQHgoBISAEEkJALLMJoSVlk5QAs7A888wzuOEfitVB9bQi64tovNukCBa+3+SOIpukR5TKPIEAJ37UyxOJqhFrEGCLwHm/HFgXVBuML8yMQpzAISIEhEDKEmAKWWvCAHN0xkllMgBvEU4UYxSEe5Wkqicx7eBEaccYuompx532EWXWnc6GF7YluEh1bAxpoIaV06NoZn8VVP9R9H+uppr96eOFNKTLhgBTZuYLuoGa4cuRPvoKrvlmwLq09VCteCGcmTdBxRgWVwPDSj6FQEoQMGGzrMeaNWsWSpQogc2bN1tXp7plptU1SRbGjRtnT2eb0I4yeg8jKFBYH78nRKztSMh+LGvdly8l1hTECa3LHcuLMuuOZ8VL2vTp3O1oM2oZrkdEoWHUZnx5qAtKZxWrm5ec/li7yRjBDH3X9vGmeKtSFEpk8cFNlTSj/fwIzPlqNPb1a4nIqxdirUM2CgEhkHwEqMgyAcEPP/ygY8om35Huf80zZszQYRbvtSVUhE2yhtdff91pfPTYjnEv7biXfWNrk7tsE2XWXc5EKmxHeHg4Zs+eDQasHjNmjE7tx27evBWJDl+uRP+ft+gECC/fmIk+F79A1kp14RfsOnRKKkQkXYqFAEPlMPB4r3fexJphz+LxagVwXSm0PUPfweztF7Cja3VcP7AplhpkkxAQAslBgIps+/bt7UkOeAzG1Gaq1j/++ANPPPGE/luyZIn98Iw7O3fuXP2bfvLJJ/Hbb7/pbdOnTweTExjhS6z1+6effoqVK1fqdLSMJT5kyBA0atQIzKx1+vRps1uMz+3bt+vEDJyX8cYbb+i28fiMk3rkyBF7Waab7dWrV6xtX7BggU6qwD4b6ywVUraD4SCplDIurhG6D7z11lto0KCBbiPdMCgDBw7UsbN79+6t0/euWLFCJ9Yx+zHzGRNGMLkO42s7imM7mAaYqXknTJgAhqZcuHAhXnnllRi7sS7213FfU4jruS+zsLE9niyizHry2XPjtt+4cQN9+vTB999/rzN4McMKf8zf/jQbDT/6AzPWHUE630gMujwaz96Yj1xPvovi/WbBR8X0ExECjgTSBPjhu9dq47VGJXFbZYH7KMOr+OFKMex6py7OLZzkWFy+C4FUQeDouLewt1+rGH/nl0y9q2+3wk7GKGP2iTh9+K6yYStUxkVV583je+7aFp8VjA/O7F4jRozQ8cDNPkxIwCxao0aNQqdOnXQyAibAMWltmf2qb9++OqNWnTp1tGJJ5TQ0NFTXxXo4uZPGD9ZBodLI7GDMCEbFk0mKLl++rJU4DpU7Km/ch3U0adIEVapUwbBhw3TaXCrPjHtLRXPy5MkspoUKJGNdx9b28uXLa1eKypUro359FTJQCRVwPuPoJrBz506ttHI9fVGZXYxtZEzsoKAgnb6X9VNpZBuYUYz9ocK9atUq7qa50GrLF4SaNWuC3BwVdcd20IeZvBl/m1nJGA+XPK3CdlLRdtyXZWhsYqayrl27olChQvpcMpGDp4pEM/DUM+fm7WZGLiYwsMpF30x4Z9553PJJg3x+lzHw/HAU9L2AQj2+Q9b6z1qLyrIQuIsA/aiHtauKPJmD8f5PmzA2/bM4dyMzXh31Cq7tWY8CXUbBNyDwrv1khRDwVAKZaz+JyOvMjvefBOUp+t+Xf5f80oWqRDIxrXLc5J8h611l0xWtBN80wQjIlPOubXGtMAokLaOff/452rVrFyMVKxWkb7/9VicZaN68OWhVZTxxxv+m4rh48WLQWko5c+aMVjb/+usvPaHq6NGjWvFiqtddu3ZpZY6TlAoWLIgCBe6EZKxQoYJWdrk/FV1nyizXU5kMDAwE3ZW+/PJL+4QtprClNZNKNRVPKn/GCuqq7dWqVdP9YfpZto3CdR999JFe5n60xFI4EknFldZSKq5U2tetW6ddMTgPgJNXmb7XMbEDRy7JjZZZCjOUsR5rsgamw+V30w4q0VSomX6X66jsuxLHfY3f7sSJE3Vc9rp164LKNNdTafdEEWXWE8+aB7R5x44dMVp5wi8/dgZWgM3HF5Wj96Nv2Gj1g86IYh8uQ/rinvnjidFB+ZJiBLo1K4OcGYPx6tdr8HNwY4QFZMF7Cybg5rFdKDFwrnJVUeHcLHLgwAE9zHbu3Dl902/RogVy5MhhKSGLQsA9CYSUrRWvhvkFpUOm6s3jVTYod1HwLzFCq+f8+fNRrlw5PYGoW7duWnEzdVGBtCpgtLpSaeRvkNtq165tiuph+LFjx+r1jRs31sPktCJy6J7K3tKlS7Fp0ya7gscdjVLLZVM3l61CJZIjghzOZ0IEKmrvvPMOihQpoi2edE9Yv349mISFyiknsFHUWFupAABAAElEQVSJc9V2a91mmZZMI+zv1atX9VdGdWAfcuXKZTaDqWudRYEwBdgOWlnZTiOPP/64WYz1k1nEqMgmRsjJJBjiMrOuiWU2MSRln1RNgDcGik397Qkoi6MBRfT3x24uwuvXf0KGElWVIjsDgZkTbh3QFck/rybQpmYhZA8NwnOfL8cSVMGlrJkxYPcI5Nq2DJlqtLCz+fvvvzF8+HB7ogVaM+gbRquK9cFo30EWhIAQcEmA6blplaRMnTpVD283bNhQ+1xyHYe6nQkVJSq1hw4d0sojy9D6atJ9cwieVk0qdf3799cpq+lvy2H4n376yV6lq/rtBf5d4FD/7t27dfip7777DrQSM5wWX2Lbtm2r66QvK4f1jcS3bpZ3FR6QYQWpINOFwAjdLJwlCDLbzbaDBw9q1wiuZ7+5nu4BsYm//3/2SLafirMR+giTpytx1QdX5d19vfMrz91b7aR9NLdv3LhRD2lERUU5KSGrUpIA/X6oyG4LfEArsj62aJSN2IRGUev0cFipYYtFkU3JE5IKj1W/TC4s/KARcoSmxSYURt+SY+Fb9hF7T5kpjBNJHDOG8V4xadIkezlZEAJCIOEEOBw9YMAAPdRPJTU2oY8oXQQ45M9heboYUBk2PqjNmjXDsmXLtBJYvXp1UEHm7HsqZ9wvIXLhwgWtUDJbIN0baImlomf0Aroa0M+U8zgY5zw+wmF/4/sbW3lamGmdpV8xhQpz0aJFQVcKSvr06e+qh0orY67TzYAKP90Lnn322RiKqd5Z/YutHVTUqcDyBZ5C32DTZ36PbV9u93TxOGWWTucffvhhDO6cVchhCTp8m2EDzuwTuX8E6tV/GKfyNsMp/3zws93WAfCLpwnDAwNnoMgbY5RvY5r71zg5cqohUC5/Zizp2wT5s6bD5nM2PP7ZUly9eVv3jxMo+GBzJrTaiAgBIXBvBOh/SpcDKl9UpFwJJ1kxhBdHRTgsXqpUKf2s5rObwuc3E6LwGc4h79KlSyM4OFhPmnJVp6v1rIsTmxgJhS4EjKfK0Rn6jVJo7WSkFPruZsyY0VU1MdazLH1+OTErNqHiSkswfXnp60vXAU4So6WYwolp9erV04qrtR4qslR4yaZixYp6olvVqlWtRfRybO1gal5GZuCxWA9fDsqUKWOvI7Z97YU8eMFH+cDQgOYxwmEB+r7Rb4fCi4DhNhgGgxcv32p+/PFH/YZHx25eGMkhISEhOg4mZ1eKxCRwKzIKz3+xAvM2nUBIGj/0rBWMivlD9Y2K3ESEQFITOHb+GpoMXohj56+jWtGs+LVHQ0SGX9MPBWfHooVErLPOyMg6IZC8BBhRgNZI44qWnEc7e/asVlwdXQioNDNqAi3A8RUq6xzloZ9qXEK1itZnq/+w2ef69etaUaeC7yhkQ1eF2FwA4moHR55Yhj7FjhLXvo7lzXfqWFSS+emu8p/Dhbu2MI52cRixRo0aWLRokb0kZxZyxiDDe8gDy44lRRbCb0Xh2dHL8Oe2k8icPhBzejZExYJZUuTYchDvJZA/a3os6NNIK7TrD5xHq+GLtEJbvmRRROxYjgN+ORHl819CDmMp8V5i0nMhcH8I0CqaUpI9e/YYh2Jc1Xnz5ulICDSAJURoMY6vUFF1pshyfw73u5L4sImrHbRou5K49nW1nyes9zg3A0eodHBmeBBHocV069atjqvlezISuBERiSc/W6IV2Yy2a5iQV1nGRZFNRuJStZWAUWjpckCF9rHhi9EyXyBa3dqIZyNWI9h2Z3IEhxmd3TOsdcmyEBACqY8A9QVaJ5kAwZllNPX12Ht65JGW2Zs3b+oLkm8ZnAXJTBiOwslg8XnLcdxPvieOAP0UW49YgjX7ziJz9GWMuDwcxdM2SlxlspcQSCQBKrS/975joV134By6334Ag7IVQ+5z+9ElYDNCOo9H2fqx+70l8tCymxAQAm5OgBO+4jvpy827Is1zIOBxllm+TdGxmb6XDBFCpXX06NHYvHmz7hpjtnXp0gVTpkyxhwtx6LN8TWICl2/cQsthi7Qimy3qAkZd+gSVH26MQm+OS+IjSXVCIG4CBbLdcTnIlyUd/j56FR8U/AQo/hD8rpzFrfEv4dreO7N9465JSggBISAEhIAnEPA4ZZaZNai4cmYhU7gxdAdjrTFGG4X+MNxGNwOm1BNJXgIXrkWg+Sd/4u+D55Ez6hw+v/wJqj3zCgp3nwAfP480/CcvMKk9RQhYFdr1hy+hd6YeCKj6GCKvXsCeXo/g8qY/U6QdchAhIASEgBBIfgIeF83AFRKmsKNSy8DInHGYN29eV0WTZL1EMwDOXw1H8yF/YueJS8gTdQYjrn6G6q9/jGyN3XfGY5KcfKnEYwgcPXcnysHxsOuooaIcjEw7GzeXfqtftAq/+y2y1G3jMX2RhgoBISAE7gcBiWaQgtRNJgwTSy4FD+2Vhwq7qiyy/yqy+SNPYmT4l6j+4TfIWLWpV/KQTt8fAvSX/+OPP3S4PqZmbNq0qU7LaFpDC+3vfR7RUQ7Wqklh3Ys9jjGPZcHV2Z/i4LAXEJA5FzKUq2OKy6cQEAJCQAh4IIFUOw7MXMlUcNOmTZug08IICHPmzIlzH2bqiE9GkDgr8sACdC14dOgdi2z+qFMYbZuIGp/MQvrilT2wN9JkTyWwY8cODB48WGfNYR+Y+YYh+piq1pqvvGC2EHvYrrX7z6Er6mB8h+y4Nv8L+KVN76ndl3YLASEgBITAvwQ8zmc2vmeO6fOseZfjux9dFBi6I64/D8s1Ed/ux1nu4vU7iuz2YxdRLGcGzFMzx+uOWymKbJzkpEBSE6BvPF8qrXLt2rW7sutwu1Fo82YJBhXaV/eWRNHxu5Gu6AN6d04cnThxos4UNG3aNFy+fNlarSwLASEgBISAGxNItZbZrl27olixYglGz9R3/ItLmC6PmTo8UWhR3rt3L4KCgnRaQWcZTaisM3sKy5hMIpeu30KLoYuw7ehFFM0ZgskvV8LxU0cQFh6pUhqGxisziifykja7HwFmAWS6WmdCiy1fSh2z/hiFlpnCqNA+/ulizHq3AQ7s2YmhQ4fqF1jWt27dOvz5558YNGgQmO9cRAgIASEgBNybQKpVZgcOHOje5O9T6+hCwRzZnDBHYW7qHj166BzWpkkbNmwAM6uFhYXpVcy9/UKnzmj/9SZsOXIBhbOH4JWS1zGwzzswFmrWwxzUxYsXN9XIpxBINgKxpcJk/GlHRdY0xKrQ/rXvnE6skP/4r3ZF1pRjcHXmWOc1LSIEhIAQEALuTcDj3QyoTNFKc+HCBfcm7Qat27JlCyZPnmxXZNkkPrRplWI+ZwpDnA0fPtyuyHLd5u270fDDX7DpcBgKZU+PjxtlxpL5s+yKLMuwnmHDhiE8PJxfRYRAshLgaEGpUqWcHoMh+2ITo9Aal4OF10sgEndS3eaJCkO9WzsRaLuNbdu2xVaNbBMCQkAICAE3IeCRyixnML/33nsoWLAgaKFh/uUsWbLo4fAKFSrgnXfeAX3nRGISYLIJZ3LlyhVs2rRJb/r9998RFRVlL6YCnmFrmqo4ExWCXNFhOrvSzo2r7dutC1RoRQGwEpHl5CTwxhtv3JX/vGjRoujQoUOchzUKbe6MQbjklwUb0jyoFdqKkUdQLfIg2kSsQXq/6DjrkQJCQAgIASFw/wl4nJvB0aNHUatWLZ1X+amnnkLhwoWROXNm/Z3W2cOHD2PGjBmYOXMmFi9ejCJFitx/ym7SAkZ4cCVG+aeV2wgV2W1pquCcX3bkiDqPoZmXIG+Wt+xWXFPO+nn9+nXrV1kWAslGgP6s9F1fv349zp8/D4bmeuCBB1y6GDg2hArtHx80QY2e03EJdxTakOhw5I6+pF7cLuPZiL9w+/I5BIRmc9xVvgsBISAEhIAbEfA4ZZZD4LTIMgSPs4lLZMtwPYw3ySH1AQMGuBHu+9uUkiVLgqHHnInxdWWyiZ07d2or1Y7Ayjjrl0Mrsq9dm4wSvb7Tu7Ke3bt3O6sG3CYiBFKKAP1jH3rooUQfrpDy//71nbpo+ekybaFdlrY+bPDBi7a1CLnyD3b3bIiSQxYgUMWjFRECQkAICAH3JOBxbgb0+3zhhRdcKrLEzAcchxoXLFjgntTvU6uaNWuGXLnufig//PDD2sLNZrVo0QKBaYOxN7AiTvvnRHblQ/jS9R9wrVIrlClXXre8ZcuWdw3vcgPXO6tf7yT/hICbEqhRrihWfPwYsqbzw0XlcrC7cFuU+nw90hYsi/Dju5VC2wC3zp9w09ZLs4SAEBACQiBByiyHkGnZ45B0RETEfaFXs2ZNrF7t3GfT2qAlS5boYUfrOm9fTpcunbZaU2Gle0bp0qXx8ssvo0uXLnY0WbNlx6Vc9XHcPy8yqaHWjhG/IEuzl9FT+SgbYSrfIUOG4LHHHtNREBjK7M0339QvGaaMfAoBTyJQMl9WLBvYQk9w3HtWpWn+YjPS9ZyD4CKVEHHyAHb1eBgRZ454UpekrUJACAgBryEQLzcDBhR/6623tB8qyTAOI8M7McMWQ2AFBwenGLDnnnsOVGjPnDmDtm3bap9YTv5iKB76zB45cgRTp07F/PnztStCijXMQw5ERdRVMonoaBs6DJ6OFaf9kSH6GibVuIgGb6xw2jPW065dO6fbZKUQ8EQC9KFd9GETHa6LSUGajFyHWW/OQLqxz+D63r+xp3djZB6wSGf+Y4YxT40z7YnnRtosBISAEIiNQJzKLDPscPiYcUk52eL999/X9dWuXRudOnUCZ8JPmDAhtmMk6baKFSvqGfOdO6u4p+3b6+Dojgdo2LAhFi5ciLp16zpuku+xEOg2aR1m77+N4Oib+EYrsh/GUlo2CYHURyBHaFqd+vbpkUuxeu9ZNB25Bj+//iNCfuiCIwcP4KPu3XWnfXx8QLcd3oNcxbRNfXSkR0JACAgB9yQQpzLLiVYMhbVv3z4d+qpfv366J61bt0aGDBn0zZyxXnlzTylh+B1GKqCifezYMW2NZfrZ3LlzgxOYaKkVSRiBPj9uwLfL9iMowBffP1UYjZq8krAKpLQQSCUEQoMD8WuPhnjhyxWYv/kEWoxcjZbZH8alyLT2HvKeN2/ePB1JpVWrVvb1siAEhIAQEAIpTyBOn9n9+/ejTJky9pSm1iZWrVoVp06d0sqkdX1KLTPGLBVbWmIZvYAxZkWRTTj9wbO2YvTvuxHg54sfu9VTimzDhFciewiBVEQgKNBP/Rbqom2tIrhxKxLTjmfFKb/cd/WQaW9FhIAQEAJC4P4SiFOZLVSokJ5wZY0/apr8008/ab9ZxncU8UwCYxbswuBZ2+CrLOvfvlYLj5SXc+mZZ1JandQE/JQf/viXH0T7mrlh8/HF1sAqOOZfMMZhLl++HOO7fBECQkAICIGUJxCnMsuwTRy6p3/Yjz/+qH1Uaa398MMP9R8nZMWWJz3luyRHjC+Bb5fuQ+8fNuri4156EI9VLRDfXaWcEPAKAnSfGtHhIZSO3gvlS4VdgRVwwL/4nb4rV4NaoTclyoFXXAnSSSEgBNyZQJzKbPr06TFr1iyd4pSKK8NycRb7xx9/rDNxff755+7cP2mbCwITv/oWb078S28d8UJVtK0tmdJcoJLVXk4gKCgIH7apjrIRmwGlwB4ILIVtgQ8gl881VDo0B7vero2bx/d4OSXpvhAQAkLg/hGIcwIYm1a+fHls2LABGzduBK2ytMTSj7ZUqVL3r+Vy5EQTmP7tJLy1ykcPnb5X2RedG0rWrkTDlB29ggBjM2fMmBFf/LISf4Tlxkn/fPgr7yto7ZMewdvnYk+vRig5dBHS5v3XausVVKSTQkAICAH3IBCnZdY0k8NtnPBF62ydOnV0dANO/hLxLAK//zQVry6JQrSPHzoXu4kPu7X1rA5Ia4XAfSLAcITTRvbBmsGPobBKg7vn9A28cPVp7Cv5DG5fPK0U2kcQ/s/++9Q6OawQEAJCwHsJxEuZHTt2rM4WRUwHDx7UWZ+Y/YmBwyVlrOdcPKtmTUOH367hlk8g2uS/gREfSvgtzzl70lJ3IVA6b0asGNAMjSrkxoVrt/Ba2COYW6QLbl84hd1UaFXGMBEhIASEgBBIOQJxKrOML9utWzedgICxFYcPH64jGKxZswavv/66Toeacs2VIyWWwKbff8GzM8/hum8wGue4jq8HiiKbWJaynxDImC4QM7o/jB4ty0IlzsPIy1UwNO/7uBZ2DrvfUwrtqYMCSQgIASEgBFKIQJzKLFPXFilSBOPHj9eJEebOnYsnnngCDz74IHr16gWmuj19+nQKNVcOkxgCe5bMxdPfH8VF31DUzHwdPw55WWUtSrkkF4lps+wjBNydAH9D/Z6shB/erIv0Qf74I7wwuuUchOMXw7FHKbS3Lsh90d3PobRPCAiB1EEgTmU2LCwM2bJl073dtm0bTp48icaNG+vvERER2kobHBycOmikwl5cvB6Bpybuxmm/rCgfcgOzhnZCoL9fKuypdEkI3B8CLavkx7J+zVA0Zwj2RWZBlywD8dflEISfUOG8RISAEBACQiDZCcSpzDKrFiMZLF++HCNGjEDatGnxyCOP4MqVKxg0aBCqV6+u09ome0vlAAkmcCMiEq1HLMFh31woGhKJ34Z2QLo0AQmuR3YQAkIgdgIl84Rief9maFIxDy7bgvBexncx7VzO2HeSrUJACAgBIZAkBOIMzVW/fn08+uijqFevnj7gmDFjEBISgo4dO4IuBxMmTEiShkglSUvgdmQ0nh29DOsPnEe+LOkw/8MmyJw+TdIeRGoTAkLATiA0OBA/d6+Pj3/ZiqG/bkf379bj1MWb6PtkRXsZWRACQkAICIGkJxCnMstDTp8+Hbt27UJoaKjOBsZ1nPw1atQoscoShptJtJqR8vJXq7F4+ylkCwnC3PcaIndmcQVxs9MkzUmFBBjC8MPWFVEwW3q8MXEths3ZjpMXb+CLjjXg7xfnQFgqJCJdEgJCQAgkP4F4KbO8QTNJglUqV65s/SrLbkTg7cnrMWPdEYQEBWB2jwbKly+DG7VOmiIEUj+B5+sURY7QtGg3ZgW+X3kQZ6/cxJQ36oibT+o/9dJDISAE7gOBeCmzDMNFKywjF9y6deuuZtKnVuT+E2BKzQ+/XoD/HcmCNAG++Pnt+qhQMPP9b5i0QAh4IYFGFfLg9z6PaL/1hVtPot4rIzEm91pU7fc9/IJkpMQLLwnpshAQAslEIE5l9vjx42jSpIl2MWA4rgwZxMqXTOfinqpl5qGBvfthvO+j8FNRt2gFqlUyxz3VKTsLASFwbwQqF86KxX2boJVKdbv7fC60P1YTX/Zrj4c//h6+AeLDfm90ZW8hIASEwB0CcSqzixcvVjFJfcGwXJkyZRJubkgg4uwxjOrdE2N8Hlets6FFrgs4sHIWNkTVRJUqVdywxdIkIZA6CfA++ccff+DixYsoWLAgmCmxSI7sWNyvKZ4Y8ju2nsyBF/+piy/6vooWH02Ar79EF0mdV4L0SggIgZQkEOeMBGb9yps3ryiyKXlWEnCsWyqF5jfvvY7BtlZQWS1QOmIbwg+swooVK/DJJ5/g+++/T0BtUlQICIHEEuCL/8CBA8FEM8ycuHDhQvTs2RP//POP9p/9o38L1CsSopOXdDpRE9/37Q5bVFRiDyf7CQEhIASEwL8E4lRmGZrr0KFD2Llzp0C7zwTomzxx4kStoB44cAC3r4Rh2nsv4f3IxxHt44dit3Yjf9SRGK2cPXs2jh07FmOdfBECQiBpCTCBzKRJk+6q9Nq1a5g6dapen15NyJz1fku0KhmMcJ8gdD1eGZ++9arTeQh3VSQrhIAQEAJCwCWBON0MgoKC8Nxzz6Fu3bpo06aNttL6+cXMIEXrg0jyEaB1nBPwVq9ebT/I/Fk/o0m6i+gR3Ra3fQNQJfQysp7aZ99uXdixYwfy589vXSXLQkAIJCEBvjDevHnTaY179uyxr9+7ZxewaxbKRubGjsByGHzpQVzt+DTe+2oq0qVLZy8nC0JACAgBIRB/AnEqs1u3bsXPP/+sa3Q1ZC3KbPyBJ6bkypUrYyiyUMpt7dsH8H50F1z3DcbjlXKgEsKw5pTz2tOkkYkmzsnIWiGQNARiS+lttkUpl4LRo0cjIjwceXFIHdhHKbRlMRbNkW7QQLw3eGjSNEZqEQJCQAh4GYE4ldnGjRvj8uXLXobFvbq7cePGGA2K8gnApyEvad+7ClltmNi1ITZtDMWa1atilOOXwMBAPPDAA3etlxVCQAgkHYE8efKgSJEiOHjw4F2VclSLcvjwYVy4cMG+PU/kQdzyCcS+gOIYdqI4Wpy4hNJ5M+rtTBfOkIi89xYuXBiM682JuCJCQAgIASFwN4E4lVnrLgzTRV/NXLlyoXjx4m5xc+UQ/Pnz50HXh8yZU2dMVSatMHILAVgfVAvXfDMgU1QY3q5bFAH+vqhevTpatGihUwybslRk33zzTZm8Z4DIpxBIRgJvv/02hgwZouNxm8PUqlULjz/OKCMqzoi6V1mFv+pCt3fjkk8IzvrnQsthi7Dow8YID/tH13P9+nV7cSat6dOnD2SUxY5EFoSAEBACdgLxUmY5Aeyll17C0qVL7Tty6Kxz584YMWKEmkT/n7JlL5CMC5wdzOG6adOm6ZnCkZGR+miMgVtQhcNp2LAhBgwYgPTp0ydjK1KualplVq1ahUj4YWOaGlqRTR99BVVu/42a1drYG9K+fXvt20wfWT70GJZLwqnZ8ciCEEhWAjly5ND3Q/7+TGgu3o+MFCpUSP8euc0I75wVb23A4azNsf/STTz6yZ944OoS3LAosizLCbgzZsxA27Ztza7yKQSEgBAQAv8SiFOZZcYvxkrkrNz33nsPzZs3h7+/vw79RCsErX8MAZVScvToUdDaQQX6qaee0kNwtMjyO4fwOJTHm/7MmTPBUDkc+vN0YX//3rgZn/99G5f9MiNt9A1UifgLL3V4TlvJrf3jw5N/IkJACKQ8AY4QVahQwemBed/s2rUrhg4dCkY/MFKoQD6M690KT3+xBhsPheF8dClUUz7wgbhtiuhPhvyyKrO7d+/W9zi6JPA+16xZM4SEhMTYR74IASEgBLyBQJzK7KJFi7B9+3b9V7ZsWTsTZgOjAknLbEoqs8OHD9fKGtvlasht8ODBaNq0KSZPnqwttPZGe+gCRyc3+1dEmN9RhATa0KtGCFo2+Ai09IgIASHgOQTKly+vI5MwDjQttPwN16lTBwEBKmzXuw1Qr+8cHDoPbE9TBQ1uLsIl3/8iHHACmRG+qI8bN858xaZNm7B8+XLw3pcx4x2/W/tGWRACQkAIpHICcc4oYPBvDldbFVnDpEOHDjh79qy2hpp1yf25ZcsWvPDCCy4VWR6fDwa2bcGCBcndnGSv/+S0oWj7/BuYtf4oMqQNwMK+j6LbS8+JIpvs5OUAQiB5CGTLlg2tW7fWrlsNGjTQ9yseKXP6NJj73iNIhxs455cdewIrIVfUfy4JFStW1A2iLy3jTTsK78XTp093XC3fhYAQEAKpnkCcyixn6VKB5OQvR/ntt9/0JLCcOXM6bkq27zVr1owZpsrFkZYsWQK23ZPl9Owx6P/zZsz1q4Egfx/MePthlMufOie5efJ5krYLgaQiUCBHRoxrWxoh0VexJbCUUmgrIHvUZeTOnVvH+eZxOAnX6qZgPTZH0USEgBAQAt5GIE43A4bmypIlCzp16oRhw4ahVKlS+kbK2KecZPXEE08gbdq0KcaNCRyo0J45c0b7j9FXjO1j2Br6zB45ckRn3Jk/fz7oiuCpcm7hJHw65Q/8kK4N/Hxs+P7N+qhZIrundkfaLQSEQDwJPNG4NjJkzIx2X67BX2kqweYXgMmvPAVOcKW4cq/iNia5ERECQkAIeBuBOJVZ3kBnzZqFdu3aoVKlStpP1oSYYdSAsWPHpigzDrVt27ZNR1Lg7P3o6Oi7js92MS+6ie94VwE3X3Fh1UyMHT8Z49N1UC214avOtdCkYl43b7U0TwgIgaQi0LB6GczPmg0tP5qDtf5l0Xro75g9IANyFC6OYsWKIXv27NrFy/F4fNEXEQJCQAh4G4E4lVkC4WQvDl8xPNSyZcu0JbR27dqoVq3afeFVtGhRPYuXkRaYRpLW2Nu3b+uhuLx58+r23ZeGJcFBL234A9+NHIER6TqrBEE+GN6uKp6pWTgJapYqhIAQ8CQCDxTJjkUDW6F5v5nYHlUQjfrPwW8DWiOfmjT2zjvv6Fi0ly5dsneJ9+mWLVvav8uCEBAC3kMgLCwMv/76KxhKNTQ0FI888giMn703UIiXMnvu3DnQCvrnn3/CxHTlJIbevXuje/fu940Tw4JRseVfapCrO1Zh+pA+GBj8OqJ9fNHn8fLo0qhkauia9EEICIFEECiZPxuWDmqNZu//iINROdCg/2+Y1+9xFFPuVWPGjMGGDRtgQnOVLCn3ikQgll2EgMcT4ORP6mPMGJjOFo69SAOG8mN+gCZNmnh8/+LTgTiVWVo/q1atqn2xaA3gED5DcjHVYv/+/bWf6kcffRSfY6VomatXr+p4uAn156Xl2RryxlWjb9686XSYz1X5uNZH3wrH3IFd8X7a13Bbpavt3LCEUmadx6uMqy7ZLgSEQOohkD93NiwZ3AaP9v4Ou6Jz4ZFPlmLuB831ZFCOkIkIASHg3QR++uknrciWiTyGZre2YKN/YSwJLKvDkzL0H5NcpXaJU5nlRC9OtmLOcc6oNcKQMgzQPWjQID0RzN3yhufPn1+b2RMaqqagSjjAsDlxyZw5c5L0Arl+Kxo9g1/DzeggPF2jAD59vmpcTZDtQkAIeAmB7LlyYOHw9nh2xEKsPAk0HrQQ07vXR62SObyEgHRTCAgBVwR27doFf1sk8kZfR/tMg1Dy1m71/QpojKTbgbPQqq7q8tT1cSqzjDNLa6xVkTWdfeaZZ7SbwYkTJ0Dl0Z2EmXY4USKhQmWWf3EJozskVbrctWvXKmvwePhGlkcu2zmk2bFWvTzkTjXuE3GxlO1CQAjETSBjthz49ePn8PJXqzFz3VG0Gr4Ik1+vg+YP5It7ZykhBISARxNgkhVmOOWkfEZx4gi5kXTp0mH3hdzoEdwSkWpkN9D/CorfvqI3e4NVlh2NU5mlibpv375auy9cOOZEJAbupuJ3PxVZRlY4f/48mEaSaW2NDBw40Cy69Scnr40cORLM7lMNa3Rbz52FzuRDnzhepCJCQAgIARII9PfDt11q6wQLXy/eh+dGL8eXnWqgXe2iAkgICIFUSmDq1Kl6cpeJ3sTMgT179gTnLlH8Cj6ITWevw6bm2uSNPIJit3fr9fny5dM6mv6Syv/FqcxSQaxVqxbKlCmj0y7SmZgWSToXT5kyRceZZfxZIy+++KIdsFmX1J///PMPRo8ejWnTpoHLZlIa31ioXNOSzBi4SWU5Ter2W+tjcgdrmkqzjZM6aLGlO4eIEBACQsAQ8PX1wcj21ZElJA0+mb0dr379FyJuR6PTw8VNEfkUAkIglRBg6mqGR7UKLbTUu/j31aK9GPv3TRX9yBeFbu9DiX8V2Rw5cuDdd9/VMfit+6bW5TiVWcZ0pcLFyAFUrvhnhAG6mZyAf0aaN2+erMrs0aNHtXJNE/tTTz0FWoupcPM7kybwJM+YMQMzZ87U4btojndnsYbWcWxnbNscy8p3ISAEvIvAB09UROZ0adBz6gZ0m7RWWW198XwdsdB611UgvU3tBFwlf6Ku02Picoxffic766BnKqNV6dpaB2JornLlytlTZad2RuxfnMosM4Ax3IO7yPDhw7X1lSfYVSacwYMHo2nTpnomHy207iwcLmBkCGfCbSJCQAgIAVcEOtfJhyP/64Wxaf/f3nmAR1V0b/xNT0gIJBBCC4Tee+9diggIYqEqiKhIx/Ih+Bek+YE0ERURsYDSREERkCId6b2XAKGEGlpI3/+c4dtlE3YhhM0mu3nneTb33rlzZ+b+Jrl5d+6Zc17A2zM3azOEl2rzuWGNF/NJwNEIyFva5Mk38R7OeJTAciVkXdVE3vTXH5gahaq305kxuab0po1Rv6S8+DQT57wXL15M6eU2K7dnzx5069bNqpCVhjw8PPDqq69i+fLlNms3rSp65plndDSf5PXL6kOJuMZEAiRAAtYIuPn44T8De+D1qF9VrEAX9PpqAxZvO2OtOPNJgAQcjEByP/o+hhhEeBTFDhXq2tPVgLn9GtBmXo1pisSshKwtXbq0/hUQF10lSpRAu3btIMbF9haMEq5x06ZNj/11FNOIfPnyPbZceheQBV7i3qxx48Y6clnu3Lk1W3GAbL5aMb37yfZJgAQyJoGA2m0x7O0X0P3u70hUgva1L9bhz133Xz1mzB6zVyRAAikl8NJLL5ncgLobEnDaoyw2elWFiNpfB9RD6yr0ZiIsH2tmIK65+vfvD3FFJbOz8prf3d1dvxoXR729evXCuXP2e3B26tQJImjF923nzp21i4ocOXJoI2exmRXvALLyT+x4rdmapPSXyF7lAgIC8Pbbb9urObZDAiTgZARyNu6Mj+7dRdx3f2JulmfRZeo/mDewMZ6pkPG/0DvZUPB2SMCmBMQt6rhx4/DTDz/il/1xOOZWENlwF79/0BxVy9CkyAj7sWJWvBbIIqqvvvpKX7N06VLtwUDigItthngVuHTpEmRG0R5JYg3LorTevXvrELtGVxXmbYs3g5UrV6JBgwbm2dwnARIgAaclEPzsGxhx7zZi563EQp9n8MrkNVg4pCkalcnjtPfMGyOBzEDA4OqFOce8cdItL4JxE0uHtkDpkhSy5mP/WDF77do1k3cCEZEXLlyALAqTFBMTo2dp7e2UV2xIxF2FRLc4e/asno2Ni4vTgR3y58+vX9eb3yT3SYAESCAzEMjzwmCMivo/xC1dg999GuPFicqtz7vNGCksMww+79EpCRwPv4Znh8/HhYRAhOKyCmX9HAoVL+qU9/o0N/VYMVuhQgWI/ea6desgQRJ8fHx0mFhZYSe2njVq1NARKZ6mE6m9VtyFibBNbiCd2vp4HQmQAAk4OoH83UZgTPS7iFu9EctQF23GrcALeS6gYbkCeO6553QYcke/R/afBDIDgX1nrqP1x4txPcEPpQxn8fvw55G3OP1JWxr7x4rZRo0aoXXr1mjYsKG+XqJSZc2aFT169ICYHMyYMcNSvcwjARIgARJIJwIF3xiPrrl/x55fDuCCewHMD8+FsBOrsGHDBowdOxbZs2dPp56xWRIggZQQ2HA4Ai9OWoPbCV6olnAU8z96AUHF7y/ET8n1ma3MY8WsAJk/fz4OHToEccQrr/El9enTB5MnT063WVndCf4gARIgARJ4iIC8OZv78y8op8yvEuGGS+75sNOrJjyvrseCBQv0wt2HLmIGCZBAhiAg3ki6fbFeR/ZrVy4QX3d7A77BBTJE3zJqJ1IkZsVFlISzvXv3Lvbu3asXhIkfVGtBCzLqzbJfJEACJJAZCBw/fhyyjsBF3Wz52J2IcfHCDbecWtCGHjySGRDwHknAIQn8tOGECoCyFYnKe1SvJsXxWdfqyluT/CUzPYpAivzMhoeH44UXXoCfnx/Em4DM0r7//vs67m9UVNSj6uc5EiABEiABOxOQtQ3G5KrCKVSO2QbfxNu47ZoNa+8WRkJiovE0tyRAAhmEwJRlB/HmN1u0kP2gXTlM6l6DQjaFY/NYMSseA9q0aQPxNztp0iST89569eph5syZGDBgQAqbYjESIAESIAF7ECiuFokEBQWZmvJAHKpHb4K/ErRnYvzR/+u1pnPcIQESSH8Cw+ftwoe/7NIdmdC1Goa1r5j+nXKgHjxWzErggfPnz+uFAyJcJWCCpA4dOmjbqz/++EMHU3Cge2ZXSYAESMCpCchz+t1334UEZDEmL0M0hifOh6chFrO3XMCEhf8iISEBv/76K/r27atDgI8ZMwZnzpwxXsItCZBAGhOQtyRvzdyMSX8eVNbtCfiqQwG82axkGrfqfNU/1mZWbK/EXlYWfyVP1apVw8WLF7Wf10KFCiU/zWMSIAESIIF0IlC4cGGI95k9e/ZAFoSJC8MCQQGIH/wmht5rhY+XHMWpA9tw+cA6Uw937dqlzcg+/fRThwgHbuo4d0jAAQlExyag+/T1Kvx0OLxUeNoRt6ajTeHJDngn6d/lx4pZEambNm3ClStXkry2kq5LOFuZAciXjyET038o2QMSIAESSErA29sbNWvWTJL55vhpOD/wA0yLb4ifT/qihktW+Blum8pER0dj0aJF6NevnymPOyRAAkkJyETezz//jCNHjuj1ROK+VNyYuro+9oW3ruhmVKxyvbUWm45eRtbEOxh7awpa9HwH/uXqJ22IRyki8FjqjRs31u64WrVqpQdOwsfKbO3w4cP1p1OnTpDgBUwkQAIkQAIZn4BHtiCMnDAKbRL/RZyLB/Z41UAsvJJ0PCwsLMkxD0iABB4QiIiI0MGkNm/ejOvXr+tIpD/88EOK/e5HRN5D89ErtJDNmXgdU2+OQ/NuvZC77TsPGuHeExF4rJgVDwaLFy/WtlUiXO/cuYMuXbpg1KhRqFu3LqZMmfJEDbIwCZAACZBA+hLwDMyDoW93QJXYA7jj6ouDXlWQYHjw78Dc1jZ9e8rWSSDjERA7c9FCyZOsMbpw4ULy7CTHJyNuofHI5ThwLhIhCRcxLXIMand+ExKKmin1BB5rZiBVly9fHjt27MDOnTv1rKzMxIodbalSpVLfMq8kARIgARJINwKlazZA3XnzcePKOZxyD8Fhr8ooFbtLLUJJRMuWLdOtX2yYBDI6gdOnT1vtopzLmzevxfN7w67j+QmrcflWNErGn8bYm5NQ6uUByNL8TYi9ukRXLVKkSIpNFSw2kkkzUyRmhY3YgciCL/mYp0uXLiF37tzmWdwnARIgARLI4ATkmT7oo1EwjBqJ769kQ7iKEhbn5okpr5RC1apVM3jv2T0SSD8ClhbEG3tj7dz6w5fw0qR/cDs6DtXiDuLjm9NQ+IV+2OhRAr/27g0x4ZRUsGBBvPfeewgODjZWyW0KCDx4r2ShsAjVhQsXatdcyU8bVHQK8TPL2dnkZHhMAiRAAo5BIEeOHBgzaQp+HvIMsvu4I8IlCPNO+TKogmMMH3uZTgSeeeYZiy2HhIRY1ES/bz+LduNXayH7QvUQTCt+DEU7v48ThZppjWUUslKpuMYTbyLmeRYbY2YSAlbFrLh0yZMnDzp27Ki/Kcg2Pj5eXyywZWFYr169+O0hCU4ekAAJkIDjEahfsRj+/E9z+Pt4YPG2MzqcpkxYMJEACTxMQN5Qv/baa0kWv4vnpw8++ABubm5JLvhx/Ql0mbYOsfGJyn9sCXzXpwHKjPgV+ToPx5o1a5KUNR6cPXsWJ06cMB5ymwICFs0MTp48iYEDB6J58+ba8fb+/fsxePBgfPPNNyhXrhzat2+Pmzdvam8GH374YQqaYRESIAESIIGMTKBCaCAWD2mC5z5dhTkbT8LXyx0Tu1fPyF1m30gg3Qg8++yzaNiwofazLwvlCxQoABcXlyT9+ervIxjy43adN6x9BXzQrnyS86KjrCXxDc2UcgIWxezhw4e194Kvv/5az8o2adIEu3fvxo8//qh9qslU+urVq7WwTXlTLEkCJEACJJCRCdQoFoT5gxqiw2drMGP1USQc24TJI/vCxc3iv4qMfCvsGwmkOQFfX1+9GN5SQ58tPYD/W7BbnTKgPI7h7MotWBDXSE8GGmdvixUrZtH7gdizMxCVJarW8yyaGYiPQYkeI4bIxlS2bFls2bIFDRo0wPbt2ylkjWC4JQESIAEnItCwdB7M6dtAh9b89lxOvP/uxzAk3Dcxc6Lb5K2QQJoRGLFw930hq0x1mt1bg7xRR3D58mXMmzcPX331landF198UQdcMGX8b6dt27YQe3amlBOw+HU7JiZGu4gwryZ79uw62tesWbOS2ImYl+E+CZAACZCA4xNoUTE/vmxfEG8uOovpV0vAtf+7yF+iEO7cjUKJEiXQokUL+Pj4OP6N8g5IwIYExM78/Tk7MH3lEbiqGdl3b89E89itmOndCNdds+qW1q5dq2dnZU2SeCwYN24c5s+fr21kxTWXrEeSt+FMT0bAopi1VoUIWjrTtkaH+SRAAiTgPAQ6tWuEqLhVGLDkAqbdqoxO//yGG+r2xOf4+vXrdeAcec3KRAIkAOV9wIB3Zm3FD2rBl6daAzb0xpeoH7sTB9zym4SskZMsohcxK0lcmzJ0tJFM6rcWzQysVZfcuNlaufTIj4qKMgV1SEhISI8usE0SIAEScCoCHZpWQe24+wtYfs7SBrkQBxc1+3Tu3DkdGdKpbpY3QwJmBGTh+4IFC/Dnn3/i2rVrZmce3o1PSETPrzZqIevj7oIxt6dpIbvfLQTLPCs9dEFgYOBDecx4OgJWZ2aPHz+O2rVrm2qXWMSRkZFJ8ownJT6xvdJnn32m+/HJJ5+Ymhw7dixGjBgBMY+QJBE0pk+fDmu+4EwXcocESIAESMAqgSNHjsA//iKqGFQESK+q+DFLe7x6dyEuwhMHDhyweh1PkICjEpDJsClTpsBc18yZMweDBg2yGEwkJi4BXaetx7Ld4fDzVEI28jOUjToIl8qt8ddh5d0gmYeDokWLQhZ+MdmWgMWZWfFWULNmTW0TJXZR8gkNDUW9evWS5BnP2bZLj65t3759egbWWOq7777D0KFDUbduXXz77beYNGmSNpxu164d9uzZYyzGLQmQAAmQwBMS8PLy0lcEJZxHxZg9SHRxw2zfjsgGFxjPPWGVLE4CGZrAypUrkwhZ6WxsbCymTp2Ku3fvJul7VEw8Ok5cq4VsgLcLJlwfp4VsUIueqPrJIryhInuZ25aXKVMG77///kMuvJJUyoNUEbA4Mysr7OTjCEl834rwXrVqlam7AwYMQOXKlTF58mTMnj3blM8dEiABEiCBlBMoXbo0/P39IT4vcyecUYLWgD1elTAvS1u8Heyf8opYkgQchMC2bdss9lRMGcX0QPSGpJtRsXhh4hpsOXYFQb5u+PTSxwiNCUNQy9cR+s4XWrDK22HxAHX+/HnttSBXrlwW62bm0xOwODP79NXarwYxfejSpctDDUp0sr179z6UzwwSIAESIIGUEfD29tYBc4wLvXInnEXx2IMwqFenX2y9jVlrj6WsIpYiAQchYIx0aqm7xnNXb0ej1di/tZDNnyMLFrRy00I2V+s3TULWeL28wRBXpxSyRiJps7U4M5s2Tdmu1nv37iEuLg4eHh4Qf2zyrSd52rlzJ3LmzJk8m8ckQAIkQAJPQEBejU6bNk17MZDXrOKaa/nJOPxn7k70++7f/4XpLPkENbIoCWRcAhUqVIAEjkqe3N3ddYCES5FRaD1uFY5cuIkiwVnxx/vNEJLTF3F1G8IjIDj5ZTy2EwGHE7PiUeGff/7RfnDLly8PcRcmhtodO3ZEpUqVEB4ejtGjR+toZfIAZiIBEiABEng6AuL/slGjRqZKZP2Kp7srBv+wXYfrlLjz/VqWNp3nDgk4KoHnnnvO5BnJ/B5ee+013Ir3wLPjViDsyh2UyZ8dS95viuBs9/0tU8ia07L/vsOJ2RkzZkBsYmVxl4TYla18Yzp58qQWs+JGQyJs9OnTBz179rQ/UbZIAiRAApmAQO+mJeHh5qpnZ4f+vBM39m/Gh291gHvWgExw97xFZyUgZgEjR47EmjVrcPToUWTJkgX169cHsgaj2agVuHAjCpUL5cBv7zZBoN/9BZLOysKR7ku5DFROA50giS2LiNoLFy4o58WJyJ8/f5relcxUTJw4EWKby0QCJEACmZXATxtO4K1vNqt4Ry543XMzxk8YAY/sXOiSWX8fnPG+9525jrb/XY0ryla2Vog35vWrh8Dg3M54qxbvqUePHtpjlGwzanL4BWBGsCJkJeXNmzfNhayxTW5JgARIILMT6FKvKL7qWl6F70zEzNjaGDDwY8ReDc/sWHj/TkJg24kraDl2pRay9XLcxUe7X8W1mf2d5O6c5zacRswmH5Lbt29DFooxkQAJkAAJpC2Bzs0qYuZrleCmBO33CbXQZdBnuBV2KG0bZe0kkMYE/jl0Ec99ukq54YpDs8DrGH50ILxcE5Gj4ctp3DKrf1ICTitmCxQogO7duz8pD5YnARIgARJIBYEXG5XHT2/WgLcKebsMldFq2HyE79maipp4CQmkP4Hftp9Bh8/W4K4KjNAm4BLeO/YePNzdUGz4AgTWeT79O8geJCHgtGK2b9++kFWJTCRAAiRAAvYh8Fztklg5rAWC3O5hj2sRNJ2wCXvWLLdP42yFBGxEYPrKwzpEbUxcIl7Ofhr9j38ID+8sKDFyKQJqtLZRK6zGlgQczptBSm9eViOmJi1evBjDhg177KXib1HcgDGRAAmQAAk8IFC5eF5sHP8y2gz9CUejc6HVrNP4yWUTGjeq86AQ90ggAxKQ9fDD5u3ClGX3TWTeybYX7U9MhZtfdi1k/UrWyIC9ZpeEgMOLWfnlu3r1Ktzc3BAYGPjUo9q4cWMsWLDgsfVUq1aNET0eS4kFSIAEMiOBfDn9sW5qL7z8n2/wz7Ws6PDDaUz3yINX6hbOjDh4zw5AIDY+Ab1nbMaCrWFwd3PBcJ9VqHdyLtyVZ46So5chS6HyDnAXmbeLDilmJeLX1KlTMW/ePB39yxhiTmKIh4aGomnTphgxYoSOhfykQ5stWzbI53HJ1dUVnp6ejyvG8yRAAiSQKQn4eXtgyWdv4T8/78AXK46g14xNOBFxC8PaV9Bx6zMlFN50hiRwMyoWr0z5B+sPRyCr+r2d06cWso8ZArc8RVDik6Xwzls0Q/abnXpAwOHE7JkzZ7S/M4kEJlG/JOaxzMjK8fXr13H69GksXLgQixYtwurVq1GkSJEHd8s9EiABEiCBNCFw5coVbNmyBWKCVapUKVSsWBGuri74tHM1FM3tr6OFffr7fpy8dBtf9aoNb0+3NOkHKyWBJyFw4XoUnp+wGgfDI5E7uw8WD2mMcgUCkfDdMbh4eMFVfZgyPgGHE7Pjx4/Xs6+rVq2CROqwlMaMGYOWLVvihx9+0DO0lsowjwRIgARIwDYEtm3bhkmTJiEuLs5UYfXq1TF48GBtAtarSQkUCsqqF9Us/DcMx89fw4LBTZA3R1ZTee6QgL0JHAy/gefHr9FRvUrmzaaEbBOE5PTV3XDL4m/v7rC9pyDgcN4MJHxtt27drApZYeHh4YFXX30Vy5dzFe1T/G7wUhIgARJ4LIE7d+5osy9zISsXicBdsWKF6fryud3xnP8ReCdGYW/4bdTsPxs/zvvddJ47JGBPAusPX0KzT+6Hp61dPBf+Ht7cJGTt2Q+2ZRsCDidma9eujU2bNj327iWucr58+R5bjgVIgARIgARST+DAgQOIjo62WIEIWkmyrmH06NG4HnYAtaLXIzT+HK67ZsegpRH45icKWovwmJkmBO5Ex2HozzvR5r+rcOteHFqFJODHJvEI8LX8pjdNOsFKbU7A4cwMOnXqBBG0ERER6Ny5s7aJzZEjh7LNctU2s2FhYZgzZw6WLVsGMUVgIgESIAESSDsCCQkJVis3ntu/f79erCsFvRCDijFbkTvhCrZ6VcbgFZG4E7cUA1+jX3CrIHnCJgQWKk8FsiDx4o17ap0N8GrOMHTZPQqXLhVGcK1nbdIGK0kfAg4nZmVRwb59+9C7d28d4SsxMfEhcuLNYOXKlWjQoMFD55hBAiRAAiRgOwJlypTRpl3JzQykhUqVKumGZHGueYp28UTO+NN4NjESf/o0xvC1kTh6/nt8MbQr3NTEBBMJ2JLAkfM31QLEbVinTAskVQnNjgFRPyPfoYVw9fZFaJ/Pbdkc60oHAg4nZoVR0aJFtaeC2NhYnD17FjIbKw/SvHnzIn/+/JCZWiYSIAESIIG0J5A9e3b06NEDM2bMgPj9NqYSJUrg2Wfvz3YVLFjQmG3axruofz+Jt9DXdzO+ulMNPx3zwOmBMzBvzGvIzle+Jk7cST0BMSkY+9s+5RruMOITDMjh54UPm+VBjT/fRMyF4/AICEbxEb/Dt2jl1DfCKzMEAYcUs0Zy4udVhK18jh49ig4dOuCnn36imDUC4pYESIAE7ECgWbNmKFSoEDZu3Khdc5UsWVK/GXN3v/8vRp7REmhm+/btSXrj6+eHQSpaY8MVS9Fz+S1suuGP+v2/xW8jX0bhvE8fBCdJYzzIFAQuX76MI0eOYMu5OHzz7w1cirxvUtCzcTEMLHId16Y8j5ioW8hSuAKKfbQIXrkKZAouzn6TDi1mzQdHFiAcPHgQUVFR5tncJwESIAESsAMB48SCtaYGDRqkA91s2LAB9+7d075ou3btiqCgIDTv0gMrCqzEyzP24FRsHjT4eBnmD3kGtdQqcyYSSCkBid7504LfscejEq653f/dKZPXF1/1boDcu77HuXH/gXp9gMC6HVBo0Ldw886S0qpZLoMTcBoxm8E5s3skQAIkkKkJiMvELl266I8lEGXqP4M1+ULwyuQ12HrTH81HLUfrkj74ou+zCMhK0WGJGfMeEBDPGTPnL8Mur3q455oFHoYYlIg9hJKXbiA0sRiOf/uBLpyvy/8hX6cPH1zIPacgQEt7pxhG3gQJkAAJOD6BdbsPItvFtQiNO4FEZX675Eg0Svb9BQs2n3T8m+MdpCmBb//Yiq3e94VstoTrqHtvLfInnMWdO7dx6GIk8nUboexjl2ghK142zp8/rz0gpWmnWLndCDjNzGzu3LkxUtleFShA+xe7/fawIRIgARKwEYGLFy9qMwTlMQkl4w4iT0I4DnpUwC0E4LWvNuOnTacxsVt1FAlOeWQmCa0ri4NlkRqT8xKYvvIw5oZlh0H528oTH46ysbvhhgeejqLuRSPfy8rEQKWtW7di5syZiIyM1MfijaNfv35ca6NpOO4PpxGzwcHBGD58uOOOBHtOAiRAApmYgKx5MPeGkC3xJmrFrMc594I45V0Oq/dfRLUPlmDQc2UxpHU5eHu6WaV17do1TJ8+HXv37tVlxMvNG2+8gdKlS1u9hiccj0B8QiIG/7gN3645rjrvgqKxR1A0/uhDNyKeNSTJQvGJEyfC3KWn/N5JQI/x48fr0MsPXcwMhyBAMwOHGCZ2kgRIgAScm4B4p0meZJa2QPwZDA9cjxbRGxEbn4hxv+1H1f8swR87wrTnhOTXSLSxTz75xCRk5Xx4eDhGjRoFmf1lcg4CkXdj8fyE1VrIenm44uue1dE4KBIl48/D0xBnuslWrVqZ3tj+9ddfSYSssZC4+JTAHkyOS8BpZmYddwjYcxIgARIgAQmw4O3tbTE0bqVWL6HFhulotXscJvt1wakrIXh56gbkir+A5sE30L/3qxB3YJJ27NihxWtyouKXXMSM+MRlcmwCpyJu44WJa3Ds4i3k8vfGvIENUdbjqjIv2IiY2MM4krsOzhZugrp166Jhw4amm5UZe2vpUeesXcP8jEOAM7MZZyzYExIgARLItASyZs2KAQMGwMvLKwmD5s2bo37T5ij+8W9o9uLL+CpyBN6+8zO81Gr1y+558cvVYnhj1ExcuHBBXyd+Rq0lCYPO5NgENh6JQMMRy7SQLRuSHes+boXQk3/iYP+aiDl3GN75S+DF0TMxbNiwJEJW7jokJMTqzT/qnNWLeCLDEODMbIYZCnaEBEiABDI3gapVq2LatGl6dlV8h5cqVUoHxREqLmpxz5XSrbHY62+0jl6HhrE7MM6vB3Z5lsEulwpoP34lfv/4JR0J0hpFiRLJ5LgEZq4+hiE/bdPRvFpWzI+Zr1XC1Zl9cHHtXH1TOZt0RcE+U5X/WF+LN9mmTRsY/RybF6hcuTKKKuemvwAALHtJREFUFy9unsV9ByPAmVkHGzB2lwRIgAScmUBAQAAkothzzz1nErLG+xWb19NuwfjeuwHilfP7Cbcm4t3bs/Qs7YFrbqimbGlPxASgcOHCxktM2yxZskDsJ5kcj0BMXALenrkFA77/VwvZfi1LY1ab7DjzXh1cU0LW1SsLCqsgCIUHSyAEy0JW7lq8Hok9dfny5SF+j/39/dG6dWsMHjzY8aCwx0kIcGY2CQ4ekAAJkAAJZFQCefLk0V27pZzi/6R8itaLO4wWMZtQJu44xhUZjSM3YvH615vRssIzqBh0EAd2boEsCBN72p49e+poYxn13tgvywQuXI/CK1P/wc5T1+CjPFh80bMWGt/diCOD3oIhPhY+oeVQdOhc+CjzgpSk0NBQfPTRRykpyjIORIBi1oEGi10lARIggcxMoEKFCnrW9dSpU0h0ccU6ZWJw2D0/3D29sPSDZ7Dy2B18MGcn/tp7Edv88mBC/zFoVzVEz8JZ4ybO82VxmPgod3Oz7u7L2vXMtw0B8QccFhambabFflXMSjYdjUDXz9fj8q1oFMzph18GNEC5AoE40PdlLWRzteqFAm98BldPb9t0grU4LAGKWYcdOnacBEiABDIXARGbH374Ib755htI+FLxF+pbpCJ69eoFmbXtriZum5TNi7e/3YI1By7itS83YWHl/Bj4bBnULJYrCSxxxzRp0iScO3dO50tghTfffBNit8tkXwKbN2/GjBkzVLSuO7ph8QscXPslfPrXSW1W0LhMHszuUw+BfvcXB8pMbNz1S8hapo59O8rWMiwBitkMOzTsGAmQAAmQQHIC2bJlw5AhQ/RsqpgQiC2secqfwxdL3muKWWuPYejPO/HnrnD9kZXvvZqUwEu1C8HNEK/9zl6/ft10qUSEmjBhAv773/+a/JKaTnIn1QTkC4eI1X379kF8CdesWRNly5Y11Xfy5ElMnjzZ5P81Aa7463IQzv9xQpfp36o0Rr5YCTfV+Eyf/i0kyIG4cKtTpw7alkzgbLqJZObeoZjN3OPPuycBEiABhyQgwshSoAXjzbTPehp5Lg3CipL98PvdwjhwLhL9Z/+LYb/sQoNCXoi8EQc/Y+H/bUUc//3339q+NtkpHqaCQEJCgv6CsH37dtPVy5cvx0svvYSOHTvqPOFtjMh1z8Ubuz2r45ZbgP7C8W7tLBj2chXcunULQ4cOxdWrV031nDlzBmJuIl9smEiAYpa/AyRAAiRAAk5HwM3HDzld7qDTgf/DK9ly42CT0fjlUi5sPnYZfxxWEaJ8GiMg4aqKMHYawQkX1XygQTMwn611Oih2vqH169fDXMgam583bx5q1KihZ8Bv3LiBKJcsOOteCOEqdHG8iwd8E+8oLxUzUX/pflwtFou/r7gnEbLGerZu3apD1BrD1Rrzuc18BOiaK/ONOe+YBEiABJyegNhTlv18G7KWrQeXm5dQ9teemHLrv1jftzTalZeZvzjccMuJvV7VsM67GU67F0E83FGwYEGnZ2OvG9yzZ4/Vpvbu3Yt/Dl3En9dCsN67KcI8imohWyTuFL67MQz141R4WR9/eBcoDTFFsJZkdpaJBDgzy98BEiABEiABpyTgU6AUSv13Na6u/glnZ76P2wc2wOVwPYx5fgAK5HfBqtMxekbwjqs/jnqWxSnPksrNV0E0Uqvng1SYVKanI2DJO4SycsV55YHi3RW3EX5rlW7A1cWAUCViu0X9oUTsPp13KbAkWn7+NzwCgpEt22arHRFfsUwkwJlZ/g6QAAmQAAk4NYGcTbqg/DcHkavVGzAkJuDSwgnoeOEX9K2bG22y7EVdl90I9Y1FnJqZnbLiGEoN/BWDvt+GM1fur653ajhpeHPVq1c31R7l4oMjHmWw1ucZHPKsqIRsAnJn98HQVkWwrMQGfHNzrBay91y9caHuW2gxa4cWslJBkyZNTPWY70iAjSpVqphncT+TEuDMbCYdeN42CZAACWQmAu5+2RH6zjTkfOZVhE17B1EnduH5pvXR9Z0HC4i2nbiCz/44oL0fzFh9FN8qjwgda4ZiYOsyKJM/IDPhssm9as8FdZpjzvaruOiWT2IS63pLBHngg4410DxPNI4NqovEe7fh4uaOXK3fQr5Ow+CeNSnr0qVL46233sJ3330HCXMsSaJ5SeQu8WzARAIUs/wdIAESIAESyDQE/IpXRZkpKjJY5GXTzJ/x5qsXDcK8AY1w+HwkJv5xEAu2nsYvm+9/mlfIBwmj2qB0bmNxbh9BQAIeyBeDlXuV2FRmBW5Kx9bK746BbSuiefVS+sp7544oEeuG7LXaoECPsfDOV8xqjTI7W6tWLW0/KwJWQhZbMmOwWgFPODUBhxezBhWfW9x1yC91YGCgUw8Wb44ESIAESODpCUh0KbHFtJZK5cuOb3rXwUcdKmLqX4cwe91xrNh7Xn/KFwxA3xal8UKNUHi4O7el3uXLl7F//379/7VixYqQwBKPSvL/ePme85iw9AD+VbPckrJ4uuO1RkU1M/EBbJ58QkqiyvzL5lmP3BefwuXKlXtkGZ7MnAQcUsxK+MGpU6dC3HvIvvgGlCSG4KEq7nLTpk0xYsQI+Pkl9yKYOQeZd00CJEACJJAyAhFLpuP8z6O1fW2e9gMwvms1fNCuPGauOYqv/z6KfWduoNfXm/DR/F14q1lJJdSKIcD3fmSqlLXgGKWWLl2KH3/80eQDVnz69unTRwcrSH4H8QmJahY7DJPUbPYhNastKdDPE72blsSbilHWuOvwUPaxTCSQVgQcTsyKo+S6devquM3idFleNciMrHzTFv+Ap0+fxsKFC7Fo0SKsXr0aRYoUSSt2rJcESIAESMDJCCTGRSP+5hVcUII2Yul0XAhtgOU3/BCd6IJ3ylVAlhINMGv9WS3aPpq/G+N+24+u9YugT/NSKByc1SqNnTt3ap+rEiCgUqVKOhKW/N/KiOnIkSP4/vvvk3QtNjYWn3/+OYoWLYrg4GAVZjYR6w9HYOnOs1iy4xwibt7T5fMFZtGzsDIbm3B4Iy6Mex4nd69Cno7vIuS10Unq5AEJ2IqAw4nZ8ePH69nXVatWwcvL8rfhMWPGoGXLlvjhhx/0DK2tYLEeEiABEiAB5yaQp8Mg+JWsifAf/g+3969D8IHf8AI8sU35Qd254Qr8jx7GWhX2duupm5i6/BBW77+Ir1cdhSwYa105RNvV1iqeKwmkWbNmYdmyZaa8NWvW6EmZ/v3764kY04kMsrNx40aLPYmJN2Darxtx0TUYy3efR2RUrKlcwUAvDGlTHp3rFsWdbb8j7L3XcPf4Ln3e1dsXvkUrmcpyhwRsTcDhxKw4Ye7evbtVISuAPDw88Oqrr+pvkWJuwEQCJEACJEACKSWQtUxt3HlhDH45NgT14o4gX+INNIo7hLpq/0h4Pqz6bT7adn4NTcrlxcHwG5i2/DDmqYViS3ee05+qhXOiX6vSaFs1BMePHUsiZI19EMFYu3ZtmLuvMp5L763RY4D0Iw4euOyWGxFueXDVLRf+3hKlck/rLoZkd4f39SPIGROOwHPXcfXrqdj73QUYroXr8+7ZghDc9h0EKy8F4k2CiQTSioDDiVn549+0aRN69er1SCbyzTdfPuUKhIkESIAESIAEnpBAWFgYzroFYY76FEqIQJW40yiUeBnlEs7hzNaFgBKzksRl15ev18bHHStpm1qxrd1x6iq6TVuPAjl9UTvonoos5qY82CY81AOZnDGKWRGQYiK3Y8cOyEKqypUrQ0zpZNFTWqS4uDhI9CxZPF2oUKEkngEKFy+FuRtO4KJ7Plx1zQWDy/8Wuql+lcmTBS/XL4FyORLx9Wef6L4WSLiC1jG74IcYHRTYI1co8nYcgqBm3eDqSddZaTF+rDMpAYcTs506ddLfZiMiItC5c2dtE5sjRw64urpqm1l5AM2ZM0d/ExZTBCYSIAESIAESeFIC5t5xTrsFQz7ZE++isBK2IWVbJKnu6NGj+Pfff1FA2cMueK089t/yw7QVh3Di0m2cvao8U/k0R0h8GArGn4K34b6fVKnA6FoqISEBn3zyCaQeY5LFzQcPHsTo0aP120Zjvi22u3btwrRp03Dr1i1dnfwPffudfjgTk1Uv5PprdwSive4HI3AxJCJHwmUEJ1xEm6oFMWxIN33NzJkztZCVg3yJ17WQveSSDf8qc4z6Lw1HpZatdDn+IAF7EHA4MSvuQfbt24fevXtrcwMxpk+exJvBypUr0aBBg+SneEwCJEACJEACjyUgDv/nzp2LmzdvmspGuvpin2dxdG3VzpS3YMEC7VlHMkrFh+P84lgE12uP3Z9+iGW7w/Hfxbux88xNnPYohjD3IghSYjgw8SoCEq6harXqup4tW7YkEbLGymXmdP369VYjYBnLPcn24sWLkLUnMjObCBdccw3Cvtv5MG/8NjWD/EAS1CoWhNL+d+EXeQxZvVxQo3orNGzUyNTUnTsPoqNtcS+OoyoownXX+x6EKt0VUwQmErAfgQe/ufZr86lbktWU4qlAVleePXsWMhsrf5h58+ZF/vz5Id8ymUiABEiABEggtQR8fX3x4YcfYvLkybhw4YKuRvysSiSqkJAQfSzec8RFpE7qFXzL2D1KDqoJljUHsP3gXFRo/CKWdWuDmVsSlV3tEVxSdqeX3dUHefQlz3x+ADWKRsAn6rwSlTnVzO8NZZCQ1Bzh5MmTNhGz567exaHwSMz9Yy12upTFHW9/3HHJikQXt/v9Vz8LBbjh9eYV8ULNgsgX6IvEuFjcObwF19fPx7WvJuH4xroo/tEiXb5YsWIwLRQTb0IuD1xhFi9e3FQnd0jAHgQcUswawYjfOxG28mEiARIgARIgAVsSENePU6ZMwblz57Q/8wIFCsDd/cG/TXldb0pK0P3qVR3l488qG9vL8Io4odx7jdGf+jnyokmFRtjtFosdrsVwFYE4cPEeTkbcxpqDF1UVyibVuw7klb5/4k34GW7BzZCgha1nhC/uLTsEXy93/fHxctNbFzWrGhOfoD6JiFXb2LjE+8dqK8cxanvu2l0dzUwimt2Jvu+PXffXvYCp236Jt5A7/jzyJJxH5yaN0LbgDdxa8RsO7/tHCdmtMMSamUV4PxCs8gZ07dq1ejLJVJnaERvg8uXLm2dxnwTSnMCDv8o0b8q+Ddy+fVs/dHx86KjZvuTZGgmQAAk4DwHxBSsiNiUpTK32l4+rEqVtK4SgjlokdWPrH4i7dh5x6+aghKqk0SsfIn/X/9PViW/WLccuY83es1i0bi9uwh833QLUNsDU3OnjiVhyfKfpOLU7ufy9IZHNsiRE4uyBrRAR65d4W/kquC9ya8QdQ7FFv+LwvJgkTfgUKo/sVZsjR6NXkCW0rOmcuMYcOXIkFi9erE3/ROSLaUarVrSVNUHijt0IOK2YlYdPs2bNMH/+fLvBZEMkQAIkQAKZh0CVKlXw888/P3TDiWr1f4lWXRFatSpC+3yOuyd24caWpbh9YAP8StcylQ/O5oN21QrqT4/Ct7B5+kfYZQjBReVBIc7TH2Wq1UFg3lDcU7Ovd2Pi9edeTILeGpTfAC93N3h5qI8Kqyuhde8fu8JT57siSARsbl8Udo+E780zSIy+Dt/qbfDBfzYhXLkUM09FVKRZl8gY+BQsA//yDZBVPuXqw8PfutmeeFqQhdjyYSKB9CTgtGK2b9++EJue1CRLi8pSUw+vIQESIAEScF4CoaGheOWVVx4StDKRUlUJWWPyLVpZBQ2obDy0uA26vA9Vo/ajKvY/OL/ic73vnjUQ4rPVMygEhfp9Ca/ggg/K/G/vztHtuDj/v0iIvgtDXIyyd41G3I0IxF45hwvKnteYio9cqj0niAjfvXu39qhQrVo1tOjQAZ4uCXD3zWYsyi0JOAwBpxWz8vojNWn27Nno2bPnYy8VwSvG/0wkQAIkQAKZl0AHJQLFRnTbtm0QF1vicSc1NqO52/aFiNa7x3YiJuK0Cql7FXGRlxF/+5r6XNef6PCjiArbb1HM3tj8m5r9/f3hgXBVM7dK/HrnLQIfZSaQtWxduKmIXG+88cbDZZlDAg5KwEU5Z37wlc1BbyI9ul2rVi1MnDgRsmUiARIgARIggbQgYFATJ1rQ3rwCQ3wcshSuAHGvJSlPnvteEWQ/ITpKhd9dDxcVBCHO4ILwixFw8Q1AiRoN4J1F2RAwkUAqCfTo0UOHX5ZtRk1OOzObUYGzXyRAAiRAAiSQUgIuKiCQhzIxkM/x48fxeb9+Jldh4o6ynzoWjz5u3lmQvVoLPUM8ffp0GP3A+v+4EGJ2V6lSpZQ2yXIk4HAE/hejznH6LXZIYnSekk+XLl0c58bYUxIgARIgARKwQiAyMhKjRo0yCVkpJv5vJXKYnDMeyxtDo5CVPInyJUESrly5osvwBwk4IwGHm5mdNGkSxEZJAiYMGzZMh7G1NjB03GyNDPNJgARIgAQcicA///yDu3fvPtRlyZNz7dq109HC4uPN/Mn+r7T8v5QAB88///xD1zODBJyBgMOJ2Xr16uk/SjGyF2P7IUOGOMM48B5IgARIgARIwCqBq1evWj137do1fU5mYa2lR52zdg3zScBRCDicmYGAlRlXebUir1yMf8SOApz9JAESIAESIIEnJfCowA3G8LpFihSxWi0jZVpFwxNOQMAhxaxwHzBgAJYsWaJnZ51gHHgLJEACJEACJGCVQIMGDZJ4LzAWFI8Gck5S/fr1YUnQlipVSkfnMl7DLQk4GwGHMzMwDoCbcj/SqFEj4yG3JEACJEACJOC0BIzhY7///nvs3Hk/vK1EIOvevTvknCQPDw98/PHHWLRokS7jqjwhyKLp9u3b6+AITguHN5bpCTismM30I0cAJEACJEACmYpAQECAfiv5qJv28fGBePKhN59HUeI5ZyPgsGYGyQfi6NGjKFu2LPbs2ZP8FI9JgARIgARIgARIgASclIDTiNno6GgcPHgQUVFRTjpUvC0SIAESIAESIAESIIHkBGhmkJxICo9jYmKwdu1ak+1SCi97ZLF169ZpB9fZsmV7ZDmeTF8CEREROmhH1qxZ07cjbP2RBC5dugQ/Pz/9eWRBnkxXAuL4P3v27PpvKl07wsYfSSA8PBw5c+aEt7f3I8vxZPoSOHfuHJo2bYrg4GCbdUSepRk9UcymcoQkXODs2bPh7m47hFu3bkWiisMdGBiYyl7xMnsQkIe6iCT5B8yUcQmcPXtWj5G/v3/G7SR7hrCwMC2S5G+KKeMSOHXqFHLnzs0vHRl3iHTPTpw4gaCgIDzKlduT3kLJkiXRuXPnJ73MruVtp8Ts2u2HG5M/spEjR9p0AB9u5UFOzZo1be7qRIRsuXLl8NZbbz1oiHsZjkC3bt3QrFkzdO3aNcP1jR16QEAiBcoDWFZyM2VcAi1atMDAgQPRvHnzjNtJ9gx169bFp59+ijp16pBGBiZQqVIlrYUksFRmSk4jZmVKffjw4Zlp7HivJEACJEACJEACJJDpCTjNArBMP5IEQAIkQAIkQAIkQAKZkADFbCYcdN4yCZAACZAACZAACTgLAYpZZxlJ3gcJkAAJkAAJkAAJZEICFLOZcNB5yyRAAiRAAiRAAiTgLAQoZp1lJHkfJEACJEACJEACJJAJCVDMZsJB5y2TAAmQAAmQAAmQgLMQoJh1lpHkfZAACZAACZAACZBAJiTgYlApE953hrzl8+fPw8fHhxHAMuToPOiUhAuUULaMAPaASUbcO3PmDAICAsAIYBlxdB706fTp0zpiESOAPWCSEfdOnjyJPHnyMAJYRhwcsz4dP34cISEhmS7sMMWs2S8Bd0mABEiABEiABEiABByLAM0MHGu82FsSIAESIAESIAESIAEzAhSzZjC4SwIkQAIkQAIkQAIk4FgEKGYda7zYWxIgARIgARIgARIgATMCFLNmMLhLAiRAAiRAAiRAAiTgWAQoZh1rvNhbEiABEiABEiABEiABMwIUs2YwuEsCJEACJEACJEACJOBYBChmHWu82FsSIAESIAESIAESIAEzAhSzZjC4SwIkQAIkQAIkQAIk4FgEKGYda7zYWxIgARIgARIgARIgATMCFLNmMLhLAiRAAiRAAiRAAiTgWAQoZtNhvAwGwxO3mpprnrgRXpCEQGqYJyYmJqmDB2lPIDXjlPa9YgvmBFI7Rqm9zrxt7qecQGp5p/a6lPeMJZMTiI2NRUJCQvLsRx478zhRzD5y6G138s6dO3j//fdRrFgxBAYGon379rh27dpjG/j+++/RsGFDZMmSBdWrV8fatWsfew0LpJ5Aasbp7t27GDx4MPLmzQt3d3cULFgQo0ePRnx8fOo7wisfSSA142ReoYxZ0aJF8c4775hnc9/GBHbv3o3OnTsjICAAhQsXxieffJKiFv7++29Uq1YNPj4+qFOnDj7//HM48z/iFEFJw0KpGafz58+jQ4cOyJo1K3x9fdG0aVMcOnQoDXvJqo0ETp8+rf/fLF++3Jhldfu0z0qrFWe0E+oBwWQHAn379jWof56G1atXGzZs2GCoWLGioUKFCgY1k2e19XXr1hk8PT0NX3zxhWHPnj2Gt99+2+Dt7a33rV7EE09FIDXj1LVrV4P6Z20YO3as4d9//zUMGzbMoESt3j5VZ3ixVQKpGSfzypSIldcjhj59+phnc9+GBNQXBoMSsIZOnToZlFgyzJ4926C+lBtGjhz5yFbkGenq6mro16+fYceOHQYlgPVz8LfffnvkdTyZOgKpGSf5v1W1alVDkSJFDPPnzzcoUWVQXz4M+fPnN9y8eTN1HeFVKSJw8uRJQ5kyZfTz648//njsNU/7rHxsAxmkgHzbZUpjAnv37tUPZ/OH8eHDh/Uv419//WW19VKlShnUrEaS82XLljX06NEjSR4PbEMgNeMUGRmpx/bdd99N0gk1Y2HIlStXkjwe2IZAasbJvOU1a9YYcuTIYVAz6RSz5mBsvP/RRx8Z/P39Dffu3TPVLEI2Z86chujoaFNe8p1mzZoZnn322STZb7zxhqFjx45J8nhgGwKpGacTJ07o/1+zZs0ydWL9+vU6b+nSpaY87tiWgExsqVlwQ4kSJVIkZp/2WWnb3qdtbTQzsMNUuZppgJphRcuWLU2tlSxZEsWLF8eyZctMeeY74eHhUIIXzz//vHk22rZta/WaJAV58MQEUjNOYrP05Zdf4q233krSXqFChXD79m3QhjYJFpscpGacjA3LKzf1ZRCfffaZNvdxcXExnuLWxgRWrlyJFi1aQL1NMtXcpk0bXL16Fdu3bzflme9cunQJYmIwaNAg82x8/fXXUDOASfJ4YBsCqRmn7NmzQ82eQ83CmjphNKtSX2BMedyxLYExY8Zo0yhruiF5a0/zrExeV0Y/ppi1wwgdP34cQUFBWtCaNyc2lhEREeZZpn31zVfv58uXz5QnO3LNlStXKJKSULHNQWrGSeyf1awRRLwakwjYX375Rds4ywOfybYEUjNOxh6oGXSoWQ10797dmMVtGhGQZ5h67ZykduPzTESrpXT27FmdLV/01YwhatasiVatWmHFihWWijPPBgRSM07qzQaU+Yj+Uvjdd99hyZIl+gtIlSpVUKtWLRv0ilVYIrBz506MGzfuIS1hqazkPc2z0lqdGTXfPaN2zJn6JTN0InqSJ1kUYU3M3rp1SxeXh4Z5kmtkNlAWj4lAZrIdgdSMk6XWhw8fDlkcsWDBAkunmfeUBFI7TqtWrcKcOXOwf//+p+wBL08JAXmGJX/uyYyepMuXL1us4sKFCzr/9ddf1+Mkb6Z+/fVXLWhlK2+mmGxLIDXjJD2YMWMGatSood90yLGM7YEDB+Dh4SGHTGlAIDg4+IlqTe2z8okaySCFOW1kh4Fwc3PTr2SSNyWvOMW9hqUkq+IlJZ/ZMx5bu85SXcxLGYHUjFPymsePHw95FTRq1Cg9q5T8PI+fnkBqxkn+Yffs2RNqkZ72NvH0vWANjyMgzzAZK/Mkzzz5xMTEmGeb9o1f4q9fvw5ZsT1t2jSEhYVBLXjBkCFDTOW4YzsCqRkn+TJSuXJlLVzF/EOt/YBaEKbF7cGDB23XOdb0VARS86x8qgbT8WKKWTvAz5MnD27cuPFQS2rxEKzZF+XOnVuXT36d8VjcoTDZlkBqxsm8BzIj+95772HEiBEYOnSo+Snu25BAasZJ3OLJg13+AW/dulV/oqKiIK+75diauLJhtzNdVfIMMz6vjDcvzzy1DMTqc08tmtRFxZ2XrDOQJFtxASWvw5PXpwvwx1MRSM04qUVeOHLkCObOnQu1ME/bRv/+++/ahvbbb799qv7wYtsRSM2z0nat27cmmhnYgbc8LGTRg9hSGmdWpVkxMahbt67FHhjFbHIzBDmWV3fWRLDFypiZIgKpGSdjxSJkxbfs5MmT0b9/f2M2t2lAIDXjpFw86Zm+2rVrJ+nRqVOnsHDhQj37J/6BmWxHQP6RWnp+SQvmNubmLcqaAEnK5ZN5tmk2/UmdxCephAcWCaRmnDZu3AhZxCz258YkvtCbN28O5dXAmMVtOhNIzbMynbuc6uY5M5tqdCm/sFGjRpBV1Mq/rOmiM2fOQF7HNGjQwJRnviMPGHlYyOsb8ySrGK1dY16O+09OIDXjJK1MnTpVC1mZkaCQfXLuT3pFasZJXoXK35v5R4ImyCIWyTOKqCftC8tbJyDjJAu3zD16yPNMHOzLQiFLSZ558g9Y+dhOcvrPP//UQReUW68k+Tx4egKpGSdZyCeL9czfaMg4y1sO/i09/ZjYqobUPCtt1bbd60lbz1+s3UhACVCDeoAblB2YQdkbGZSbLoNa9ZkkaIJ6RW2YNGmS8RKDshfTPuXEMbJ6JarPSdCEY8eOmcpwx7YEHjdOaibPoGwvdeALaVktWDH4+flph+FqcZEh+ScuLs62HWRtmsCTjpMlbOKzWYInMKUNAeVeUAcPUbauBrUQxbBlyxaDWsBimDBhgqnB5H9PckKCj0jQEfUKWzvgnz59ug62oFZxm67jju0IpGac1Cp5g4rOZhB/2krU6v9r6ou89n2qvnjYrnOsySKBc+fOadbJgyZY+nt63LPSYgMOmMmgCXYaNDUTa1BuZvQvoFrtaRDH4GpGKEnrBQoUMKjXNKY8EULygJAHu1o0YZAgChJFhyntCDxunCTCl/rGaZg5c6buxJQpU/Sx5Fn6MBpO2ozVk46TpV5QzFqiYts8ZUepA1TI80uZRxkk+IHyR2pqJPnfk5xQpgQGceQvYkmuU6vkDcmDkpgq4I5NCKRmnJQ/YB0BTJ57Mk4SiES9nbJJf1jJowlYE7OW/p4e96x8dEuOc9ZFuqp+GZnsREB8xMpClOQuax7VvIqWo13ZKLH7qGI8Z0MCqRknGzbPqlJIgOOUQlDpWEz+xYhHgpCQEMjK+ZQmsY+V60JDQx/yipDSOlgu5QRSO04XL17U5gZic65EbcobZEm7EnD2ZyXFrF1/ndgYCZAACZAACZAACZCALQlwAZgtabIuEiABEiABEiABEiABuxKgmLUrbjZGAiRAAiRAAiRAAiRgSwIUs7akybpIgARIgARIgARIgATsSoBi1q642RgJkAAJkAAJkAAJkIAtCVDM2pIm6yIBEiABEiABEiABErArAYpZu+JmYyRAAiRAAiRAAiRAArYkQDFrS5qsiwRIgARIgARIgARIwK4EKGbtipuNkQAJkAAJkAAJkAAJ2JIAxawtabIuEiABEiABEiABEiABuxKgmLUrbjZGAiRAAiRAAiRAAiRgSwIUs7akybpIgARIgARIgARIgATsSoBi1q642RgJkAAJkAAJkAAJkIAtCVDM2pIm6yIBEiABEiABEiABErArAYpZu+JmYyRAAiRAAiRAAiRAArYkQDFrS5qsiwRIgARIgARIgARIwK4EKGbtipuNkQAJkAAJkAAJkAAJ2JIAxawtabIuEiABEiABEiABEiABuxKgmLUrbjZGAiRAAiRAAiRAAiRgSwIUs7akybpIgARIgARIgARIgATsSoBi1q642RgJkAAJkAAJkAAJkIAtCVDM2pIm6yIBEiABEiABEiABErArAYpZu+JmYyRAAiRAAiRAAiRAArYkQDFrS5qsiwRIgARIgARIgARIwK4EKGbtipuNkQAJkAAJkAAJkAAJ2JIAxawtabIuEiABpyVw5swZ3L1712nvjzdGAiRAAo5KgGLWUUeO/SYBEkhzAuvWrUP79u0RFBSE0NBQ+Pn5oU6dOvj333/TvO1HNfDrr7/CxcUF165d08UCAgLw6aefPuqSJz6XmJiIL7/8EtHR0U98LS8gARIgAXsSoJi1J222RQIk4DAENm7ciFatWiEqKgpjx47F/v378fXXX+PevXta4EZGRmaYe+ncuTPKlStn0/7Mnz8fb7/9NhISEmxaLysjARIgAVsTcLd1hayPBEiABBydQFhYGJ599llUq1YNy5Ytg6vr/e/9ZcuWRfPmzVG6dGkMHjwY3377bYa41WnTptm8HzIzy0QCJEACjkCAM7OOMErsIwmQgF0JrFmzBrdu3cL3339vErLGDhQsWBBz5szRYteYJ7OXkydP1iI3a9asqF69OhYvXmw8rbcpKVO3bl0sWbIEtWrVQtGiRfHXX3/pa//880+0aNECOXLkQNu2bREREZGk7kaNGum+SubWrVtRo0YNnDhxQgvv7Nmzo0KFCg/15/Tp0+jQoYM2n5A+V6lSBXPnztX1Sh+GDRum9+vVq4cff/xR78uPWbNmoXLlyjDe59KlS03nuEMCJEAC6UGAYjY9qLNNEiCBDE1gx44dyJMnD0S4Wkrt2rXTpgbGcx9//DHeffddLQ5F6Ip4FFtbEcPGlJIyu3fv1q/23dzcUKJECd2HvXv34oUXXkBwcLAWkrlz58bAgQON1ertnj17cOnSJb1/8+ZNbN++XQtZuWbChAnw9vbWfRMBK0mEuohXueajjz7CZ599Bk9PT4i5wsGDB1GqVCk888wzumzv3r1RqVIlvS/l3njjDRQvXlzfm4huEdfJhbsuzB8kQAIkYC8CBiYSIAESIIEkBJR5gaFBgwZJ8qwdnDt3zuDh4WEYPXp0kiKdOnUyKOFpiI2NNaSkjFycJUsWQ8WKFQ1qFtdUV9OmTQ1qxtZ0LDtKQBrU/wjD1atXdb6afTWMGzdO7y9fvlyfMx5L5tmzZ3WesvnVZZTphEEtaDMocwp9LD+OHTumy8yYMUPnKVGuj+/cuaOPlY2wIVu2bIbu3bvrY+OPjh07GooVK2Y85JYESIAE7E6AM7P2+tbAdkiABByGgI+Pj174lZIOy6xoXFwcunbtmqR4t27d9MznyZMnkZIyxovltb7RRlfy5Nrnn3/eeFpvX3755STHlg7E9MCYQkJC9Ozs7du3dVbLli0hs7Qy8yzeCmT2V0wrpF1Z8GYpST9k1lfsiHfu3Gn6iP3w8ePHoYS1pcuYRwIkQAJpToALwNIcMRsgARJwNAJiJjB79myr3RZRqGZjtUAUUShusvLmzZukfP78+fXx+fPntXB8XJmSJUvq8iI8jen69etaJIppgXnKly+f+aHFfXEnZp7EjMDcM4F4Zvj8889x5MgRiFmDiFQ1naI/5tcZ92VRnKR33nlHb5P/kPM5c+ZMns1jEiABEkhzApyZTXPEbIAESMDRCIiYFcGqXr1b7Hr//v0RGBioZ15lUZaIwOSuuow+YAsXLqwXbj2ujLEhd/cHcwyyeMvX1xc3btwwntbblARvEPFsLcmCrjfffBP169fHihUrdP1///23Li79tJTEl62kDRs26OAR0gfzjywKYyIBEiCB9CBAMZse1NkmCZBAhibQunVryGyosg/VJgTmnZVX6j/88INeQCVl5DW7pH/++UdvjT/kWIIsKNvUFJUxXme+ldf+IqxFQJon8VjwNOm3335DmTJlMH36dDRp0gTKVlf70RUha5y9NYpho4suWRQmSTwdSHnjR/zRijAWUwsmEiABEkgPAhSz6UGdbZIACWRoAuIFYN68eRCvBm3atNEuq8RmdOTIkdpLgHgHMPp2VQu2tNusIUOGaLdYMTExWvDJyn8ReSIKU1LGGhDxZ7to0SLtyUC8EHzxxRfaDZi18inJlyhmMussoljEqtyb0ebXaDMrQlySRBtTC9igFnlBLfbS/RARLLPFK1euRL9+/SAmFV5eXilpmmVIgARIwPYE1DdxJhIgARIgAQsEFi5cqD0HqFfsemW/egIblBA0qHC2SUpfuXLFoNxnGdRMqkGJV0OuXLkM77///hOXEW8GEydOTHKdHEyZMsWgbHJ1H5RZg2HMmDF6/1HeDJQtb5J6/P39DSrkrc5TtrgG5V7MoBa6GZQI1V4XlI2wQbnjMqhgEbqMEqvas4Lcc58+fUx5amGbQZlC6PaV+zJDr169DEoAJ2mLByRAAiRgTwIu0pjtJTJrJAESIAHnISCzl+KVQMwKJFiAtSShbsV3a6FChawV0eFwH1fG0sXyqFYutiALxMy9HVgqm9I8mYWVRWbGxWqWrhNbYJmlNbflVe7GIAvbxITCaI5g6VrmkQAJkIA9CFDM2oMy2yABEiABEiABEiABEkgTArSZTROsrJQESIAESIAESIAESMAeBChm7UGZbZAACZAACZAACZAACaQJAYrZNMHKSkmABEiABEiABEiABOxBgGLWHpTZBgmQAAmQAAmQAAmQQJoQoJhNE6yslARIgARIgARIgARIwB4EKGbtQZltkAAJkAAJkAAJkAAJpAkBitk0wcpKSYAESIAESIAESIAE7EGAYtYelNkGCZAACZAACZAACZBAmhCgmE0TrKyUBEiABEiABEiABEjAHgQoZu1BmW2QAAmQAAmQAAmQAAmkCQGK2TTBykpJgARIgARIgARIgATsQYBi1h6U2QYJkAAJkAAJkAAJkECaEKCYTROsrJQESIAESIAESIAESMAeBChm7UGZbZAACZAACZAACZAACaQJAYrZNMHKSkmABEiABEiABEiABOxBgGLWHpTZBgmQAAmQAAmQAAmQQJoQoJhNE6yslARIgARIgARIgARIwB4EKGbtQZltkAAJkAAJkAAJkAAJpAkBitk0wcpKSYAESIAESIAESIAE7EGAYtYelNkGCZAACZAACZAACZBAmhCgmE0TrKyUBEiABEiABEiABEjAHgQoZu1BmW2QAAmQAAmQAAmQAAmkCYH/B14u7KUqXpWsAAAAAElFTkSuQmCC" alt="Noisy observations along a sine curve, with a fitted solid curve close to the dashed synthetic truth." width="100%" />
 <p class="caption">
@@ -578,21 +547,22 @@ synthetic.
 </p>
 </div>
 <p>Here CV selected 8-point neighborhoods, degree 1, and the Gaussian
-kernel, with a tuning RMSE of 0.0799 response units. A larger support
-averages more nearby responses; the polynomial degree determines the
-local shape. The selected CV score was used for tuning, so it is not an
-independent measure of performance. This small illustration shows how to
-read a fit; it does not rank estimators.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">fitted</span>(fit))</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] -0.01193899  0.09633293  0.20478722  0.31316459  0.41899355  0.52015223</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>new.X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">seq</span>(<span class="fl">0.1</span>, <span class="fl">0.9</span>, <span class="at">length.out =</span> <span class="dv">5</span>), <span class="at">ncol =</span> <span class="dv">1</span>)</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">newdata =</span> new.X)</span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; [1]  0.593224184  0.978163565  0.003195166 -0.910822694 -0.559835093</span></span></code></pre></div>
-<p>Cross-validation (CV) holds out responses to choose tuning
-parameters. A support is the neighborhood used for a local fit; a grid
-lists candidate values. The local support size and polynomial degree
-jointly determine whether a local fit has enough observations. For
-grouped observations, use <a href="https://pgajer.github.io/geosmooth/reference/lps.grouped.foldid.html"><code>lps.grouped.foldid()</code></a>
+kernel, with a tuning RMSE of 0.0799 response units. A larger
+neighborhood averages over more observations, and the degree determines
+the shape that is fitted within a neighborhood. Because this RMSE was
+used to choose the settings, it is not an independent estimate of
+prediction error.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">fitted</span>(fit))</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; [1] -0.01193899  0.09633293  0.20478722  0.31316459  0.41899355  0.52015223</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>new.X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">seq</span>(<span class="fl">0.1</span>, <span class="fl">0.9</span>, <span class="at">length.out =</span> <span class="dv">5</span>), <span class="at">ncol =</span> <span class="dv">1</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">newdata =</span> new.X)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; [1]  0.593224184  0.978163565  0.003195166 -0.910822694 -0.559835093</span></span></code></pre></div>
+<p>Some terms used throughout the package: cross-validation (CV) chooses
+tuning parameters by predicting responses that were held out of the fit.
+A <em>support</em> is the neighborhood used for one local fit, and a
+<em>grid</em> is a list of candidate values. The support size and the
+polynomial degree together determine whether a local fit has enough
+observations. For grouped observations, use <a href="https://pgajer.github.io/geosmooth/reference/lps.grouped.foldid.html"><code>lps.grouped.foldid()</code></a>
 to keep each group in one fold. Use <a href="https://pgajer.github.io/geosmooth/reference/lps.nested.cv.html"><code>lps.nested.cv()</code></a>
 when you need an outer assessment of the whole tuning procedure.</p>
 <div id="prediction-and-reusable-fits" class="section level3">
@@ -657,31 +627,34 @@ contract.</td>
 </tr>
 </tbody>
 </table>
-<p>Use <code>summary(fit)</code> for selected settings and stored
-diagnostics. The summary explicitly says when convergence information is
-unavailable. <code>fitted(fit)</code> preserves the vector or matrix
-stored by each regression fit. <code>residuals(fit)</code> preserves
-missing-label masks and requires an aligned response: a fit evaluated at
-other coordinates has no training residuals. These are response-scale
-residuals, including for binomial fits; they are not Pearson or deviance
-residuals. See <code>help(&quot;model-values&quot;, package = &quot;geosmooth&quot;)</code>
-and <code>help(&quot;model-summary&quot;, package = &quot;geosmooth&quot;)</code> for the
-contracts. Probability mass remains <code>fit$rho</code>; it is a
-different quantity.</p>
-<p>A <em>refit</em> changes the response while reusing geometry or an
-operator. It does not automatically rerun the original model-selection
-procedure. Each refit method documents whether penalties remain fixed or
-can be selected again. An <em>operator</em> describes the differences or
-derivatives being penalized; it is not itself a fitted response. A
-<em>spectral basis</em> stores graph eigenvectors so many responses can
-be smoothed without recomputing them.</p>
+<p><code>summary(fit)</code> shows the selected settings and the
+diagnostics stored in the fit, and says so when no convergence
+information is available. <code>fitted(fit)</code> returns the fitted
+values as a vector or a matrix, as stored by the fit.
+<code>residuals(fit)</code> returns the response minus the fitted
+values, with <code>NA</code> where the response is missing. Residuals
+exist only at the training points, so a fit that was evaluated at other
+coordinates has none. They are on the scale of the response, also for
+binomial fits; they are not Pearson or deviance residuals. Probability
+mass is a different quantity and is read from <code>fit$rho</code>. See
+<code>help(&quot;model-values&quot;, package = &quot;geosmooth&quot;)</code> and
+<code>help(&quot;model-summary&quot;, package = &quot;geosmooth&quot;)</code> for
+details.</p>
+<p>Three further terms: a <em>refit</em> fits a new response while
+reusing the neighborhoods or the operator of an existing fit. It does
+not repeat the model selection of the original fit; the help page of
+each refit method says whether the penalties stay fixed or can be
+selected again. An <em>operator</em> is the matrix of differences or
+derivatives that a method penalizes; it is not a fitted response. A
+<em>spectral basis</em> is a stored set of graph eigenvectors, which
+allows many responses to be smoothed without recomputing them.</p>
 </div>
 <div id="refit-and-extract-smoother-matrices" class="section level3">
 <h3>Refit and extract smoother matrices</h3>
-<p>Use <code>refit(fit, y = new.y, ...)</code> for all six reusable
-model families. R chooses the method from the fitted object’s class. The
-controls in the last column belong to that method; they are not shared
-by every model.</p>
+<p><code>refit(fit, y = new.y, ...)</code> works for the six kinds of
+model in the table below. R chooses the method from the class of the
+fitted object. The arguments named in the last column belong to that
+method only.</p>
 <table>
 <colgroup>
 <col width="33%" />
@@ -692,7 +665,7 @@ by every model.</p>
 <tr class="header">
 <th>Fitted model</th>
 <th>Accepted response</th>
-<th>Geometry reused and tuning behavior</th>
+<th>What is reused and what can be changed</th>
 </tr>
 </thead>
 <tbody>
@@ -740,44 +713,117 @@ fixed or CV <code>lambda.selection</code>, and solver controls.</td>
 </tr>
 </tbody>
 </table>
-<p>For repeated metric graph low-pass or quadratic Hessian refits, keep
-using the original fitted object. Their returned refit summaries cannot
-themselves be refitted. The other four families return reusable fitted
-objects.</p>
-<p>Use <code>smoother.matrix(fit, ...)</code> for LPS and MALPS. LPS
-accepts <code>check.tol</code> and returns a map from training responses
-to evaluation predictions under its fixed-configuration restrictions.
-MALPS accepts <code>max.n</code> and <code>allow.robust</code> and
-returns a training-point matrix conditional on stored supports and
-weights. For robust MALPS, <code>allow.robust = TRUE</code> freezes the
-final robust weights; it does not capture their response-dependent
-changes.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>malps.fit <span class="ot">&lt;-</span> <span class="fu">fit.malps</span>(</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  X, y, <span class="at">degree =</span> <span class="dv">1</span><span class="dt">L</span>, <span class="at">support.type =</span> <span class="st">&quot;knn&quot;</span>, <span class="at">support.size =</span> <span class="dv">12</span><span class="dt">L</span></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>)</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>new.y <span class="ot">&lt;-</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> X[, <span class="dv">1</span>])</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>malps.refit <span class="ot">&lt;-</span> <span class="fu">refit</span>(malps.fit, <span class="at">y =</span> new.y)</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fu">smoother.matrix</span>(malps.fit)</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">max</span>(<span class="fu">abs</span>(<span class="fu">as.vector</span>(S <span class="sc">%*%</span> new.y) <span class="sc">-</span> <span class="fu">predict</span>(malps.refit)))</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; [1] 4.440892e-16</span></span></code></pre></div>
-<p>The former six <code>refit.*()</code> entry points and two
-<code>*.smoother.matrix()</code> entry points are no longer exported.
-Replace <code>fitted.model =</code> with <code>object =</code> and
-<code>y.new =</code> with <code>y =</code> in old refit calls. Other
-method-specific arguments and return classes are unchanged.
+<p>A refit of a metric graph low-pass fit or of a quadratic Hessian fit
+returns a summary that cannot itself be refitted, so for further
+responses keep calling <code>refit()</code> on the original fit. The
+other four kinds return fitted objects that can be refitted again.</p>
+<p><code>smoother.matrix(fit, ...)</code> returns the matrix that maps
+responses to predictions, for LPS and MALPS fits. For LPS, the fit must
+have a single candidate configuration; the matrix maps the training
+responses to the predictions at the evaluation points, and
+<code>check.tol</code> sets the tolerance of an internal check. For
+MALPS, the matrix maps training responses to predictions at the training
+points, given the stored supports and weights; <code>max.n</code> limits
+the size of the matrix. For a robust MALPS fit,
+<code>allow.robust = TRUE</code> returns the matrix for the final robust
+weights held fixed. It does not reflect how those weights depend on the
+response.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>malps.fit <span class="ot">&lt;-</span> <span class="fu">fit.malps</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  X, y, <span class="at">degree =</span> <span class="dv">1</span><span class="dt">L</span>, <span class="at">support.type =</span> <span class="st">&quot;knn&quot;</span>, <span class="at">support.size =</span> <span class="dv">12</span><span class="dt">L</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>new.y <span class="ot">&lt;-</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> X[, <span class="dv">1</span>])</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>malps.refit <span class="ot">&lt;-</span> <span class="fu">refit</span>(malps.fit, <span class="at">y =</span> new.y)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fu">smoother.matrix</span>(malps.fit)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="fu">max</span>(<span class="fu">abs</span>(<span class="fu">as.vector</span>(S <span class="sc">%*%</span> new.y) <span class="sc">-</span> <span class="fu">predict</span>(malps.refit)))</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; [1] 4.440892e-16</span></span></code></pre></div>
+<p>If you are updating code written for version 0.1.0: the six
+<code>refit.*()</code> functions and the two
+<code>*.smoother.matrix()</code> functions are no longer exported. Call
+<code>refit()</code> and <code>smoother.matrix()</code> instead, and in
+refit calls replace <code>fitted.model =</code> with
+<code>object =</code> and <code>y.new =</code> with <code>y =</code>.
+The other arguments and the classes of the results are unchanged.
 <code>help(&quot;refit&quot;, package = &quot;geosmooth&quot;)</code> and
-<code>help(&quot;smoother.matrix&quot;, package = &quot;geosmooth&quot;)</code> link to each
-method’s full argument list; former help names remain available.</p>
+<code>help(&quot;smoother.matrix&quot;, package = &quot;geosmooth&quot;)</code> link to the
+arguments of each method, and the old help names still work.</p>
 </div>
+</div>
+<div id="nearest-neighbor-probabilities-for-a-binary-outcome" class="section level2">
+<h2>Nearest-neighbor probabilities for a binary outcome</h2>
+<p><code>fit.neighbor.probability()</code> estimates the probability of
+a binary outcome at a point from the outcomes of its nearest neighbors.
+It offers three estimators, selected by <code>method</code>.
+<code>&quot;knn&quot;</code> is the ordinary proportion among the <code>k</code>
+nearest people. <code>&quot;case_raw&quot;</code> and
+<code>&quot;case_corrected&quot;</code> instead extend the neighborhood until it
+contains <code>k</code> cases; the second corrects the proportion for
+this stopping rule. So <code>k</code> counts people for
+<code>&quot;knn&quot;</code> and cases for the other two. Give <code>k</code>
+directly, or give fold labels in <code>foldid</code> to select
+<code>k</code> by the Brier score.</p>
+<p>The function is designed for data in which a participant can have
+several records:</p>
+<ul>
+<li><code>group</code> identifies the participant of each record. A
+participant is represented by the closest of their records that has an
+outcome, and all records of a participant are left out together when
+predicting for that participant.</li>
+<li><code>id</code> identifies the records and is used to break ties in
+distance, so that results do not depend on row order.</li>
+<li>A record with a missing outcome is never counted as a control.</li>
+<li><code>predict(fit)</code> leaves each participant out of their own
+prediction. For new points that belong to a participant in the training
+data, pass <code>query.group</code>.</li>
+<li>If too few neighbors can be reached, the prediction is
+<code>NA</code>; no overall rate is substituted.</li>
+</ul>
+<p>Three settings control how neighbors are found. With Euclidean
+coordinates, <code>search = &quot;auto&quot;</code> uses an exact tree search (ANN
+with <code>eps = 0</code>), and <code>search = &quot;brute&quot;</code> uses an
+exhaustive search that serves as a reference.
+<code>search = &quot;ann&quot;</code> with, for example, <code>eps = 0.1</code>
+allows approximate neighbors. The tolerance <code>eps</code> bounds the
+error in distance, not the error in the estimated probability, and an
+approximate search can miss participants or tied records, so the
+diagnostics for ties are complete only with an exact search. Chebyshev,
+intrinsic simplex, and precomputed distances always use the exhaustive
+search; asking for ANN or a positive <code>eps</code> with them is an
+error.</p>
+<p>For compositional data normalized so that the largest coordinate is
+one, <code>metric = &quot;linf.simplex&quot;</code> with
+<code>normalization = &quot;max&quot;</code> measures distance along the surface
+of the simplex, using the solver in <code>dgraphs</code>. Paths may
+cross intermediate faces. Distances are computed for one query point at
+a time, so neither a matrix of all pairwise distances nor a graph of the
+samples is needed. With <code>normalization = &quot;none&quot;</code>, the rows
+must already be max-normalized to within
+<code>sqrt(.Machine$double.eps)</code>, and
+<code>normalization = &quot;sum&quot;</code> is not allowed for this metric. Note
+that max normalization combined with <code>metric = &quot;euclidean&quot;</code>
+measures straight-line distance instead, which can give different
+neighbors. The search structures are reused within one prediction call
+or cross-validation split and rebuilt on the next call, so a fitted
+object can be saved and reloaded.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">fit.neighbor.probability</span>(X, y, <span class="at">method =</span> <span class="st">&quot;case_corrected&quot;</span>, <span class="at">k =</span> <span class="dv">3</span>,</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>                                <span class="at">id =</span> record_id, <span class="at">group =</span> participant_id,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>                                <span class="at">normalization =</span> <span class="st">&quot;max&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;linf.simplex&quot;</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">newdata =</span> query_X, <span class="at">query.group =</span> query_participant_id,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">&quot;diagnostics&quot;</span>)</span></code></pre></div>
+<p>When the neighborhood stops at a number of cases, it depends on the
+outcomes, so the estimator is not a linear smoother and
+<code>smoother.matrix()</code> is not available for it. To assess a
+model whose <code>k</code> was tuned, use a separate set of outer folds,
+grouped by participant.</p>
 </div>
 <div id="function-catalog" class="section level2">
 <h2>Function catalog</h2>
-<p>Each row in the geosmooth catalog gives one exported name and its
-purpose. In an R session, open the corresponding help with, for example,
-<code>help(&quot;fit.lps&quot;, package = &quot;geosmooth&quot;)</code>. The final two
-sections explicitly list related functions owned by
-<code>dgraphs</code>; they are not geosmooth exports, and their detailed
-help lives in dgraphs.</p>
+<p>The tables in this section list every function exported by
+<code>geosmooth</code>, each with a one-line description. To open the
+help page of a function in R, use, for example,
+<code>help(&quot;fit.lps&quot;, package = &quot;geosmooth&quot;)</code>. The last two tables
+list related functions that belong to the <code>dgraphs</code> package.
+They are not exported by <code>geosmooth</code>, and their help pages
+are in <code>dgraphs</code>.</p>
 <div id="shared-model-operations" class="section level3">
 <h3>Shared model operations</h3>
 <table>
@@ -940,18 +986,20 @@ the selected geometry fixed.</td>
 </tr>
 </tbody>
 </table>
-<p>Generalized cross-validation (GCV) uses a smoother’s effective
-degrees of freedom to estimate prediction error without explicitly
-fitting every leave-one-out model. It is not interchangeable with every
-form of CV.</p>
-<p>The two uncertainty workflows have different assumptions. LPS
-uncertainty requires a Gaussian fit, the R backend, the documented
-orthogonal polynomial basis, a single candidate configuration, and a
-fixed chart dimension. Its pointwise band also requires evaluation at
-the training points. MALPS matrix and bootstrap diagnostics condition on
-the selected supports and weights; they do not repeat model selection.
-Neither workflow provides simultaneous coverage or automatic uncertainty
-for a full data-selected pipeline.</p>
+<p>Generalized cross-validation (GCV) estimates prediction error from
+the effective degrees of freedom of a smoother, without fitting a
+separate model for each left-out observation. It is a different
+criterion from cross-validation with folds, and the two need not select
+the same settings.</p>
+<p>The uncertainty functions for LPS and for MALPS rest on different
+assumptions. <code>lps.pointwise.band()</code> requires a Gaussian fit
+made with the R backend and the orthogonal polynomial basis, with a
+single candidate configuration and a fixed chart dimension, and
+evaluated at the training points. <code>malps.gcv()</code> and
+<code>bootstrap.malps()</code> treat the selected supports and weights
+as fixed and do not repeat the model selection. Neither gives
+simultaneous coverage, and neither accounts for the uncertainty of
+choosing the settings from the data.</p>
 </div>
 <div id="lifting-trend-filters" class="section level3">
 <h3>Lifting trend filters</h3>
@@ -987,11 +1035,12 @@ operator.</td>
 </tr>
 </tbody>
 </table>
-<p>Both fitters accept a prebuilt operator or can construct one. For a
-single fit, start with the fitter. Build operators explicitly when
-comparing responses, studying neighborhoods, or reusing expensive
-geometry. Both fitters currently require <code>genlasso</code>; their
-supported prediction domain is the training set.</p>
+<p>Both fitting functions accept an operator that was built beforehand,
+or build one themselves. For a single fit, call the fitting function
+directly. Build the operator yourself when you want to fit several
+responses, examine the neighborhoods, or avoid recomputing an expensive
+operator. Both fitting functions require the optional package
+<code>genlasso</code>, and both predict only at the training points.</p>
 </div>
 <div id="graph-spectral-smoothing-and-graph-trend-filtering" class="section level3">
 <h3>Graph spectral smoothing and graph trend filtering</h3>
@@ -1048,37 +1097,46 @@ differences.</td>
 </tr>
 </tbody>
 </table>
-<p>Graph construction and shortest paths are supplied by
-<code>dgraphs</code>. A graph’s adjacency list contains 1-based vertex
-indices; a parallel weight list gives the corresponding edge values.
-<strong>Check their meaning for the chosen method:</strong> metric
-low-pass smoothing defaults to lengths and converts them to
-conductances; use <code>weight.type = &quot;conductance&quot;</code> for supplied
-connection strengths. Recursive graph trend filtering uses
-conductance-like weights, whereas its path divided-difference option
-uses lengths. Conductance measures connection strength; it is not the
-same quantity as distance.</p>
-<p>Heat time (<code>eta</code>) controls the amount of spectral
-smoothing. A truncated basis can fail to resolve small positive heat
-times; use the returned spectral diagnostics when constructing or
-extending a path yourself.</p>
-<p>Full-spectrum heat smoothing also supports missing responses,
-provided each connected component has an observed response. The <a href="verified-heat-fallback.html">observed-data heat guide</a> explains
-this objective and the opt-in
-<code>numerical.policy = &quot;verified.fallback&quot;</code> cross-checks.
-Automatic tuning under that policy refuses structurally flat paths and
-score differences that cannot be resolved numerically. Its resolution
-bands are numerical diagnostics, not confidence intervals.</p>
+<p><code>geosmooth</code> does not construct graphs or compute shortest
+paths; the <code>dgraphs</code> package does. A graph is passed as an
+adjacency list, in which element <code>i</code> holds the indices
+(starting from 1) of the neighbors of vertex <code>i</code>, and a
+weight list of the same shape that holds a value for each edge.</p>
+<p><strong>The meaning of the edge values depends on the
+method.</strong> A <em>length</em> is a distance between two vertices. A
+<em>conductance</em> is the strength of their connection, and larger
+values mean a stronger connection. Metric low-pass smoothing expects
+lengths by default and converts them to conductances; pass
+<code>weight.type = &quot;conductance&quot;</code> if your values are already
+conductances. Graph trend filtering with the default recursive operator
+treats the values as conductances, whereas its path divided-difference
+operator treats them as lengths.</p>
+<p>The heat time <code>eta</code> controls the amount of smoothing in
+graph low-pass filtering. A basis that contains only part of the
+spectrum may be unable to represent the filter for small positive heat
+times. If you build or extend a grid of heat times yourself, consult the
+spectral diagnostics returned with the basis.</p>
+<p>With a complete spectrum, heat smoothing also accepts missing
+responses, as long as every connected component of the graph has at
+least one observed response. The <a href="verified-heat-fallback.html">observed-data heat guide</a>
+describes the criterion that is minimized in this case and the optional
+numerical cross-checks requested with
+<code>numerical.policy = &quot;verified.fallback&quot;</code>. Under that policy,
+a heat time is not selected automatically when the GCV scores cannot
+distinguish the candidates, either because the scores are constant by
+construction or because their differences are smaller than the numerical
+accuracy. The resolution bands reported there describe numerical
+accuracy; they are not confidence intervals.</p>
 <div id="from-a-constructed-graph-to-a-fitted-response" class="section level4">
 <h4>From a constructed graph to a fitted response</h4>
-<p>This example uses the tested development dependency described in the
-README; the compatible dgraphs release must be on CRAN before geosmooth
-0.2.0 is submitted. The 20 locations form an undirected chain because
-the construction radius joins only adjacent sites. Vertex <em>i</em>,
-coordinate row <em>i</em>, and response entry <em>i</em> refer to the
-same observation. Retain your identifiers in a separate table and join
-by those identifiers before fitting; a smoother cannot detect a shuffled
-response.</p>
+<p>This example constructs a graph with <code>dgraphs</code> and smooths
+a response on it. The 20 locations lie on a line, and the radius used to
+construct the graph joins only adjacent locations, so the graph is a
+chain. Vertex <em>i</em>, row <em>i</em> of the coordinates, and entry
+<em>i</em> of the response must refer to the same observation. The
+smoother cannot detect a response that is in the wrong order, so keep
+your identifiers in a table and match the response to the vertices by
+identifier before fitting.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Each row, vertex, and response refers to the same location.</span></span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>locations <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">20</span>), <span class="at">ncol =</span> <span class="dv">1</span>,</span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                    <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="fu">sprintf</span>(<span class="st">&quot;site-%02d&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>), <span class="st">&quot;position&quot;</span>))</span>
@@ -1122,16 +1180,17 @@ response.</p>
 <span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a>second.fit <span class="ot">&lt;-</span> <span class="fu">refit</span>(graph.fit, <span class="at">y =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> locations[, <span class="dv">1</span>]))</span>
 <span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">fitted</span>(second.fit))</span>
 <span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt; [1]  0.99896194  0.94388145  0.78751744  0.54582318  0.24498057 -0.08240949</span></span></code></pre></div>
-<p>With <code>conductance.alpha = 1</code>, a length of 2 becomes a
-conductance of <code>1 / (2 + 1e-8)</code>, approximately 0.5. Longer
-edges therefore connect responses less strongly. This choice changes the
-smoothing operator; it is not just a change of labels. The example
-retains all eigenvectors, so no spectral truncation is involved. For
-large graphs, use the spectral diagnostics described in
-<code>help(&quot;metric.graph.lowpass.basis&quot;)</code> when retaining fewer
-eigenvectors. The second response reuses those eigenvectors and the
-selected heat time. The printed GCV score is a tuning criterion, not
-held-out predictive error.</p>
+<p>With <code>conductance.alpha = 1</code>, an edge of length 2 receives
+the conductance <code>1 / (2 + 1e-8)</code>, about 0.5, so longer edges
+connect their endpoints less strongly. The conversion from lengths to
+conductances affects the result of the smoothing. The example computes
+all eigenvectors of the graph Laplacian, so nothing is lost by
+truncating the spectrum. For a large graph you would keep only some of
+them; <code>help(&quot;metric.graph.lowpass.basis&quot;)</code> describes the
+diagnostics to consult in that case. The second response is smoothed
+with the same eigenvectors and the heat time already selected. The GCV
+score that is printed was used for tuning and is not an estimate of
+held-out prediction error.</p>
 <table>
 <colgroup>
 <col width="33%" />
@@ -1140,8 +1199,8 @@ held-out predictive error.</p>
 </colgroup>
 <thead>
 <tr class="header">
-<th>Input context</th>
-<th>Meaning</th>
+<th>Where the values are used</th>
+<th>What they mean</th>
 <th>Consequence</th>
 </tr>
 </thead>
@@ -1183,10 +1242,12 @@ positive weights are used unchanged.</td>
 </table>
 <p>For example,
 <code>metric.graph.lowpass.operator(list(2L, integer()), list(1, numeric()))</code>
-is rejected because the edge has no reciprocal entry. Resolve the
-meaning of directed or zero-length input before constructing an
-undirected graph. A zero conductance denotes no connection; a zero
-length is invalid for the length transformation.</p>
+is rejected, because the edge from vertex 1 to vertex 2 is not also
+listed from vertex 2 to vertex 1. If your input has directed edges or
+edges of length zero, decide what they should mean before you construct
+an undirected graph. A conductance of zero means that there is no
+connection. A length of zero is not allowed, because it cannot be
+converted to a conductance.</p>
 </div>
 </div>
 <div id="one-dimensional-gaussian-and-logistic-trend-filtering" class="section level3">
@@ -1213,10 +1274,22 @@ C++ backend.</td>
 <td>Fit a univariate piecewise-quadratic mean curve with squared-error
 loss using the same order-2 geometry and native C++ solvers.</td>
 </tr>
+<tr class="odd">
+<td><code>fit.projection.trend.filtering()</code></td>
+<td>Fit centered order-2 curves on fixed directions or learn directions
+by projection pursuit; supports Gaussian and binomial losses.</td>
+</tr>
+<tr class="even">
+<td><code>cv.projection.trend.filtering()</code></td>
+<td>Select component counts and mean-loss penalties using supplied,
+optionally grouped folds; repeat all direction learning within each
+training split.</td>
+</tr>
 </tbody>
 </table>
-<p>For continuous outcomes, fit an explicit penalty path and assess both
-association and held-out prediction:</p>
+<p>For a continuous outcome, fit the model over a list of penalties that
+you supply, and then assess both the association with the predictor and
+the held-out prediction:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>x.continuous <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">40</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>y.continuous <span class="ot">&lt;-</span> <span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">*</span>x.continuous) <span class="sc">+</span> <span class="fl">0.2</span><span class="sc">*</span><span class="fu">cos</span>(<span class="fu">seq_along</span>(x.continuous))</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>gaussian.fit <span class="ot">&lt;-</span> <span class="fu">fit.gaussian.trend.filtering</span>(</span>
@@ -1242,45 +1315,54 @@ association and held-out prediction:</p>
 <span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt;             model        mse       mae</span></span>
 <span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt; 1   Constant mean 0.55796292 0.6414749</span></span>
 <span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt; 2 Trend filtering 0.03138962 0.1546267</span></span></code></pre></div>
-<p>The global statistic is residual sum-of-squares reduction from the
-sample mean. Its permutations repeat tuning and require exchangeable
-outcomes under the null; equal means with arbitrary predictor-dependent
-variances are insufficient. Nested CV separately compares the smoother
-with outer-training means, using MSE and MAE on the same held-out rows.
-Curve summaries are in response units. The example demonstrates the
-workflow; it is not a calibration or power study.
-<code>lambda=Inf</code> gives a quadratic curve, while the assessment
-baseline is constant.</p>
+<p>The test statistic is the reduction in the residual sum of squares
+relative to the sample mean. The tuning is repeated for every
+permutation. The test assumes that the outcomes are exchangeable under
+the null hypothesis; equal means with variances that depend on the
+predictor are not enough. The nested cross-validation is a separate
+assessment. It compares the smoother with the mean of the outer training
+data, using MSE and MAE on the same held-out rows. The curve summaries
+are in the units of the response. Note that <code>lambda = Inf</code>
+gives a quadratic curve, whereas the baseline of the assessment is a
+constant. The example shows how the functions are used; with nine
+permutations it says nothing about the calibration or the power of the
+test.</p>
 <p>The <a href="logistic-trend-filtering.html">logistic trend-filtering
 vignette</a> walks through synthetic probabilities, trial weights and
 held-out Pima predictions.</p>
-<p>The univariate logistic trend filter accepts binary observations or
-binomial proportions with trial weights. Supply a <code>lambda</code>
-path explicitly; its units refer to predictor locations normalized to
-the training range. Exact ties share the curve while retaining distinct
-covariates and offsets. Optional cross-validation requires
-<code>foldid</code>, which can keep repeated observations from the same
-subject together. Inspect <code>fit$diagnostics</code>: iteration
-limits, detected separation, and numerical failures are not successful
-fits. <code>predict()</code> reuses the training transformations and
-holds the curve constant beyond either boundary. Ridge stabilization is
-explicit and defaults to zero. <code>backend=&quot;auto&quot;</code> selects the
-banded C++ backend above 256 distinct locations or when the dense
-workspace estimate exceeds its guard. The banded solver and predictor
-avoid full dense knot matrices; every stopping check scans all knot
-coefficients, without thinning. <code>backend=&quot;dense&quot;</code> retains the
-small-problem reference solver. Both backends check an estimated
-workspace bound before allocation.</p>
-<p>Gaussian, logistic, local-polynomial lifting and graph
-trend-filtering CV use <code>cv.penalty.scale=&quot;training_mass&quot;</code> by
-default: fold penalties scale with the training/full data-loss mass.
-This holds their coefficient relative to mean loss constant. Set
-<code>&quot;none&quot;</code> explicitly for the earlier same-numerical-penalty
-convention. One-dimensional fits also scale explicit ridge penalties and
-record the actual fold settings. The assessment functions propagate this
-convention through outer and inner training sets; older saved fits
-without the setting retain the legacy convention. Fixed-penalty
-objectives are unchanged.</p>
+<p><code>fit.logistic.trend.filtering()</code> accepts binary
+observations, or proportions together with the numbers of trials as
+weights. You must supply the penalties in <code>lambda</code>. They
+refer to the predictor after it has been rescaled to the range of the
+training data, not to its original units. Observations with exactly
+equal predictor values share one value of the curve but keep their own
+covariates and offsets. To select a penalty by cross-validation, supply
+<code>foldid</code>; give repeated observations of one subject the same
+fold label.</p>
+<p>Always inspect <code>fit$diagnostics</code>. A fit that reached the
+iteration limit, detected separation, or failed numerically is not a
+successful fit. <code>predict()</code> applies the transformations
+learned from the training data and holds the curve constant outside the
+training range. No ridge penalty is added unless you request one.</p>
+<p>Two solvers are available. <code>backend = &quot;dense&quot;</code> is the
+reference solver for small problems. The banded solver does not form
+dense matrices over all knots, yet its stopping checks still examine
+every knot coefficient. <code>backend = &quot;auto&quot;</code> chooses the banded
+solver when there are more than 256 distinct predictor values or when
+the dense solver would need too much memory. Both solvers check an
+estimate of their memory use before allocating.</p>
+<p>Cross-validation for Gaussian, logistic, local polynomial lifting,
+and graph trend filtering uses
+<code>cv.penalty.scale = &quot;training_mass&quot;</code> by default. A fold is
+fitted to less data than the full fit, so its penalty is multiplied by
+the ratio of the training weight to the full weight. This keeps the
+penalty in the same proportion to the mean loss. Set
+<code>cv.penalty.scale = &quot;none&quot;</code> to use the same numerical penalty
+in every fold, as earlier versions did. The one-dimensional fits scale
+explicit ridge penalties in the same way and record the settings used in
+each fold. The assessment functions apply the same rule to their outer
+and inner training sets. Fits saved by earlier versions keep the earlier
+convention, and fits with a fixed penalty are not affected.</p>
 </div>
 <div id="hessian-energy-regression" class="section level3">
 <h3>Hessian-energy regression</h3>
@@ -1317,22 +1399,25 @@ regularization.</td>
 </tr>
 </tbody>
 </table>
-<p>The Hessian describes local second derivatives. A quadratic penalty
-spreads curvature reduction across the fitted field; an absolute-value
-penalty can set derivative components to zero. These are different
-estimators.</p>
-<p>Label CV supports semi-supervised use: some vertices may lack an
-observed response. GCV currently requires one fully observed response
-vector and strictly positive observation weights. Exact GCV traces and
-randomized trace estimates have different computational costs and
-reproducibility properties. For the absolute-value fitter,
-<code>solver = &quot;admm&quot;</code> selects the implemented alternating
-direction method of multipliers; the <code>genlasso</code> solver
-requires that optional package.</p>
-<p>To select quadratic Hessian penalties, use the same fitter with an
-explicit selection mode. Mode-specific settings belong in
-<code>cv.control</code> or <code>gcv.control</code>. Scalar penalties
-and candidate grids cannot be combined.</p>
+<p>The Hessian of a function is its matrix of second derivatives. These
+methods estimate it locally from the points near each observation and
+penalize its size. A quadratic penalty reduces curvature everywhere by a
+moderate amount, whereas an absolute-value penalty can set some second
+derivatives exactly to zero. The two penalties therefore give different
+estimates.</p>
+<p>Cross-validation works when some points have no observed response
+(semi-supervised regression). GCV requires a single response vector with
+no missing values and strictly positive observation weights. The trace
+needed for GCV can be computed exactly or estimated with random probes;
+the exact computation costs more, and the estimate depends on a random
+seed. For the absolute-value penalty, <code>solver = &quot;admm&quot;</code> uses
+the built-in alternating direction method of multipliers, and the
+<code>genlasso</code> solver requires that optional package.</p>
+<p>To select the penalties of the quadratic method, call the same
+fitting function with <code>lambda.selection = &quot;cv&quot;</code> or
+<code>&quot;gcv&quot;</code>, and put the settings of the selection in
+<code>cv.control</code> or <code>gcv.control</code>. A single penalty
+value and a grid of candidates cannot be given together.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>hessian.fit <span class="ot">&lt;-</span> <span class="fu">fit.ssrhe.hessian.regression</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  X, y, <span class="at">k =</span> <span class="dv">12</span><span class="dt">L</span>, <span class="at">tangent.dim =</span> <span class="dv">1</span><span class="dt">L</span>,</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">lambda.selection =</span> <span class="st">&quot;cv&quot;</span>, <span class="at">lambda1.grid =</span> <span class="fu">c</span>(<span class="fl">0.01</span>, <span class="fl">0.1</span>),</span>
@@ -1347,11 +1432,11 @@ and candidate grids cannot be combined.</p>
 <span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; $ridge</span></span>
 <span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
-<p>The former <code>.cv()</code> and <code>.gcv()</code> fitter names
-have been retired. Their old help names still lead to the unified
-fitter’s migration instructions. Existing fixed calls with
-<code>lambda1</code> and optional <code>lambda2</code> continue to
-work.</p>
+<p>The separate <code>.cv()</code> and <code>.gcv()</code> fitting
+functions of version 0.1.0 have been removed. Their old help names now
+open the help page of <code>fit.ssrhe.hessian.regression()</code>, which
+explains how to update a call. Calls with fixed <code>lambda1</code> and
+optional <code>lambda2</code> work as before.</p>
 </div>
 <div id="harmonic-interpolation" class="section level3">
 <h3>Harmonic interpolation</h3>
@@ -1383,22 +1468,31 @@ topology stability.</td>
 </tr>
 </tbody>
 </table>
-<p>Use <code>print()</code>, <code>summary()</code>, and
-<code>plot()</code> on the tracked <code>harmonic_smoother</code>
-object. The two smoothing functions currently differ in boundary-free
-behavior so they should not be treated as aliases. In the current native
-implementation, boundary vertices are defined by a neighbor outside the
-region; a degree-one vertex inside a whole-graph region is not
-automatically fixed. The basic function returns unchanged input with
-<code>status = &quot;no_boundary&quot;</code> when no boundary exists; the tracked
-function still runs relaxation. Both require small value changes and a
-small harmonic residual for numerical convergence. Extrema stability is
-a separate diagnostic: <code>stability_detected</code> records whether a
-window was found, and <code>stable_iteration</code> is <code>NA</code>
-otherwise. On an alternating path, recording every second iteration can
-appear stable while the values continue to oscillate. Check
-<code>converged</code> and <code>max_residual</code>; a stability
-detection does not establish optimal smoothing.</p>
+<p>Harmonic smoothing replaces the values inside a region of the graph
+by values that are, at each vertex, the weighted average of the
+neighbors’ values, while the values on the boundary of the region stay
+fixed. A boundary vertex is a vertex of the region that has a neighbor
+outside it. A vertex of degree one is therefore not a boundary vertex
+when the region is the whole graph.</p>
+<p>The two functions behave differently when the region has no boundary,
+so they are not interchangeable.
+<code>perform.harmonic.smoothing()</code> returns its input unchanged
+with <code>status = &quot;no_boundary&quot;</code>, whereas
+<code>harmonic.smoother()</code> still runs the iteration. Both report
+numerical convergence only when the change between iterations and the
+harmonic residual are both small.</p>
+<p><code>harmonic.smoother()</code> returns a
+<code>harmonic_smoother</code> object with <code>print()</code>,
+<code>summary()</code>, and <code>plot()</code> methods. It also reports
+whether the local extrema of the values stopped changing:
+<code>stability_detected</code> says whether a stable stretch of
+iterations was found, and <code>stable_iteration</code> identifies it,
+or is <code>NA</code> if none was found. This is a separate diagnostic
+from convergence. For example, on a path whose values alternate,
+recording every second iteration can look stable while the values are
+still oscillating. Check <code>converged</code> and
+<code>max_residual</code>, and do not take stable extrema as a sign that
+the amount of smoothing is right.</p>
 </div>
 <div id="probability-mass-and-subject-occupation" class="section level3">
 <h3>Probability mass and subject occupation</h3>
@@ -1439,19 +1533,22 @@ subject-occupation distribution.</td>
 <span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; [1] 0.25 0.00 0.50 0.00 0.00 0.25</span></span>
 <span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="fu">sum</span>(occupation<span class="sc">$</span>rho)</span>
 <span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
-<p>Here the third support point receives twice as many visits as the
-first or sixth. <code>rho</code> is a probability <strong>mass</strong>
-vector over support points, summing to one; it is not automatically a
-continuous density per unit volume. <a href="https://pgajer.github.io/geosmooth/reference/normalize.density.html"><code>normalize.density()</code></a>
-is an explicit conversion step, not another regression fit. Inspect its
-clipping and normalization accounting when the source field contains
-negative values.</p>
+<p>In this example the third support point is visited twice and the
+first and sixth once each. <code>rho</code> is a vector of probability
+<strong>masses</strong>, one for each support point, that sums to one.
+It is not a density per unit volume. <a href="https://pgajer.github.io/geosmooth/reference/normalize.density.html"><code>normalize.density()</code></a>
+converts a fitted field to such a vector; it does not fit anything. If
+the field has negative values, they are set to zero before normalizing,
+and the result reports how much was changed.</p>
 <p><a href="https://pgajer.github.io/geosmooth/reference/fit.subject.od.html"><code>fit.subject.od()</code></a>
-offers more methods than <a href="https://pgajer.github.io/geosmooth/reference/fit.density.html"><code>fit.density()</code></a>:
-it can fit ordinary smoothers and normalize their output. Visit-level CV
-holds out visits and uses <code>visit.foldid</code>; ordinary regression
-CV holds out support rows and uses <code>foldid</code> (or the
-method-specific spelling). Keep these validation units distinct.</p>
+offers more methods than <a href="https://pgajer.github.io/geosmooth/reference/fit.density.html"><code>fit.density()</code></a>,
+because it can also fit one of the regression smoothers and normalize
+the result. Two kinds of cross-validation occur here and should not be
+confused. Visit-level cross-validation holds out visits and takes its
+folds from <code>visit.foldid</code>. The cross-validation of a
+regression smoother holds out rows of the support and takes its folds
+from <code>foldid</code>, or from the argument of that name in the
+chosen method.</p>
 </div>
 <div id="experimental-transport-methods" class="section level3">
 <h3>Experimental transport methods</h3>
@@ -1493,11 +1590,15 @@ direction-matching rules.</td>
 </tr>
 </tbody>
 </table>
-<p>Parallel transport aligns local tangent directions before comparing
-derivatives. These experimental interfaces expose geometry, operator,
-and solver diagnostics deliberately. The transported graph Hessian
-constructor is a separate diagnostic workflow; it does not fit a
-response and is not an interchangeable spelling of <a href="https://pgajer.github.io/geosmooth/reference/pttf.operator.html"><code>pttf.operator()</code></a>.</p>
+<p>Derivatives estimated at neighboring points are expressed in
+different local coordinate frames. Parallel transport aligns the frames
+so that the derivatives can be compared. The functions in this table are
+experimental, and they return detailed diagnostics about the frames, the
+operator, and the solver.
+<code>transported.graph.hessian.operator()</code> serves a different
+purpose from <a href="https://pgajer.github.io/geosmooth/reference/pttf.operator.html"><code>pttf.operator()</code></a>:
+it builds a diagnostic operator and does not lead to a fitted
+response.</p>
 </div>
 <div id="synthetic-datasets-specifications-responses-and-reproducibility" class="section level3">
 <h3>Synthetic datasets: specifications, responses, and
@@ -1606,21 +1707,24 @@ requirements.</td>
 </tr>
 </tbody>
 </table>
-<p>The constructors create specifications; <a href="https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html"><code>materialize.synthetic()</code></a>
-performs random draws. Use <code>print()</code>, <code>plot()</code>,
-and <code>as.data.frame()</code> on a resulting
-<code>synthetic_dataset</code>. For complete examples, read
-<code>vignette(&quot;synthetic-datasets&quot;, package = &quot;geosmooth&quot;)</code>. Use
-the named-stream random-number policy for new work; historical seed and
-algorithm controls preserve frozen examples and should not be changed
-casually.</p>
+<p>The functions whose names begin with <code>synthetic.</code> only
+describe a data set; no random numbers are drawn until you call <a href="https://pgajer.github.io/geosmooth/reference/materialize.synthetic.html"><code>materialize.synthetic()</code></a>.
+The result is a <code>synthetic_dataset</code> object with
+<code>print()</code>, <code>plot()</code>, and
+<code>as.data.frame()</code> methods.
+<code>vignette(&quot;synthetic-datasets&quot;, package = &quot;geosmooth&quot;)</code> gives
+complete examples. For new work, use the random-number policy
+<code>&quot;named.stream.v1&quot;</code>. The other seed and algorithm settings
+exist so that data sets generated by earlier versions can be reproduced
+exactly; leave them at their defaults unless that is your aim.</p>
 </div>
 <div id="geometry-constructors-and-helpers-supplied-by-dgraphs" class="section level3">
 <h3>Geometry constructors and helpers supplied by dgraphs</h3>
-<p>These names are available from <code>dgraphs</code>, and are no
-longer exported by <code>geosmooth</code>. Replace former
-<code>geosmooth::</code> calls with <code>dgraphs::</code>. See, for
-example, <code>help(&quot;synthetic.circle&quot;, package = &quot;dgraphs&quot;)</code>.</p>
+<p>The following functions were exported by <code>geosmooth</code> 0.1.0
+and are now provided by <code>dgraphs</code>. In existing code, replace
+<code>geosmooth::</code> with <code>dgraphs::</code>. Their help pages
+are in <code>dgraphs</code>; see, for example,
+<code>help(&quot;synthetic.circle&quot;, package = &quot;dgraphs&quot;)</code>.</p>
 <table>
 <colgroup>
 <col width="50%" />
@@ -1754,21 +1858,20 @@ algorithm.</td>
 </tr>
 </tbody>
 </table>
-<p>Similar geometric domains do not imply identical random-number
-sequences: these descriptors also preserve ordering and algorithm
-choices.</p>
+<p>Two sampling descriptions of similar regions do not necessarily draw
+the same random numbers, because each description also fixes the order
+of the draws and the algorithm.</p>
 </div>
 </div>
 <div id="finding-detailed-help" class="section level2">
 <h2>Finding detailed help</h2>
-<p>Function links in this guide open the rendered online reference. When
-working without an internet connection, the same help is installed with
-the package: use <code>help(&quot;fit.lps&quot;, package = &quot;geosmooth&quot;)</code>,
-replacing <code>fit.lps</code> with the function name. Start at
-<code>help(&quot;geosmooth-package&quot;, package = &quot;geosmooth&quot;)</code> for
-clickable task links in installed help, or use
-<code>browseVignettes(&quot;geosmooth&quot;)</code> for the installed HTML
-guides.</p>
+<p>The function links in this guide open the online reference. The same
+help pages are installed with the package and need no internet
+connection: use <code>help(&quot;fit.lps&quot;, package = &quot;geosmooth&quot;)</code>,
+with the name of the function you want.
+<code>help(&quot;geosmooth-package&quot;, package = &quot;geosmooth&quot;)</code> lists the
+main functions by task, and <code>browseVignettes(&quot;geosmooth&quot;)</code>
+lists the installed guides.</p>
 <p>The <a href="synthetic-datasets.html">synthetic datasets guide</a>
 develops reproducible geometry, sampling, truth, and response
 specifications in more detail.</p>
@@ -1778,17 +1881,17 @@ specifications in more detail.</p>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="fu">help</span>(<span class="st">&quot;predict.lps&quot;</span>, <span class="at">package =</span> <span class="st">&quot;geosmooth&quot;</span>)</span>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="fu">vignette</span>(<span class="st">&quot;function-guide&quot;</span>, <span class="at">package =</span> <span class="st">&quot;geosmooth&quot;</span>)</span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="fu">vignette</span>(<span class="st">&quot;synthetic-datasets&quot;</span>, <span class="at">package =</span> <span class="st">&quot;geosmooth&quot;</span>)</span></code></pre></div>
-<p>The package’s help pages give exact arguments, defaults, return
-values, and examples. Use this guide to find the appropriate family,
-then read the chosen function’s help before configuring its advanced
-controls.</p>
+<p>The help pages give the exact arguments, defaults, return values, and
+examples. Use this guide to find the right function, and read its help
+page before changing its more specialized settings.</p>
 </div>
-<div id="advanced-controls-without-a-new-fitter" class="section level2">
-<h2>Advanced controls without a new fitter</h2>
-<p>Each main fitter’s installed help groups controls for a first fit,
-selection, geometry, numerical solving, and returned diagnostics. Begin
-with a small statistical grid; numerical tolerances do not replace
-statistical tuning.</p>
+<div id="tuning-and-numerical-settings" class="section level2">
+<h2>Tuning and numerical settings</h2>
+<p>The help page of each main fitting function groups its arguments into
+those needed for a first fit and those that control model selection, the
+neighborhoods, the numerical solver, and the diagnostics that are
+returned. Start by tuning over a small grid of the statistical settings.
+Tightening numerical tolerances is not a substitute for that.</p>
 <table>
 <colgroup>
 <col width="33%" />
@@ -1797,9 +1900,9 @@ statistical tuning.</p>
 </colgroup>
 <thead>
 <tr class="header">
-<th>Family</th>
-<th>Fold and selection vocabulary</th>
-<th>Meaning and main cost</th>
+<th>Method</th>
+<th>Arguments for folds and selection</th>
+<th>What is selected, and the main cost</th>
 </tr>
 </thead>
 <tbody>
@@ -1832,16 +1935,19 @@ storage.</td>
 </tr>
 </tbody>
 </table>
-<p><code>smoother.matrix()</code> returns a dense evaluation-by-training
-matrix. Retained candidate fits and solver histories also consume
-memory. Request them for an actual diagnostic purpose. These differences
-are deliberate method contracts; matching argument names would not make
-the criteria equivalent.</p>
-<p>The catalog covers all explicitly exported functions in geosmooth
-0.2.0. Geometry and sampling functions are owned by dgraphs. Registered
-methods are accessed through familiar generics; use the installed
-package index for the complete method list rather than treating methods
-as additional fitters.</p>
+<p>The argument names differ among the methods because the selection
+criteria differ; giving them the same names would not make the criteria
+equivalent.</p>
+<p><code>smoother.matrix()</code> returns a dense matrix with one row
+per evaluation point and one column per training point. Stored candidate
+fits and solver histories also take memory, so request them only when
+you intend to examine them.</p>
+<p>The catalog above covers every function exported by
+<code>geosmooth</code> 0.2.0. The geometry and sampling functions belong
+to <code>dgraphs</code>. Methods for generics such as
+<code>print()</code>, <code>predict()</code>, and <code>summary()</code>
+are not listed individually; the package index,
+<code>help(package = &quot;geosmooth&quot;)</code>, lists them all.</p>
 <p>For intrinsic simplex charts, weighted PCA/PLS and their limits, see
 the <a href="local-simplex-charts.html">local simplex charts
 guide</a>.</p>

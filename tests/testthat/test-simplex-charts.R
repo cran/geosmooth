@@ -23,6 +23,7 @@ chart.fit.test <- function(X, y, ..., X.eval = X, method = "local.pca", unfold =
 test_that("R package reproduces the independent synthetic Python predictions", {
     path <- test_path("fixtures", "simplex-charts")
     reference <- read.csv(file.path(path, "predictions.csv"))
+    predictions <- references <- fallbacks <- gradients <- list()
     for (scenario in 0:4) {
         dat <- read.csv(file.path(path, paste0("scenario-", scenario, ".csv")))
         X <- as.matrix(dat[1:320, 1:8])
@@ -34,11 +35,18 @@ test_that("R package reproduces the independent synthetic Python predictions", {
                 lambda.ridge = ridge, max.iter = 70, tol = 1e-7)
             expected <- reference[reference$scenario == scenario & reference$method == method &
                 reference$dimension == d & reference$ridge == ridge, ]
-            expect_equal(fit$fitted.values, expected$prediction, tolerance = 2e-7)
-            expect_equal(fit$diagnostics$fallback.count, 0)
-            expect_true(all(fit$diagnostics$per.eval$gradient < 1e-7))
+            key <- paste(scenario,method,d,ridge,sep="/")
+            predictions[[key]] <- fit$fitted.values
+            references[[key]] <- expected$prediction
+            fallbacks[key] <- list(fit$diagnostics$fallback.count)
+            gradients[[key]] <- all(fit$diagnostics$per.eval$gradient < 1e-7)
         }
     }
+    # Keep each prediction vector separate so its original tolerance applies.
+    expect_equal(predictions,references,tolerance=2e-7)
+    expect_equal(fallbacks,setNames(rep(list(0),length(fallbacks)),names(fallbacks)))
+    expect_true(all(unlist(gradients)),info=paste(
+        names(gradients)[!vapply(gradients,isTRUE,logical(1))],collapse=", "))
 })
 
 test_that("unfolded charts preserve explicit fallback and solver failures", {

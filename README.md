@@ -1,45 +1,50 @@
 # geosmooth
 
-`geosmooth` provides geometric methods for nonparametric regression and density
-estimation on data represented as coordinate matrices or weighted graphs. It
-includes local polynomial smoothing, model-averaged local polynomial smoothing,
-local polynomial lifting trend filtering, synchronized local polynomial lifting
-trend filtering, one-dimensional logistic trend filtering, graph low-pass
-filtering, and Hessian-energy regression.
+`geosmooth` is an R package for nonparametric regression and density
+estimation when the data have geometric structure. The data can be given as a
+matrix of coordinates, one row per observation, or as a weighted graph whose
+vertices are the observations. The package estimates a smooth response, or a
+probability mass, over those points. Its methods include local polynomial
+smoothing, model-averaged local polynomial smoothing, two forms of local
+polynomial lifting trend filtering, one-dimensional Gaussian and logistic
+trend filtering, graph low-pass filtering, and Hessian-energy regression.
 
 ![Noisy observations along a sine curve; the solid blue fitted response follows the dashed orange synthetic truth.](man/figures/first-fit.png)
 
-The points are observations, the solid line is a selected local polynomial fit,
-and the dashed line is known synthetic truth. The
+In the figure, the points are noisy observations, the solid line is a local
+polynomial fit whose settings were selected by cross-validation, and the
+dashed line is the true curve, which is known here because the data are
+simulated. The
 [first-fit guide](https://pgajer.github.io/geosmooth/articles/function-guide.html#a-first-regression-fit)
-shows the code, selected settings, and how to interpret the tuning score.
+gives the code, the selected settings, and an explanation of the tuning score.
 
-For a task-based catalog of every exported function, prediction capabilities,
-and examples, read [Finding your way around geosmooth](https://pgajer.github.io/geosmooth/articles/function-guide.html).
-In an installed package, use `vignette("function-guide", package = "geosmooth")`
-or start with `help("geosmooth-package", package = "geosmooth")`.
+## Where to start
 
-Browse the [reference by task](https://pgajer.github.io/geosmooth/reference/index.html),
-[functions A–Z](https://pgajer.github.io/geosmooth/reference/alphabetical.html), or
-[synthetic datasets guide](https://pgajer.github.io/geosmooth/articles/synthetic-datasets.html).
-See [NEWS](https://pgajer.github.io/geosmooth/news/index.html) for migration details.
+- [Finding your way around geosmooth](https://pgajer.github.io/geosmooth/articles/function-guide.html)
+  is organized by task. It lists every exported function, says which fitted
+  models can predict at new points, and includes examples. In an installed
+  package, open it with `vignette("function-guide", package = "geosmooth")`.
+- `help("geosmooth-package", package = "geosmooth")` is a shorter overview
+  with links to the main functions.
+- The online reference is available
+  [by task](https://pgajer.github.io/geosmooth/reference/index.html) and
+  [alphabetically](https://pgajer.github.io/geosmooth/reference/alphabetical.html).
+- The [synthetic datasets guide](https://pgajer.github.io/geosmooth/articles/synthetic-datasets.html)
+  shows how to generate reproducible test data.
+- [NEWS](https://pgajer.github.io/geosmooth/news/index.html) describes what
+  changed between versions and how to update existing code.
 
 ## Installation
 
-For the version currently on CRAN:
+Install the released version from CRAN:
 
 ```r
 install.packages("geosmooth")
 help("geosmooth-package", package = "geosmooth")
 ```
 
-The 0.2.0 release candidate includes the guides below and requires R >= 4.1.0
-and dgraphs >= 0.4.0. Its optional GRIP and edge-KK embeddings require
-grip >= 0.3.0. These dependency releases must be available before the candidate
-can complete CRAN-only validation. A source installation needs an R compilation
-toolchain.
-
-Once those dependencies are published on CRAN, install the candidate with:
+To install the development version from GitHub, you need the tools for
+compiling R packages from source:
 
 ```r
 install.packages("pak")
@@ -47,12 +52,8 @@ pak::pkg_install("pgajer/geosmooth")
 vignette("function-guide", package = "geosmooth")
 ```
 
-The package-check and website workflows now resolve dependencies from CRAN.
-Their next builds and the final **CRAN dependency check** remain pending until
-dgraphs >= 0.4.0 and grip >= 0.3.0 are published. Earlier successful checks used
-development dependencies and do not establish CRAN-only release readiness.
-See [the submission draft](https://github.com/pgajer/geosmooth/blob/main/cran-comments.md) for the recorded status and
-remaining validation.
+Version 0.2.0 requires R >= 4.1.0 and `dgraphs` >= 0.4.0. The optional GRIP
+and edge-KK embeddings also require `grip` >= 0.3.0.
 
 ## Quick Start
 
@@ -77,61 +78,76 @@ lps.fit <- fit.lps(
 head(predict(lps.fit))
 ```
 
-`fit.lps()` is the canonical local polynomial smoother (LPS) entry point.  It
-selects support size, local polynomial degree, and kernel by cross-validation.
+`fit.lps()` fits a local polynomial smoother (LPS). It selects the
+neighborhood size, the degree of the local polynomial, and the kernel by
+cross-validation.
 
-## Method Map
+## Choosing a method
 
-Choose by the structure of your data and the penalty you need:
+The methods differ in the kind of data they take and in how they penalize
+roughness. The main ones are listed here; the
+[function guide](https://pgajer.github.io/geosmooth/articles/function-guide.html)
+covers the rest.
 
-- **LPS**: local polynomial smoother, `fit.lps()`.
-  Use this as the direct local-regression baseline.  It predicts by fitting a
-  local polynomial around each evaluation point.
+- **Local polynomial smoothing (LPS)**, `fit.lps()`. Fits a weighted
+  polynomial to the observations near each point at which a prediction is
+  wanted. This is the standard local-regression method and a good first
+  choice.
 
-- **MALPS**: model-averaged local polynomial smoother, `fit.malps()`.
-  Use this when you want many local polynomial fits around observed anchors and
-  an averaged prediction surface.
+- **Model-averaged local polynomial smoothing (MALPS)**, `fit.malps()`. Fits
+  a local polynomial around each of a set of anchor points and predicts at a
+  point by averaging the local fits that cover it.
 
-- **LPL-TF**: local polynomial lifting trend filtering, `fit.lpl.tf()` and
-  `lpl.tf.operator()`.
-  Use this when the local polynomial residual operator should be regularized by
-  an L1 (absolute-value) trend-filtering penalty.
+- **Local polynomial lifting trend filtering (LPL-TF)**, `fit.lpl.tf()` and
+  `lpl.tf.operator()`. Penalizes the absolute values of the residuals that
+  remain when each fitted value is predicted from its neighbors by a local
+  polynomial. As in trend filtering, this L1 penalty lets the fit adapt to
+  the local smoothness of the response.
 
-- **SLPLiFT / S-LPL-TF**: synchronized local polynomial lifting trend
-  filtering, `fit.slpl.tf()` and `slpl.tf.operator()`.
-  Use this when you want LPL-TF plus a quadratic synchronization penalty across
-  overlapping local predictions.
+- **Synchronized LPL-TF (S-LPL-TF, also called SLPLiFT)**, `fit.slpl.tf()`
+  and `slpl.tf.operator()`. Adds to LPL-TF a quadratic penalty that makes the
+  local predictions agree where their neighborhoods overlap.
 
-- **Graph low-pass**: `fit.metric.graph.lowpass()` smooths a response on an
-  undirected graph with positive edge lengths or supplied nonnegative
-  conductances. The
+- **Graph low-pass filtering**, `fit.metric.graph.lowpass()`. Smooths a
+  response defined on the vertices of an undirected graph whose edges carry
+  positive lengths or nonnegative conductances. The
   [graph workflow](https://pgajer.github.io/geosmooth/articles/function-guide.html#from-a-constructed-graph-to-a-fitted-response)
-  explains vertex alignment, length-to-conductance conversion, and basis reuse.
-  The [observed-data heat guide](https://pgajer.github.io/geosmooth/articles/verified-heat-fallback.html)
-  covers missing responses, numerical cross-checks, and unresolved tuning choices.
+  explains how responses are matched to vertices, how lengths are converted
+  to conductances, and how to reuse the computed eigenvectors for further
+  responses. The
+  [observed-data heat guide](https://pgajer.github.io/geosmooth/articles/verified-heat-fallback.html)
+  covers missing responses and the numerical checks that are available.
 
-- **One-dimensional Gaussian trend filtering**: `fit.gaussian.trend.filtering()`
-  fits continuous outcomes with an order-2 piecewise-quadratic curve.
-  `assess.gaussian.trend.filtering()` retunes on each outcome permutation,
-  compares held-out MSE/MAE with a training-only mean, and reports absolute
-  deviation and total variation. The permutation null requires exchangeability;
-  constant mean alone under arbitrary heteroskedasticity is insufficient.
-- **One-dimensional logistic trend filtering**: `fit.logistic.trend.filtering()`
-  fits a binary outcome over a continuous predictor. The
-  [assessment function](https://pgajer.github.io/geosmooth/reference/assess.logistic.trend.filtering.html)
-  tests constancy by permutation and measures predictive improvement.
-  Likelihood remains the default test; absolute-deviation and total-variation
-  summaries have optional permutation tests with Holm adjustment. The
+- **One-dimensional Gaussian trend filtering**,
+  `fit.gaussian.trend.filtering()`. Fits a piecewise-quadratic curve (trend
+  filtering of order 2) to a continuous outcome. Its companion,
+  `assess.gaussian.trend.filtering()`, tests by permutation whether the
+  outcome varies with the predictor, repeating the tuning for every
+  permutation, and compares held-out prediction error with that of a constant
+  mean. The permutation test assumes that the outcomes are exchangeable under
+  the null hypothesis; a constant mean with unequal variances is not enough.
+
+- **One-dimensional logistic trend filtering**,
+  `fit.logistic.trend.filtering()`. Fits the probability of a binary outcome
+  as a function of a continuous predictor.
+  [`assess.logistic.trend.filtering()`](https://pgajer.github.io/geosmooth/reference/assess.logistic.trend.filtering.html)
+  tests by permutation whether the probability is constant and measures the
+  gain in held-out prediction. The
   [logistic trend-filtering guide](https://pgajer.github.io/geosmooth/articles/logistic-trend-filtering.html)
-  illustrates fitting and assessment on synthetic and Pima data.
+  works through simulated data and the Pima diabetes data.
 
-- **SSRHE**: SSRHE-style Hessian-energy smoothing,
-  `fit.ssrhe.hessian.regression()` and
-  `fit.ssrhe.hessian.l1.regression()`.
-  Use this as a Hessian-energy comparator with fixed-k, supplied, or
-  graph-derived adaptive-radius neighborhoods.
+- **Hessian-energy regression**, `fit.ssrhe.hessian.regression()` and
+  `fit.ssrhe.hessian.l1.regression()`. Penalizes estimated second
+  derivatives of the fit on a point cloud, following the semi-supervised
+  regression with Hessian energy (SSRHE) of Kim, Steinke, and Hein (2009).
+  The first function uses a quadratic penalty and the second an L1 penalty.
+  Neighborhoods can have a fixed number of points, be supplied by you, or
+  have radii that adapt to a graph.
 
-## Basic Examples
+## Basic examples
+
+The examples below continue from the Quick Start and use its `X`, `y`, and
+`foldid`.
 
 ### LPS
 
@@ -163,7 +179,9 @@ malps.fit <- fit.malps(
 )
 ```
 
-### LPL-TF and SLPLiFT Operators
+### LPL-TF and S-LPL-TF
+
+The operators can be built once and reused for several responses.
 
 ```r
 lpl.op <- lpl.tf.operator(
@@ -185,7 +203,7 @@ slpl.op <- slpl.tf.operator(
 )
 ```
 
-Fitting LPL-TF and SLPLiFT currently uses the optional `genlasso` dependency.
+Fitting these two models requires the optional package `genlasso`.
 
 ```r
 if (requireNamespace("genlasso", quietly = TRUE)) {
@@ -206,7 +224,7 @@ if (requireNamespace("genlasso", quietly = TRUE)) {
 }
 ```
 
-### SSRHE Hessian-Energy Regression
+### Hessian-energy regression
 
 ```r
 grid <- expand.grid(x = seq(0, 1, length.out = 5),
@@ -223,7 +241,8 @@ ssrhe.fit <- fit.ssrhe.hessian.regression(
     return.local.diagnostics = FALSE
 )
 
-# Select penalties with the same fitter (use "gcv" for fully observed data).
+# The same function can select the penalties by cross-validation
+# (or by "gcv" when every response is observed).
 ssrhe.cv <- fit.ssrhe.hessian.regression(
     X = X2,
     y = y2,
@@ -235,39 +254,30 @@ ssrhe.cv <- fit.ssrhe.hessian.regression(
 )
 ```
 
-The same runnable code is available in
+The code of these examples is also available in
 `inst/examples/geosmooth_quickstart.R`.
 
-## Graph Dependency Boundary
+## Graphs and the dgraphs package
 
-`geosmooth` owns smoother APIs and package-local coordinate/fixed-k paths.
-Graph construction and shortest-path operations are supplied by `dgraphs`.
+`geosmooth` does not construct graphs. Methods that work directly on
+coordinates need no graph: LPS, MALPS, and both lifting trend filters with
+coordinate neighborhoods, and Hessian-energy regression with neighborhoods of
+fixed size or neighborhoods that you supply. Methods that use distances along
+a graph take a graph object from the
+[`dgraphs`](https://github.com/pgajer/dgraphs) package, which also computes
+the shortest paths. These are MALPS and the lifting trend filters with
+graph-geodesic neighborhoods, and Hessian-energy regression with
+adaptive-radius neighborhoods.
 
-That means:
+## Compiled code
 
-- Coordinate LPS, coordinate MALPS, coordinate LPL-TF/SLPLiFT, fixed-k SSRHE,
-  and supplied-neighborhood SSRHE are package-local `geosmooth` paths.
-- Graph-dependent paths, including graph-geodesic MALPS/LPL-TF/SLPLiFT
-  supports and SSRHE adaptive-radius neighborhoods, use compatible `dgraphs`
-  graph objects.
-- `geosmooth` does not currently export graph construction functions such as
-  rKNN graph builders.
+The computationally demanding parts of the package are written in C++: LPS
+cross-validation and prediction, the construction of local PCA coordinate
+charts, graph low-pass filtering, and the Hessian-energy operators.
 
-Native support currently includes:
+## Development
 
-- C++ coordinate backend for LPS CV and prediction
-- C++ shared local-PCA chart backend
-- C++ SSRHE Hessian-energy operator backend
-
-## Native Backends
-
-The package includes compiled backends for LPS cross-validation and
-prediction, shared local-PCA chart construction, metric-graph low-pass
-filtering, and SSRHE Hessian-energy operators.
-
-## Validation
-
-Focused validation:
+To run the main tests and a quick package check from a source checkout:
 
 ```sh
 make test

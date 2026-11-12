@@ -22,14 +22,14 @@ test_that("all three C++ paths match the original sPTB Python predictions and tu
             expect_equal(unname(predict(coords, X[query,], k = sizes)), expected,
                          tolerance = 1e-15)
             got <- predict(fixed, distances = D[query,train], type = "diagnostics")
-            for (j in seq_along(query)) {
-                expected.diag <- a$diagnostics[[m]][[j]]
-                expect_equal(got$neighbors[j,1], expected.diag$neighbors)
-                expect_equal(got$cases[j,1], expected.diag$cases)
-                expect_equal(got$radius[j,1], expected.diag$radius)
-                expect_equal(got$boundary.ties[j,1], expected.diag$boundary_ties)
-                expect_equal(got$split.tie[j,1], expected.diag$split_tie)
-            }
+            actual.diag <- lapply(seq_along(query), function(j) list(
+                neighbors=got$neighbors[j,1], cases=got$cases[j,1],
+                radius=got$radius[j,1], boundary.ties=got$boundary.ties[j,1],
+                split.tie=got$split.tie[j,1]))
+            expected.diag <- lapply(a$diagnostics[[m]], function(d) list(
+                neighbors=d$neighbors, cases=d$cases, radius=d$radius,
+                boundary.ties=d$boundary_ties, split.tie=d$split_tie))
+            expect_equal(actual.diag, expected.diag)
             tuned <- fit.neighbor.probability(y = y[train], distances = D[train,train],
                         method = m, id = id[train], foldid = mat(a$folds))
             expect_equal(tuned$k, a$selected[[m]])
@@ -141,6 +141,7 @@ test_that("tuning is participant-balanced with repeated records and respects sel
 test_that("tiny label configurations agree with independent rank arithmetic", {
     X <- matrix(c(0,1,2,4,8,16),ncol=1)
     q <- matrix(0.1,ncol=1)
+    predictions <- references <- list()
     for (bits in 0:63) {
         y <- as.numeric(intToBits(bits))[1:6]
         ord <- order(abs(X[,1]-.1))
@@ -154,7 +155,10 @@ test_that("tiny label configurations agree with independent rank arithmetic", {
                 if (k>length(stop)) return(NA_real_)
                 if (m=="case_raw") k/stop[k] else (k-1)/(stop[k]-1)
             },0)
-            expect_equal(actual,expected)
+            key <- paste(bits,m,sep="/")
+            predictions[[key]] <- actual
+            references[[key]] <- expected
         }
     }
+    expect_equal(predictions,references)
 })

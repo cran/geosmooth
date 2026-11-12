@@ -1,11 +1,12 @@
 #' Construct an SSRHE-Style Local Hessian Energy Operator
 #'
-#' Constructs the discrete local Hessian operator used by the semi-supervised
-#' regularization framework of Kim, Steinke, and Hein (2009). The constructor
-#' is intended as a package-facing, auditable R/C++ port of the reference
-#' behavior: it returns the sparse row operator \eqn{A}, the quadratic energy
-#' matrix \eqn{B=A^\top A}, and optionally the supplemental stabilizer
-#' \eqn{B_S}.
+#' Constructs the discrete local Hessian operator of the semi-supervised
+#' regression method of Kim, Steinke, and Hein (2009). For each point, the
+#' second derivatives of a function are estimated from its values at nearby
+#' points, in local coordinates computed by PCA. The function returns the
+#' sparse operator \eqn{A} whose rows compute these second derivatives, the
+#' Hessian-energy matrix \eqn{B=A^\top A}, and optionally the additional
+#' stabilizing matrix \eqn{B_S}.
 #'
 #' @param X Numeric matrix with one observation per row. Distances for the
 #'   default neighborhood search are Euclidean distances in these coordinates.
@@ -1025,11 +1026,14 @@ print.ssrhe.hessian.operator <- function(x, ...) {
 
 #' Fit SSRHE-Style Hessian-Energy Regression
 #'
-#' Fits the \eqn{\ell_2} Hessian-energy regularized estimator associated with
-#' \code{\link{ssrhe.hessian.operator}}. This is a direct SSRHE-style
-#' comparator for Hessian smoothing on point clouds; it is not a replacement
-#' for graph trend-filtering regression and is distinct from
-#' \eqn{\ell_1}-adaptive graph trend filtering.
+#' Fits a regression function on a point cloud by least squares with a
+#' quadratic (\eqn{\ell_2}) penalty on the Hessian energy computed by
+#' \code{\link{ssrhe.hessian.operator}}, following the semi-supervised
+#' regression with Hessian energy (SSRHE) of Kim, Steinke, and Hein (2009).
+#' The penalties can be fixed or selected by cross-validation or GCV. This
+#' method differs from graph trend filtering
+#' (\code{\link{fit.graph.trend.filtering}}), which uses an \eqn{\ell_1}
+#' penalty on graph differences.
 #'
 #' @inheritParams ssrhe.hessian.operator
 #' @param y Numeric response vector of length \code{nrow(X)} or numeric matrix
@@ -2577,8 +2581,10 @@ refit.ssrhe.hessian.fit <- function(object,
 
 #' Fit SSRHE-Style Hessian L1 Regression
 #'
-#' Fits an \eqn{\ell_1}-adaptive SSRHE Hessian comparator using the row
-#' operator \eqn{A} from \code{\link{ssrhe.hessian.operator}}:
+#' Fits a regression function on a point cloud by least squares with an
+#' \eqn{\ell_1} (absolute-value) penalty on the estimated second derivatives
+#' \eqn{Af}, where \eqn{A} is the operator returned by
+#' \code{\link{ssrhe.hessian.operator}}:
 #' \deqn{
 #'   \widehat f_\lambda =
 #'   \arg\min_f

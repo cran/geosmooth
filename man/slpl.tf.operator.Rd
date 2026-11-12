@@ -132,11 +132,12 @@ A list of class \code{"slpl_tf_operator"} containing
 embedded \code{"lpl_tf_operator"}.
 }
 \description{
-Builds the fixed S-LPL-TF operator pair. The LPL component
-\eqn{A_{\mathrm{LPL}}} is the accepted self-excluded LPL-TF residual
-operator from \code{\link{lpl.tf.operator}}. The synchronization component
-\eqn{C_{\mathrm{sync}}} compares inclusive local polynomial prediction maps
-over overlapping supports.
+Builds the two operators of synchronized local polynomial lifting trend
+filtering (S-LPL-TF). The first, \eqn{A_{\mathrm{LPL}}}, is the residual
+operator of \code{\link{lpl.tf.operator}}, in which each point is
+predicted from its neighbors without using its own value. The second,
+\eqn{C_{\mathrm{sync}}}, compares the local polynomial predictions of
+overlapping neighborhoods, each of which includes its own center point.
 }
 \examples{
 X <- matrix(seq(0, 1, length.out = 18), ncol = 1)

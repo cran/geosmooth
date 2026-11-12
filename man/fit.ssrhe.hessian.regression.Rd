@@ -201,11 +201,14 @@ diagnostics, the reused \code{operator}, solver metadata, the call, and
 the corresponding \code{support.cv.table} or \code{support.gcv.table}.
 }
 \description{
-Fits the \eqn{\ell_2} Hessian-energy regularized estimator associated with
-\code{\link{ssrhe.hessian.operator}}. This is a direct SSRHE-style
-comparator for Hessian smoothing on point clouds; it is not a replacement
-for graph trend-filtering regression and is distinct from
-\eqn{\ell_1}-adaptive graph trend filtering.
+Fits a regression function on a point cloud by least squares with a
+quadratic (\eqn{\ell_2}) penalty on the Hessian energy computed by
+\code{\link{ssrhe.hessian.operator}}, following the semi-supervised
+regression with Hessian energy (SSRHE) of Kim, Steinke, and Hein (2009).
+The penalties can be fixed or selected by cross-validation or GCV. This
+method differs from graph trend filtering
+(\code{\link{fit.graph.trend.filtering}}), which uses an \eqn{\ell_1}
+penalty on graph differences.
 }
 \details{
 For each response column, this function solves

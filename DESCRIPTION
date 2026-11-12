@@ -1,7 +1,7 @@
 Package: geosmooth
 Title: Geometric Methods for Nonparametric Regression and Density
         Estimation
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: c(
     person(given = "Pawel",
            family = "Gajer",
@@ -70,9 +70,13 @@ Suggests: genlasso, grip (>= 0.3.0), knitr, rmarkdown, splines,
         testthat (>= 3.0.0), waldo, withr
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Config/testthat/start-first: synthetic-registry, ps-lps,
+        state-density-odcv3-lps-outer-visit-cv, synthetic-legacy-ssrhe,
+        coupled-kd-selection-csd4, graph-trend-filtering,
+        simplex-charts
 Config/roxygen2/version: 8.0.0
 NeedsCompilation: yes
-Packaged: 2026-11-10 08:05:10 UTC; pgajer
+Packaged: 2026-11-12 01:24:48 UTC; pgajer
 Author: Pawel Gajer [aut, cre],
   Gael Guennebaud [ctb] (Eigen),
   Benoit Jacob [ctb] (Eigen),
@@ -86,4 +90,4 @@ Author: Pawel Gajer [aut, cre],
   University of Maryland [cph] (ANN)
 Maintainer: Pawel Gajer <pgajer@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-11-10 18:20:02 UTC
+Date/Publication: 2026-11-12 13:20:10 UTC

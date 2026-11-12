@@ -116,10 +116,11 @@ A list with class \code{"chart_kernel"} containing
 denominator diagnostics.
 }
 \description{
-Fits a local chart-kernel field by evaluating a Nadaraya--Watson style
-smoother at each evaluation point. The function is a general fitted-field
-model, not an occupation-density wrapper: density workflows should call
-\code{\link{normalize.density}} on the returned fit.
+Computes a kernel-weighted average of the response at each evaluation
+point, in the manner of the Nadaraya--Watson estimator, with distances
+measured in a local coordinate chart. The result is a fitted field of
+general use. To obtain a density from it, apply
+\code{\link{normalize.density}} to the returned fit.
 }
 \details{
 For an evaluation point \eqn{x_u}, the method chooses a local support

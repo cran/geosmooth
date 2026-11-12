@@ -139,9 +139,13 @@ spectral filter weights describe the base heat kernel, not eigenvalues
 of the observed fitting matrix.
 }
 \description{
-Fits graph-spectral low-pass regression using supplied conductances or
-transformed metric lengths. Missing-response heat fits use an observed-data
-penalized least-squares operator on a complete graph eigensystem.
+Smooths a response defined on the vertices of a graph by keeping the
+low-frequency part of its expansion in the eigenvectors of the graph
+Laplacian. The amount of smoothing is selected by generalized
+cross-validation. Edge values can be conductances, or lengths that are
+converted to conductances. With the heat filter and a complete set of
+eigenvectors, responses with missing values can also be fitted, by
+penalized least squares on the observed vertices.
 }
 \details{
 Missing-response heat fits minimize observed squared error plus

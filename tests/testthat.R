@@ -1,6 +1,15 @@
 library(testthat)
 library(geosmooth)
 
+# Windows test files are independent and can share two check workers. Keep
+# Unix files serial because they also exercise fork-based graph parallelism.
+if (.Platform$OS.type == "windows") {
+  options(Ncpus = min(2L, getOption("Ncpus", 2L)))
+  if (!nzchar(Sys.getenv("TESTTHAT_PARALLEL"))) {
+    Sys.setenv(TESTTHAT_PARALLEL = "true")
+  }
+}
+
 validation.contexts <- gsub(
   "^test-|\\.R$", "",
   c(

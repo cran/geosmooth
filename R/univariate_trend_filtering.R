@@ -6,7 +6,12 @@
     lambda.selection = c("fixed", "cv"), foldid = NULL,
     control = list(), warn = TRUE, backend = c("auto", "dense", "banded"),
     family = "binomial", call = NULL,
-    cv.penalty.scale = c("training_mass", "none")) {
+    cv.penalty.scale = c("training_mass", "none"), before.fit = NULL, observer = NULL) {
+    geometry.id <- .ptf.observe.begin(observer, "geometry", list())
+    geometry.closed <- FALSE
+    on.exit(if (!geometry.closed && !is.null(observer) &&
+        length(observer$stack) && tail(observer$stack, 1L)[[1L]]$id == geometry.id)
+        .ptf.observe.end(observer, geometry.id, list(status = "error")), add = TRUE)
     gaussian <- identical(family, "gaussian")
     lambda.selection <- match.arg(lambda.selection)
     cv.penalty.scale <- match.arg(cv.penalty.scale)
@@ -55,6 +60,11 @@
     if (!is.matrix(covariates) || !is.numeric(covariates) ||
         nrow(covariates) != n || any(!is.finite(covariates)))
         stop("covariates must be a finite numeric matrix with length(x) rows.", call. = FALSE)
+    # Check the supplied values: rounded weighted means can give an exactly
+    # constant column a positive residual scale on some BLAS implementations.
+    if (any(vapply(seq_len(ncol(covariates)), function(j)
+        all(covariates[, j] == covariates[1L, j]), logical(1))))
+        stop("covariates must not contain constant columns.", call. = FALSE)
     knots <- sort(unique(x))
     if (length(knots) < 4L || !is.finite(diff(range(x))))
         stop("x needs at least four distinct values and a finite range.", call. = FALSE)
@@ -116,7 +126,14 @@
     }
     # Fit stronger penalties first for warm starts, but preserve caller order.
     ord <- order(lambda, decreasing = TRUE)
-    fits <- if (backend == "dense") {
+    # Reserve fitting allowance after geometry validation, at solver entry.
+    .ptf.observe.end(observer, geometry.id, list(status = "complete", backend = backend,
+        observations = n, distinct.projections = length(knots)))
+    geometry.closed <- TRUE
+    fits <- .ptf.native.call(observer, before.fit, list(backend = backend,
+        call.type = "univariate", columns = p,
+        observations = n, distinct.projections = length(knots)), {
+    if (backend == "dense") {
         native <- if (gaussian) gaussian_tf_native else logistic_tf_native
         native(A, ridge.factor, as.numeric(y), as.numeric(weights),
             as.numeric(offset), penalty, as.numeric(lambda[ord]),
@@ -128,6 +145,7 @@
             as.numeric(lambda[ord]), nuisance.ridge, curve.ridge,
             control$tolerance, control$gap.tolerance, as.integer(control$max.iterations))
     }
+    })
     fits <- fits[order(ord)]
     diagnostics <- do.call(rbind, lapply(seq_along(fits), function(i) {
         f <- fits[[i]]
@@ -173,7 +191,7 @@
                 nuisance.ridge * factors[k], curve.ridge * factors[k],
                 control = control, warn = FALSE, backend = backend.requested,
                 family = family, cv.penalty.scale = cv.penalty.scale),
-                error = function(e) e)
+                error = .ptf.numerical.error)
             if (inherits(ff, "error")) { fold.status[k] <- conditionMessage(ff); next }
             eta <- stats::predict(ff, x[test], covariates = covariates[test, , drop = FALSE],
                 offset = offset[test], type = "link", lambda.index = seq_along(lambda))

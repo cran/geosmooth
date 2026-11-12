@@ -774,8 +774,8 @@ knitr::kable(shape_tests, row.names=FALSE, digits=3)
 ```
 
 The Holm column adjusts across the three statistics within each assessment.
-It does not adjust across the two examples or a wider family of outcomes and
-phylotypes. The scalar `p.value` remains the individual likelihood p-value for
+It does not adjust across the two examples or across a wider family of
+outcomes and predictors. The scalar `p.value` remains the individual likelihood p-value for
 backward compatibility. Prespecify the tests; choosing the smallest individual
 p-value after inspecting the table would ignore multiple testing. These
 examples do not establish that one statistic has greater power than another.

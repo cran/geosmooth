@@ -114,11 +114,11 @@ the result.}
 A list of class \code{"density_fit"}.
 }
 \description{
-Converts a numeric field or fitted smoother/regression object into a
-probability mass vector over the evaluation support.  This is the explicit
-adapter between ordinary smoothers such as \code{\link{fit.lps}},
-\code{\link{fit.ps.lps}}, and \code{\link{fit.metric.graph.lowpass}} and
-density or occupation-density workflows.
+Converts a numeric vector, or the fitted values of a smoother, to a vector
+of probability masses over the evaluation points.  Use it to obtain a
+density or an occupation density from the output of a regression smoother
+such as \code{\link{fit.lps}}, \code{\link{fit.ps.lps}}, or
+\code{\link{fit.metric.graph.lowpass}}.
 }
 \examples{
 normalize.density(c(0.5, -0.1, 0.6, 0), X = matrix(1:4, ncol = 1))

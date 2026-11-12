@@ -68,11 +68,9 @@ the edge table, conductances, degree vector, Laplacian triplets, summaries,
 and optionally a sparse Laplacian matrix.
 }
 \description{
-Builds a weighted graph Laplacian from supplied conductances or by
-transforming metric edge lengths into conductances. This operator is a direct
-metric-conductance comparator to
-the legacy rdgraph regression smoother, not a replacement for the
-Riemannian-complex/overlap-density smoother.
+Builds the weighted graph Laplacian used by graph low-pass filtering. The
+edge weights of the Laplacian are conductances, which are either supplied
+directly or computed from edge lengths.
 }
 \details{
 The legacy rdgraph regression precomputed-graph path uses

@@ -1,9 +1,12 @@
 #' Nearest-Person and Nearest-Case Binary Probability Estimators
 #'
-#' Fit one of three estimators through a shared, single-threaded C++ backend.
-#' Ordinary nearest neighbors counts people; nearest-case estimators stop at
-#' the requested number of cases. Coordinates are processed one query at a
-#' time without constructing an all-pairs distance matrix.
+#' Estimates the probability of a binary outcome at a point from the outcomes
+#' of its nearest neighbors, with one of three estimators. The ordinary
+#' nearest-neighbor estimator uses the \code{k} nearest people. The two
+#' nearest-case estimators instead extend the neighborhood until it contains
+#' \code{k} cases. All three are computed by the same single-threaded C++
+#' code, which handles one query point at a time and never forms the matrix
+#' of all pairwise distances.
 #'
 #' @param X Numeric matrix with one training record per row. Supply either
 #'   \code{X} or \code{distances}.

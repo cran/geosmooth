@@ -1,10 +1,8 @@
 #' Construct a Metric-Conductance Graph Low-Pass Operator
 #'
-#' Builds a weighted graph Laplacian from supplied conductances or by
-#' transforming metric edge lengths into conductances. This operator is a direct
-#' metric-conductance comparator to
-#' the legacy rdgraph regression smoother, not a replacement for the
-#' Riemannian-complex/overlap-density smoother.
+#' Builds the weighted graph Laplacian used by graph low-pass filtering. The
+#' edge weights of the Laplacian are conductances, which are either supplied
+#' directly or computed from edge lengths.
 #'
 #' @param adj.list List of integer neighbor vectors using 1-based vertex indices.
 #' @param weight.list List of weights parallel to \code{adj.list}: positive
@@ -119,10 +117,10 @@ metric.graph.lowpass.operator <- function(
 
 #' Construct a Reusable Metric Graph Low-Pass Spectral Basis
 #'
-#' Builds a metric-conductance graph Laplacian and computes the low-frequency
-#' eigensystem used by graph low-pass filters. The resulting object is
-#' response-independent and can be reused for many responses and filter
-#' parameters.
+#' Builds the weighted graph Laplacian and computes its eigenvalues and
+#' eigenvectors of lowest frequency, which graph low-pass filters use. The
+#' result does not depend on any response, so it can be reused to smooth many
+#' responses with many filter parameters.
 #'
 #' @inheritParams metric.graph.lowpass.operator
 #' @param n.eigenpairs Positive integer number of eigenpairs to compute.
@@ -941,9 +939,13 @@ apply.metric.graph.lowpass.path <- function(
 
 #' Fit Metric-Conductance Graph Low-Pass Regression
 #'
-#' Fits graph-spectral low-pass regression using supplied conductances or
-#' transformed metric lengths. Missing-response heat fits use an observed-data
-#' penalized least-squares operator on a complete graph eigensystem.
+#' Smooths a response defined on the vertices of a graph by keeping the
+#' low-frequency part of its expansion in the eigenvectors of the graph
+#' Laplacian. The amount of smoothing is selected by generalized
+#' cross-validation. Edge values can be conductances, or lengths that are
+#' converted to conductances. With the heat filter and a complete set of
+#' eigenvectors, responses with missing values can also be fitted, by
+#' penalized least squares on the observed vertices.
 #'
 #' @inheritParams metric.graph.lowpass.operator
 #' @param y Numeric response vector of length \code{length(adj.list)}.

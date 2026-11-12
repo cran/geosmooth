@@ -256,22 +256,23 @@ convergence statuses, fallback-path counts, event-rate fallback counts,
 and \code{NA} failure counts separately for CV and final fitting.
 }
 \description{
-Fits a local polynomial smoother (LPS) and selects its support size,
-polynomial degree, and kernel by cross-validation.  By default, the smoother
-works in the observed ambient coordinates: each prediction point uses its
-nearest training points in Euclidean distance, centers the support at the
-prediction point, fits a weighted local polynomial, and uses the fitted
-intercept as the prediction.
+Fits a local polynomial smoother (LPS) and selects the size of its
+neighborhoods (the support size), the degree of the polynomial, and the
+kernel by cross-validation.  By default the smoother works in the supplied
+coordinates.  To predict at a point, it takes the nearest training points
+in Euclidean distance, centers their coordinates at the point, fits a
+kernel-weighted polynomial to their responses, and uses the intercept of
+that polynomial as the prediction.
 }
 \details{
-The optional \code{coordinate.method = "local.pca"} mode keeps the same
-support and kernel weighting rule, but builds the local polynomial in a local
-PCA chart centered at each prediction point.  With \code{chart.dim = "auto"},
-the chart dimension is estimated as one global scalar from observed
-\code{X} only, using the same shared local-PCA dimension helper used by
-LPL-TF and S-LPL-TF.  The experimental
-\code{chart.dim = "local.auto"} mode estimates an input-only local chart
-dimension separately for each prediction anchor.
+With \code{coordinate.method = "local.pca"}, the neighborhoods and the
+kernel weights are the same, but the polynomial is fitted in a local
+coordinate chart computed by PCA and centered at the prediction point.
+With \code{chart.dim = "auto"}, a single chart dimension for all points is
+estimated from \code{X} alone, by the same procedure that LPL-TF and
+S-LPL-TF use.  The experimental \code{chart.dim = "local.auto"} estimates
+a chart dimension separately for each prediction point, again from
+\code{X} alone.
 }
 \section{Choosing controls}{
 

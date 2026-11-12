@@ -1,8 +1,8 @@
 # Large enough to exercise ANN retrieval rather than the exhaustive small-set path.
 neighbor.compare.exact <- function(a, b) {
-    for (field in c("probability", "neighbors", "cases", "radius", "boundary.ties",
-                    "split.tie", "available.people", "available.cases", "status"))
-        expect_equal(a[[field]], b[[field]], tolerance = 0, info = field)
+    fields <- c("probability", "neighbors", "cases", "radius", "boundary.ties",
+                "split.tie", "available.people", "available.cases", "status")
+    expect_equal(a[fields], b[fields], tolerance = 0)
 }
 
 test_that("exact ANN matches brute force on normalized and repeated-participant profiles", {

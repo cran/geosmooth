@@ -1,7 +1,7 @@
 intrinsic.compare <- function(a, b) {
-    for (field in c("probability", "neighbors", "cases", "boundary.ties",
-                    "split.tie", "available.people", "available.cases", "status"))
-        expect_identical(a[[field]], b[[field]], info=field)
+    fields <- c("probability", "neighbors", "cases", "boundary.ties",
+                "split.tie", "available.people", "available.cases", "status")
+    expect_identical(a[fields], b[fields])
     expect_equal(a$radius, b$radius, tolerance=1e-14)
 }
 

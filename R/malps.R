@@ -1,34 +1,39 @@
 #' Fit Model-Averaged Local Polynomial Smoothing
 #'
-#' Fits the current model-averaged local polynomial smoother (MALPS) on a
-#' supplied coordinate matrix.  MALPS fits local polynomial regressions around
-#' observed anchor points and averages all positive-weight local predictions at
-#' each training point.  The current implementation supports supplied
-#' coordinates, observed or supplied coordinate anchors, fixed support
-#' parameters, deterministic cross-validation and exact dense GCV over support
-#' parameters, local PCA chart coordinates,
-#' ordinary and weighted new-response refits, coordinate-space new-point
-#' prediction, linear-smoother diagnostics, and fixed-selection bootstrap
-#' uncertainty summaries.  Graph-geodesic supports are available for training
-#' and refit; graph-geodesic new-point prediction is deferred.
+#' Fits a model-averaged local polynomial smoother (MALPS) to a response
+#' observed at the rows of a coordinate matrix.  MALPS fits a local polynomial
+#' regression around each of a set of anchor points, which by default are the
+#' observations themselves.  The fitted value at a training point is the
+#' weighted average of the predictions of all local fits that give that point
+#' positive weight.
 #'
-#' Current development benchmarks suggest using the plain MALPS defaults for
-#' production-style fits unless a specific diagnostic motivates a non-default
-#' option: \code{support.selection = "cv"}, \code{robust.iterations = 0L},
-#' \code{model.weight.rule = "none"}, and observed anchors
-#' (\code{anchor.coordinates = NULL}).  Exact GCV selection
-#' (\code{support.selection = "gcv"}) is a useful faster option for
-#' fixed-weight, non-robust MALPS fits, especially exploratory continuous
-#' smoothing runs, but it is not yet the universal default.  Binary responses
-#' are treated as numeric conditional-expectation targets; fitted values are not
-#' clipped inside the smoother.  Grid anchors, empirical-Bayes shrinkage, robust
-#' local residual reweighting, and conservative/smoothed GCV selection remain
-#' experimental controls rather than default recommendations.
+#' The neighborhoods (supports) of the local fits can be given fixed
+#' parameters, or their parameters can be selected by cross-validation or by
+#' exact GCV.  The local polynomials can be fitted in the supplied coordinates
+#' or in local PCA charts.  A fitted model can be refitted to a new response,
+#' with or without observation weights (\code{\link{refit}}), can predict at
+#' new points when its supports are based on coordinate distances, and
+#' supports linear-smoother diagnostics (\code{\link{smoother.matrix}},
+#' \code{\link{malps.gcv}}) and bootstrap summaries
+#' (\code{\link{bootstrap.malps}}).  Supports based on graph-geodesic
+#' distances can be used for fitting and refitting, but prediction at new
+#' points is not yet available for them.
 #'
-#' Graph construction is supplied by \pkg{dgraphs} or by explicit
-#' \code{adj.list}/\code{weight.list} payloads. Coordinate MALPS paths and
-#' graph-geodesic payload validation are package-local; shortest-path distances
-#' are computed through \pkg{dgraphs}.
+#' The defaults are recommended for most uses: \code{support.selection =
+#' "cv"}, \code{robust.iterations = 0L}, \code{model.weight.rule = "none"},
+#' and the observations as anchors (\code{anchor.coordinates = NULL}).
+#' \code{support.selection = "gcv"} is a faster alternative for fits without
+#' robust reweighting, particularly for exploratory smoothing of a continuous
+#' response.  A binary response is treated as numeric, so the fit estimates a
+#' conditional expectation, and the fitted values are not restricted to
+#' \eqn{[0, 1]}.  Grid anchors, empirical-Bayes shrinkage, robust reweighting
+#' of local residuals, and the conservative and smoothed GCV rules are
+#' experimental.
+#'
+#' For graph-geodesic supports, supply a graph constructed with \pkg{dgraphs},
+#' or an adjacency list and a weight list (\code{adj.list},
+#' \code{weight.list}).  Shortest-path distances are computed by
+#' \pkg{dgraphs}.
 #'
 #' @param X Numeric coordinate matrix with one row per observation.
 #' @param y Numeric response vector with length \code{nrow(X)}.

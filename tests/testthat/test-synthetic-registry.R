@@ -5,6 +5,20 @@
     path, stringsAsFactors = FALSE, check.names = FALSE)
 }
 
+.reuse.synthetic.registry.components <- function(.env = parent.frame()) {
+  original <- geosmooth:::.synthetic.registry.component
+  components <- new.env(parent=emptyenv())
+  testthat::local_mocked_bindings(
+    .synthetic.registry.component = function(component.id,expected.kind) {
+      key <- paste(expected.kind,component.id,sep="\r")
+      if (!exists(key,envir=components,inherits=FALSE)) {
+        components[[key]] <- original(component.id,expected.kind)
+      }
+      components[[key]]
+    },
+    .package="geosmooth", .env=.env)
+}
+
 test_that("normalized component foreign keys resolve exactly once", {
   recipes <- .read.synthetic.registry.table("recipes.csv")
   table.by.field <- c(
@@ -32,20 +46,19 @@ test_that("normalized component foreign keys resolve exactly once", {
     expect_true(all(nzchar(components$parameters)), info = field)
     # Check every foreign key, and reconstruct each shared component once.
     expect_true(all(recipes[[field]] %in% components$component.id), info = field)
-    for (id in unique(recipes[[field]])) {
-      expect_identical(sum(components$component.id == id), 1L, info = id)
-      component <- geosmooth:::.synthetic.registry.component(
-        id, kind.by.field[[field]])
-      row <- components[components$component.id == id, , drop = FALSE]
-      expect_identical(
-        geosmooth:::.synthetic.sha256(component),
-        row$component.sha256,
-        info = id)
-      expect_identical(
-        geosmooth:::.synthetic.registry.json.text(component$parameters),
-        row$parameters,
-        info = id)
-    }
+    ids <- unique(recipes[[field]])
+    expect_identical(vapply(ids, function(id) sum(components$component.id == id),
+                            integer(1), USE.NAMES=FALSE), rep(1L,length(ids)))
+    rebuilt <- lapply(ids, geosmooth:::.synthetic.registry.component,
+                      expected.kind=kind.by.field[[field]])
+    rows <- match(ids,components$component.id)
+    expect_identical(
+      setNames(vapply(rebuilt,geosmooth:::.synthetic.sha256,character(1)),ids),
+      setNames(components$component.sha256[rows],ids))
+    expect_identical(
+      setNames(vapply(rebuilt,function(component)
+        geosmooth:::.synthetic.registry.json.text(component$parameters),character(1)),ids),
+      setNames(components$parameters[rows],ids))
     all.component.ids <- c(all.component.ids, components$component.id)
   }
   expect_identical(anyDuplicated(all.component.ids), 0L)
@@ -53,16 +66,13 @@ test_that("normalized component foreign keys resolve exactly once", {
 
 test_that("every registry recipe is reconstructed from normalized rows", {
   recipes <- .read.synthetic.registry.table("recipes.csv")
-  for (i in seq_len(nrow(recipes))) {
-    spec <- synthetic.registry.spec(recipes$recipe.id[i])
-    expect_identical(
-      spec$specification.sha256, recipes$specification.sha256[i],
-      info = recipes$recipe.id[i])
-    expect_identical(
-      geosmooth:::.synthetic.registry.resolve(recipes$recipe.id[i]),
-      spec,
-      info = recipes$recipe.id[i])
-  }
+  # Reuse immutable component definitions while rebuilding every recipe.
+  .reuse.synthetic.registry.components()
+  ids <- recipes$recipe.id
+  specs <- setNames(lapply(ids,synthetic.registry.spec),ids)
+  expect_identical(vapply(specs,function(spec) spec$specification.sha256,character(1)),
+                   setNames(recipes$specification.sha256,ids))
+  expect_identical(setNames(lapply(ids,geosmooth:::.synthetic.registry.resolve),ids),specs)
 })
 
 test_that("frozen instances replay their checksums and registry keys are complete", {
@@ -81,11 +91,17 @@ test_that("frozen instances replay their checksums and registry keys are complet
   expect_setequal(
     instances$recipe.id,
     synthetic.registry.ids()[grepl("^G", synthetic.registry.ids())])
-  # All instances use the same runtime; capture it once per RNG policy for
-  # these assertions. Each materialization still performs its own verification.
+  # All instances use the same runtime. Capture its identity once per RNG
+  # policy; each materialization still verifies its own content and provenance.
   policies <- unique(instances$rng.policy)
   current.by.policy <- setNames(lapply(
     policies, geosmooth:::.synthetic.environment.fingerprint), policies)
+  .reuse.synthetic.registry.components()
+  testthat::local_mocked_bindings(
+    .synthetic.environment.fingerprint = function(rng.policy = "legacy") {
+      current.by.policy[[rng.policy]]
+    },
+    .package = "geosmooth")
   required.scope <- c(
     "r.version", "platform", "architecture", "compiler",
     "os.name", "os.release", "os.version", "os.machine", "endianness",
